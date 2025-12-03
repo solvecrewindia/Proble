@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --color-primary: 0 199 230;
+        --color-background: 248 250 252;
+        --color-surface: 255 255 255;
+        --color-muted: 100 116 139;
+        --color-text: 15 23 42;
+        --border-color-custom: #E2E8F0;
+    }
+}
+
+@layer utilities {
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
