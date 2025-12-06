@@ -88,18 +88,18 @@ export default function Dashboard() {
             {/* Hero / Welcome Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-neutral-900">Explore Global Tests By Other Facultys</h1>
-                    <p className="text-neutral-500 mt-1">Discover assessments from top rated faculty worldwide.</p>
+                    <h1 className="text-3xl font-bold text-text">Explore Global Tests By Other Facultys</h1>
+                    <p className="text-muted mt-1">Discover assessments from top rated faculty worldwide.</p>
                 </div>
             </div>
 
             {/* Search and Filter */}
-            <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl border border-neutral-200 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-4 items-center bg-surface p-4 rounded-xl border border-border-custom shadow-sm">
                 <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-400" />
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted" />
                     <Input
                         placeholder="Search for tests, topics, or instructors..."
-                        className="pl-10 border-none bg-neutral-50 focus:ring-0"
+                        className="pl-10 border-none bg-background focus:ring-0 text-text placeholder:text-muted"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -111,7 +111,7 @@ export default function Dashboard() {
                             onClick={() => setSelectedCategory(cat)}
                             className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === cat
                                 ? 'bg-primary text-white'
-                                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                                : 'bg-background text-muted hover:bg-neutral-200 dark:hover:bg-neutral-800'
                                 }`}
                         >
                             {cat}
@@ -123,32 +123,32 @@ export default function Dashboard() {
             {/* Quiz Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredQuizzes.map((quiz) => (
-                    <Card key={quiz.id} className="group hover:shadow-lg transition-all duration-300 border-neutral-200 overflow-hidden cursor-pointer" onClick={() => setSelectedQuiz(quiz)}>
+                    <Card key={quiz.id} className="group hover:shadow-lg transition-all duration-300 border-border-custom overflow-hidden cursor-pointer bg-surface" onClick={() => setSelectedQuiz(quiz)}>
                         {/* Thumbnail */}
                         <div className={`h-40 w-full ${quiz.thumbnail} relative`}>
                             <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
-                            <Badge className="absolute top-3 right-3 bg-white/90 text-neutral-900 backdrop-blur-sm">
+                            <Badge className="absolute top-3 right-3 bg-surface/90 text-text backdrop-blur-sm">
                                 {quiz.category}
                             </Badge>
                         </div>
 
                         <CardContent className="p-4 space-y-4">
                             <div>
-                                <h3 className="font-bold text-lg text-neutral-900 line-clamp-2 group-hover:text-primary transition-colors">
+                                <h3 className="font-bold text-lg text-text line-clamp-2 group-hover:text-primary transition-colors">
                                     {quiz.title}
                                 </h3>
                                 <div className="flex items-center gap-2 mt-2">
-                                    <div className="h-6 w-6 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600">
+                                    <div className="h-6 w-6 rounded-full bg-background flex items-center justify-center text-xs font-bold text-muted border border-border-custom">
                                         {quiz.instructor.avatar}
                                     </div>
-                                    <span className="text-sm text-neutral-600 truncate">{quiz.instructor.name}</span>
+                                    <span className="text-sm text-muted truncate">{quiz.instructor.name}</span>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-sm text-neutral-500 pt-2 border-t border-neutral-100">
+                            <div className="flex items-center justify-between text-sm text-muted pt-2 border-t border-border-custom">
                                 <div className="flex items-center gap-1">
                                     <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                                    <span className="font-medium text-neutral-900">{quiz.rating}</span>
+                                    <span className="font-medium text-text">{quiz.rating}</span>
                                     <span className="text-xs">({quiz.participants})</span>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -164,7 +164,7 @@ export default function Dashboard() {
             {/* Test Details Modal */}
             {selectedQuiz && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-surface rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl animate-in fade-in zoom-in-95 duration-200 border border-border-custom">
                         <div className={`h-32 w-full ${selectedQuiz.thumbnail} relative`}>
                             <button
                                 onClick={() => setSelectedQuiz(null)}
@@ -177,32 +177,32 @@ export default function Dashboard() {
                         <div className="p-8 space-y-6">
                             <div>
                                 <Badge variant="secondary" className="mb-2">{selectedQuiz.category}</Badge>
-                                <h2 className="text-3xl font-bold text-neutral-900">{selectedQuiz.title}</h2>
-                                <div className="flex items-center gap-2 mt-3 text-neutral-600">
+                                <h2 className="text-3xl font-bold text-text">{selectedQuiz.title}</h2>
+                                <div className="flex items-center gap-2 mt-3 text-muted">
                                     <span className="font-medium">{selectedQuiz.instructor.name}</span>
                                     <span>•</span>
                                     <span>{selectedQuiz.instructor.department}</span>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4 py-4 border-y border-neutral-100">
+                            <div className="grid grid-cols-3 gap-4 py-4 border-y border-border-custom">
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-neutral-900">{selectedQuiz.questions}</div>
-                                    <div className="text-xs text-neutral-500 uppercase tracking-wide">Questions</div>
+                                    <div className="text-2xl font-bold text-text">{selectedQuiz.questions}</div>
+                                    <div className="text-xs text-muted uppercase tracking-wide">Questions</div>
                                 </div>
-                                <div className="text-center border-l border-neutral-100">
-                                    <div className="text-2xl font-bold text-neutral-900">{selectedQuiz.duration}</div>
-                                    <div className="text-xs text-neutral-500 uppercase tracking-wide">Minutes</div>
+                                <div className="text-center border-l border-border-custom">
+                                    <div className="text-2xl font-bold text-text">{selectedQuiz.duration}</div>
+                                    <div className="text-xs text-muted uppercase tracking-wide">Minutes</div>
                                 </div>
-                                <div className="text-center border-l border-neutral-100">
-                                    <div className="text-2xl font-bold text-neutral-900">{selectedQuiz.rating}</div>
-                                    <div className="text-xs text-neutral-500 uppercase tracking-wide">Rating</div>
+                                <div className="text-center border-l border-border-custom">
+                                    <div className="text-2xl font-bold text-text">{selectedQuiz.rating}</div>
+                                    <div className="text-xs text-muted uppercase tracking-wide">Rating</div>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
-                                <h3 className="font-semibold text-lg">Instructions & Rules</h3>
-                                <ul className="space-y-2 text-sm text-neutral-600">
+                                <h3 className="font-semibold text-lg text-text">Instructions & Rules</h3>
+                                <ul className="space-y-2 text-sm text-muted">
                                     <li className="flex items-start gap-2">
                                         <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-neutral-400 shrink-0" />
                                         You cannot exit full-screen mode once the exam starts.

@@ -9,7 +9,7 @@ const Layout = () => {
             <div className="flex pt-16 h-screen overflow-hidden">
                 <Sidebar />
                 <main className="flex-1 overflow-y-auto p-6 md:pl-64 transition-all duration-300">
-                    <div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ zoom: '90%' }}>
                         <Outlet />
                     </div>
                 </main>

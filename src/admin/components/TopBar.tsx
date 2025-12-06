@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Sun, Moon, LogOut, User } from 'lucide-react';
+import { ChevronDown, Sun, Moon, LogOut, User, Settings } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const TopBar = () => {
@@ -59,6 +59,18 @@ const TopBar = () => {
                                 </div>
                             </div>
 
+                            {/* Row 1.5: Profile Settings */}
+                            <button
+                                onClick={() => {
+                                    window.location.href = '/admin/profile-settings';
+                                    setIsDropdownOpen(false);
+                                }}
+                                className="flex w-full items-center gap-3 p-3 text-sm text-text rounded-lg hover:bg-surface transition-colors"
+                            >
+                                <Settings className="h-4 w-4 text-muted" />
+                                <span>Profile Settings</span>
+                            </button>
+
                             {/* Row 2: Theme Toggle */}
                             <button
                                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -74,7 +86,13 @@ const TopBar = () => {
                             </button>
 
                             {/* Row 3: Logout */}
-                            <button className="flex w-full items-center gap-3 p-3 text-sm text-red-500 rounded-lg hover:bg-red-500/10 transition-colors mt-1">
+                            <button
+                                onClick={() => {
+                                    // Add logout logic here
+                                    window.location.href = '/login';
+                                }}
+                                className="flex w-full items-center gap-3 p-3 text-sm text-red-500 rounded-lg hover:bg-red-500/10 transition-colors mt-1"
+                            >
                                 <LogOut className="h-4 w-4" />
                                 <span>Logout</span>
                             </button>

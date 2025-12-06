@@ -64,7 +64,7 @@ export function StepImport({ questions, setQuestions }: any) {
 
             <div {...getRootProps()} className={cn(
                 "border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors",
-                isDragActive ? "border-primary bg-primary/5" : "border-neutral-300 hover:border-primary",
+                isDragActive ? "border-primary bg-primary/5" : "border-border-custom hover:border-primary",
                 error ? "border-red-300 bg-red-50" : ""
             )}>
                 <input {...getInputProps()} />

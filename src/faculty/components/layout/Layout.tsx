@@ -12,7 +12,7 @@ export function Layout() {
     }
 
     return (
-        <div className="min-h-screen bg-bg">
+        <div className="min-h-screen bg-background">
             <Topbar />
             <Sidebar />
             <main className="ml-64 pt-20 min-h-screen">

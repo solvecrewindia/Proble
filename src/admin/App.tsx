@@ -5,6 +5,7 @@ import Users from './pages/Users';
 import Quizzes from './pages/Quizzes';
 import ProblemRequests from './pages/ProblemRequests';
 import Settings from './pages/Settings';
+import ProfileSettings from '../shared/pages/ProfileSettings';
 import { ThemeProvider } from './context/ThemeContext';
 import './index.css';
 
@@ -12,6 +13,7 @@ function AdminApp() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <Routes>
+        <Route path="profile-settings" element={<ProfileSettings />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="users" element={<Users />} />

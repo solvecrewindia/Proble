@@ -87,29 +87,29 @@ export function StepQuestions({ questions, setQuestions }: any) {
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold text-neutral-900">Questions Management</h2>
+                <h2 className="text-xl font-semibold text-text">Questions Management</h2>
             </div>
 
 
-            <div className="flex border-b border-neutral-200">
+            <div className="flex border-b border-border-custom">
                 <button
                     className={cn(
                         "px-6 py-3 text-sm font-medium border-b-2 transition-colors",
                         view === 'list'
                             ? "border-primary text-primary"
-                            : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
+                            : "border-transparent text-muted hover:text-text hover:border-border-custom"
                     )}
                     onClick={() => setView('list')}
                 >
                     Question List
-                    <span className="ml-2 text-xs bg-neutral-100 px-2 py-0.5 rounded-full text-neutral-600">{questions.length}</span>
+                    <span className="ml-2 text-xs bg-surface px-2 py-0.5 rounded-full text-muted">{questions.length}</span>
                 </button>
                 <button
                     className={cn(
                         "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
                         view === 'import'
                             ? "border-primary text-primary"
-                            : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
+                            : "border-transparent text-muted hover:text-text hover:border-border-custom"
                     )}
                     onClick={() => setView('import')}
                 >
@@ -122,7 +122,7 @@ export function StepQuestions({ questions, setQuestions }: any) {
                     <div className="flex justify-end mb-4">
                         <div className="flex gap-2">
                             <select
-                                className="h-9 rounded-lg border border-neutral-200 text-sm px-2"
+                                className="h-9 rounded-lg border border-border-custom bg-background text-text text-sm px-2"
                                 value={activeType}
                                 onChange={(e) => setActiveType(e.target.value as any)}
                             >
@@ -145,15 +145,15 @@ export function StepQuestions({ questions, setQuestions }: any) {
                     <div className="space-y-6 animate-in fade-in duration-300">
                         <div {...getRootProps()} className={cn(
                             "border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors",
-                            isDragActive ? "border-primary bg-primary/5" : "border-neutral-300 hover:border-primary",
+                            isDragActive ? "border-primary bg-primary/5" : "border-border-custom hover:border-primary",
                             error ? "border-red-300 bg-red-50" : ""
                         )}>
                             <input {...getInputProps()} />
-                            <FileSpreadsheet className={cn("mx-auto h-12 w-12 mb-4", error ? "text-red-400" : "text-neutral-400")} />
-                            <p className="text-lg font-medium text-neutral-900">
+                            <FileSpreadsheet className={cn("mx-auto h-12 w-12 mb-4", error ? "text-red-400" : "text-muted")} />
+                            <p className="text-lg font-medium text-text">
                                 {isDragActive ? "Drop the file here" : "Drag & drop Excel file"}
                             </p>
-                            <p className="text-sm text-neutral-500 mt-2">
+                            <p className="text-sm text-muted mt-2">
                                 or click to select file
                             </p>
                         </div>
@@ -165,11 +165,11 @@ export function StepQuestions({ questions, setQuestions }: any) {
                             </div>
                         )}
 
-                        <div className="bg-neutral-50 p-4 rounded-lg">
-                            <h3 className="text-sm font-medium text-neutral-900 mb-2">Template Format</h3>
+                        <div className="bg-surface p-4 rounded-lg">
+                            <h3 className="text-sm font-medium text-text mb-2">Template Format</h3>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-xs text-left text-neutral-600">
-                                    <thead className="bg-neutral-100 uppercase">
+                                <table className="w-full text-xs text-left text-muted">
+                                    <thead className="bg-background uppercase">
                                         <tr>
                                             <th className="px-3 py-2">question</th>
                                             <th className="px-3 py-2">optionA</th>
@@ -181,7 +181,7 @@ export function StepQuestions({ questions, setQuestions }: any) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr className="border-b border-neutral-200">
+                                        <tr className="border-b border-border-custom">
                                             <td className="px-3 py-2">What is 2+2?</td>
                                             <td className="px-3 py-2">3</td>
                                             <td className="px-3 py-2">4</td>
@@ -206,7 +206,7 @@ export function StepQuestions({ questions, setQuestions }: any) {
                                 </div>
 
                                 <div className="flex gap-4">
-                                    <div className="mt-2 text-neutral-300 cursor-move">
+                                    <div className="mt-2 text-muted cursor-move">
                                         <GripVertical className="h-5 w-5" />
                                     </div>
 
@@ -230,7 +230,7 @@ export function StepQuestions({ questions, setQuestions }: any) {
                                         </div>
 
                                         {q.type === 'mcq' && q.options && (
-                                            <div className="space-y-2 pl-4 border-l-2 border-neutral-100">
+                                            <div className="space-y-2 pl-4 border-l-2 border-border-custom">
                                                 {q.options.map((opt, optIndex) => (
                                                     <div key={optIndex} className="flex items-center gap-3">
                                                         <input
@@ -260,7 +260,7 @@ export function StepQuestions({ questions, setQuestions }: any) {
                         ))}
 
                         {questions.length === 0 && (
-                            <div className="text-center py-12 border-2 border-dashed border-neutral-200 rounded-xl text-neutral-400">
+                            <div className="text-center py-12 border-2 border-dashed border-border-custom rounded-xl text-muted">
                                 No questions added yet. Click "Add Question" to start or use Import.
                             </div>
                         )}

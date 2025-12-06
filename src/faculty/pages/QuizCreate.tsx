@@ -70,8 +70,8 @@ export default function QuizCreate() {
         <div className="space-y-6 max-w-5xl mx-auto">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-neutral-900">Create Quiz</h1>
-                    <div className="flex items-center text-sm text-neutral-500 mt-1">
+                    <h1 className="text-2xl font-bold text-text">Create Quiz</h1>
+                    <div className="flex items-center text-sm text-muted mt-1">
                         {isSaving ? (
                             <span className="flex items-center text-primary">
                                 <span className="animate-spin mr-2">⟳</span> Saving...
@@ -95,14 +95,20 @@ export default function QuizCreate() {
 
             {/* Stepper */}
             <div className="relative">
-                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-neutral-200 -z-10" />
-                <div className="flex justify-between">
+                {/* Background Line */}
+                <div className="absolute top-4 left-0 w-full h-0.5 bg-neutral-200 dark:bg-neutral-800 z-0" />
+                {/* Active Progress Line */}
+                <div
+                    className="absolute top-4 left-0 h-0.5 bg-primary z-0 transition-all duration-500 ease-in-out"
+                    style={{ width: `${(currentStep / (STEPS.length - 1)) * 100}%` }}
+                />
+                <div className="flex justify-between relative z-10">
                     {STEPS.map((step, index) => (
                         <div
                             key={step.id}
                             className={cn(
-                                "flex flex-col items-center gap-2 bg-white px-2 cursor-pointer z-10",
-                                index <= currentStep ? "text-primary" : "text-neutral-400"
+                                "flex flex-col items-center gap-2 bg-background px-2 cursor-pointer z-10",
+                                index <= currentStep ? "text-primary" : "text-muted"
                             )}
                             onClick={() => setCurrentStep(index)}
                         >
@@ -110,7 +116,7 @@ export default function QuizCreate() {
                                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors",
                                 index <= currentStep
                                     ? "border-primary bg-primary text-white"
-                                    : "border-neutral-300 bg-white text-neutral-500"
+                                    : "border-border-custom bg-background text-muted"
                             )}>
                                 {index + 1}
                             </div>

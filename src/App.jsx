@@ -1,20 +1,88 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import FacultyApp from './faculty/App'
-import LoginApp from './login/App'
+import Login from './login/pages/Login'
 import HomepageApp from './homepage/App'
+import QuizDetails from './student/pages/QuizDetails';
 import AdminApp from './admin/App'
+import StudentApp from './student/App'
+import { AuthProvider, useAuth } from './shared/context/AuthContext'
+import { ThemeProvider } from './shared/context/ThemeContext';
+import Header from './shared/components/Header';
+import { useState } from 'react';
 
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/faculty/*" element={<FacultyApp />} />
-        <Route path="/login/*" element={<LoginApp />} />
-        <Route path="/admin/*" element={<AdminApp />} />
-        <Route path="/" element={<HomepageApp />} />
-      </Routes>
-    </BrowserRouter>
-  )
+// Protected Route Component
+const ProtectedRoute = ({ children, allowedRoles }) => {
+    const { user, isLoading } = useAuth();
+
+    if (isLoading) return <div>Loading...</div>;
+
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+        return <Navigate to="/" replace />; // Or unauthorized page
+    }
+
+    return children;
+};
+
+function AppContent() {
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const location = useLocation();
+
+    return (
+        <div className="app-container">
+            {location.pathname !== '/login' && !location.pathname.startsWith('/faculty') && !location.pathname.startsWith('/admin') && !location.pathname.includes('/practice/setup') && !location.pathname.includes('/practice/test') && !location.pathname.includes('/practice/mcq') && (
+                <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+            )}
+            <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<HomepageApp searchQuery={searchQuery} />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/course/:id" element={<QuizDetails />} />
+
+                {/* Protected Routes */}
+                <Route
+                    path="/faculty/*"
+                    element={
+                        <ProtectedRoute allowedRoles={['faculty', 'admin']}>
+                            <FacultyApp />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/admin/*"
+                    element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                            <AdminApp />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/student/*"
+                    element={
+                        <ProtectedRoute allowedRoles={['student', 'admin']}>
+                            <StudentApp />
+                        </ProtectedRoute>
+                    }
+                />
+            </Routes>
+        </div>
+    );
 }
 
-export default App
+function App() {
+    return (
+        <Router>
+            <AuthProvider>
+                <ThemeProvider>
+                    <AppContent />
+                </ThemeProvider>
+            </AuthProvider>
+        </Router>
+    );
+}
+
+export default App;

@@ -22,7 +22,7 @@ export function Sidebar() {
     ];
 
     return (
-        <aside className="fixed left-0 top-15 z-40 h-[calc(100vh-5rem)] w-64 bg-white shadow-sm transition-transform">
+        <aside className="fixed left-0 top-[63px] z-40 h-[calc(100vh-63px)] w-64 bg-surface shadow-sm transition-transform border-r border-border-custom">
             <div className="flex h-full flex-col">
 
                 <nav className="flex-1 space-y-1 px-3 py-4">
@@ -33,10 +33,10 @@ export function Sidebar() {
                             end={item.to === '/faculty/dashboard'}
                             className={({ isActive }) =>
                                 cn(
-                                    'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                                    'flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group',
                                     isActive
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'text-neutral-700 hover:bg-neutral-100'
+                                        ? 'bg-primary/10 text-primary shadow-[0_0_20px_rgba(0,199,230,0.1)]'
+                                        : 'text-muted hover:bg-surface hover:text-text'
                                 )
                             }
                         >

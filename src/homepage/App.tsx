@@ -1,27 +1,57 @@
 import { useState, useMemo } from 'react';
-import Header from './components/Header';
 import Tabs from './components/Tabs';
 import CourseCard from './components/CourseCard';
 import type { Course, TabType } from './types';
 
-const sampleCourses: Course[] = Array.from({ length: 8 }).map((_, i) => ({
-  id: i + 1,
-  title:
-    i % 4 === 0
-      ? `Move from Graphic Designer to UX DESIGNER - Class ${i + 1}`
-      : i % 4 === 1
-        ? "User Experience Design For Mobile Apps & Websites (UI)"
-        : i % 4 === 2
-          ? "How To Create a Simple Website With Bootstrap 4"
-          : "Learn to make websites with Google's Material Design",
-  author: "Proble",
-  date: `Dec ${10 + i}`,
-  image: `https://picsum.photos/seed/course${i}/800/400`,
-}));
+import pythonBanner from '../assets/python_banner.png';
+import dbmsBanner from '../assets/dbms_banner.png';
+import osBanner from '../assets/os_banner.png';
+import mlBanner from '../assets/ml_banner.png';
 
-function App() {
+const sampleCourses: Course[] = [
+  {
+    id: 1,
+    title: "Programming, Data Structures and Algorithms Using Python",
+    author: "Proble",
+    date: "Dec 10",
+    image: pythonBanner
+  },
+  {
+    id: 2,
+    title: "Database Management System",
+    author: "Proble",
+    date: "Dec 11",
+    image: dbmsBanner
+  },
+  {
+    id: 3,
+    title: "Operating System Fundamentals",
+    author: "Proble",
+    date: "Dec 12",
+    image: osBanner
+  },
+  {
+    id: 4,
+    title: "Machine Learning by IIT Madras",
+    author: "Proble",
+    date: "Dec 13",
+    image: mlBanner
+  },
+  ...Array.from({ length: 4 }).map((_, i) => ({
+    id: i + 5,
+    title: `Advanced Topic ${i + 1}`,
+    author: "Proble",
+    date: `Dec ${14 + i}`,
+    image: `https://picsum.photos/seed/course${i + 5}/800/400`,
+  }))
+];
+
+interface AppProps {
+  searchQuery?: string;
+}
+
+function App({ searchQuery = '' }: AppProps) {
   const [activeTab, setActiveTab] = useState<TabType>('nptel');
-  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredCourses = useMemo(() => {
     let list = sampleCourses;
@@ -52,7 +82,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background font-sans text-text transition-colors duration-200">
-      <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+
 
       <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
 

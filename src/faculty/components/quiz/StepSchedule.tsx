@@ -22,14 +22,14 @@ export function StepSchedule({ data, update }: any) {
     return (
         <div className="space-y-6 max-w-2xl mx-auto">
             <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Schedule & Access</h2>
-                <p className="text-sm text-neutral-500">Configure when and how students can access this quiz.</p>
+                <h2 className="text-xl font-semibold text-text">Schedule & Access</h2>
+                <p className="text-sm text-muted">Configure when and how students can access this quiz.</p>
             </div>
 
             <Card className="p-6 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-neutral-700 flex items-center">
+                        <label className="text-sm font-medium text-text flex items-center">
                             <Calendar className="mr-2 h-4 w-4" /> Start Date & Time
                         </label>
                         <Input
@@ -40,7 +40,7 @@ export function StepSchedule({ data, update }: any) {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-neutral-700 flex items-center">
+                        <label className="text-sm font-medium text-text flex items-center">
                             <Clock className="mr-2 h-4 w-4" /> Duration (minutes)
                         </label>
                         <Input
@@ -52,8 +52,8 @@ export function StepSchedule({ data, update }: any) {
                     </div>
                 </div>
 
-                <div className="pt-6 border-t border-neutral-100 space-y-4">
-                    <label className="text-sm font-medium text-neutral-700 flex items-center">
+                <div className="pt-6 border-t border-border-custom space-y-4">
+                    <label className="text-sm font-medium text-text flex items-center">
                         <Key className="mr-2 h-4 w-4" /> Access Code
                     </label>
                     <div className="flex gap-3">
@@ -65,28 +65,28 @@ export function StepSchedule({ data, update }: any) {
                         />
                         <Button variant="outline" onClick={generateCode}>Generate</Button>
                     </div>
-                    <p className="text-xs text-neutral-500">Students will need this code to start the quiz.</p>
+                    <p className="text-xs text-muted">Students will need this code to start the quiz.</p>
                 </div>
 
-                <div className="pt-6 border-t border-neutral-100 space-y-4">
-                    <label className="text-sm font-medium text-neutral-700 flex items-center">
+                <div className="pt-6 border-t border-border-custom space-y-4">
+                    <label className="text-sm font-medium text-text flex items-center">
                         <Link className="mr-2 h-4 w-4" /> Shareable Link
                     </label>
                     <div className="flex gap-3">
                         <input
                             readOnly
                             value={`${window.location.origin}/quiz/${data.accessCode || '...'}`}
-                            className="flex-1 h-10 px-3 rounded-md border border-neutral-200 bg-neutral-50 text-sm text-neutral-600 font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="flex-1 h-10 px-3 rounded-md border border-border-custom bg-background text-sm text-muted font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
                         />
                         <Button variant="outline" onClick={copyLink} disabled={!data.accessCode}>
                             {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                         </Button>
                     </div>
-                    <p className="text-xs text-neutral-500">Direct link for students to join the quiz.</p>
+                    <p className="text-xs text-muted">Direct link for students to join the quiz.</p>
                 </div>
 
-                <div className="pt-6 border-t border-neutral-100">
-                    <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg text-blue-700">
+                <div className="pt-6 border-t border-border-custom">
+                    <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-700 dark:text-blue-300">
                         <Shield className="h-5 w-5 mt-0.5" />
                         <div>
                             <h4 className="font-medium text-sm">Proctoring Enabled</h4>

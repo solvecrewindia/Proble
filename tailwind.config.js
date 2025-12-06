@@ -4,6 +4,7 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    darkMode: 'class',
     theme: {
         extend: {
             colors: {
@@ -21,6 +22,7 @@ export default {
                     500: '#858585',
                 },
                 bg: '#F5F7FA',
+                'border-custom': 'rgb(var(--border-color-custom) / <alpha-value>)',
             },
             fontFamily: {
                 sans: ['Montserrat', 'sans-serif'],

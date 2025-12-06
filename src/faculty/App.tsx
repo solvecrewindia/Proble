@@ -2,10 +2,12 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Layout } from './components/layout/Layout';
+import { HeaderOnlyLayout } from './components/layout/HeaderOnlyLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
+import ProfileSettings from '../shared/pages/ProfileSettings';
 import QuizCreate from './pages/QuizCreate';
 
 import Global from './pages/Global';
@@ -20,6 +22,10 @@ function FacultyApp() {
     <AuthProvider>
       <Routes>
         <Route path="login" element={<Login />} />
+
+        <Route element={<HeaderOnlyLayout />}>
+          <Route path="profile-settings" element={<ProfileSettings />} />
+        </Route>
 
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="dashboard" replace />} />

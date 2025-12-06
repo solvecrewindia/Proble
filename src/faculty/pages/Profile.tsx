@@ -60,7 +60,7 @@ export default function Profile() {
                         <CardContent>
                             {isEditing ? (
                                 <textarea
-                                    className="w-full h-32 p-3 rounded-xl border border-neutral-200 focus:ring-primary focus:border-primary"
+                                    className="w-full h-32 p-3 rounded-xl border border-border-custom focus:ring-primary focus:border-primary"
                                     defaultValue="Passionate educator with over 15 years of experience in Computer Science and Artificial Intelligence. Dedicated to making complex concepts accessible to everyone."
                                 />
                             ) : (

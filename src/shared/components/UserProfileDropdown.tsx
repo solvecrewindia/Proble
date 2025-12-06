@@ -1,16 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Sun, Moon, LogOut } from 'lucide-react';
-
+import { ChevronDown, Sun, Moon, LogOut, Home, Settings, LayoutDashboard, List, Link2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 const UserProfileDropdown: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const { theme, setTheme } = useTheme();
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const isDarkMode = theme === 'dark';
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const toggleDropdown = () => setIsOpen(!isOpen);
     const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+        setIsOpen(false);
+    };
 
     // Click outside logic
     useEffect(() => {
@@ -26,6 +35,8 @@ const UserProfileDropdown: React.FC = () => {
         };
     }, []);
 
+    if (!user) return null;
+
     return (
         <div className="relative" ref={dropdownRef}>
             {/* Trigger Button */}
@@ -35,7 +46,7 @@ const UserProfileDropdown: React.FC = () => {
             >
                 <div className="w-8 h-8 rounded-full overflow-hidden border border-border-custom">
                     <img
-                        src="https://i.pravatar.cc/150?img=32"
+                        src={`https://ui-avatars.com/api/?name=${user.name}&background=random`}
                         alt="User Avatar"
                         className="w-full h-full object-cover"
                     />
@@ -55,14 +66,15 @@ const UserProfileDropdown: React.FC = () => {
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full overflow-hidden border border-border-custom shrink-0">
                                 <img
-                                    src="https://i.pravatar.cc/150?img=32"
+                                    src={`https://ui-avatars.com/api/?name=${user.name}&background=random`}
                                     alt="User Avatar"
                                     className="w-full h-full object-cover"
                                 />
                             </div>
                             <div className="flex flex-col overflow-hidden">
-                                <span className="text-sm font-bold text-text truncate">Tharun</span>
-                                <span className="text-xs text-muted truncate">tharun@example.com</span>
+                                <span className="text-sm font-bold text-text truncate">{user.name}</span>
+                                <span className="text-xs text-muted truncate">{user.email}</span>
+                                <span className="text-[10px] uppercase tracking-wider text-muted font-semibold">{user.role}</span>
                             </div>
                         </div>
                     </div>
@@ -97,9 +109,72 @@ const UserProfileDropdown: React.FC = () => {
                         </button>
                     </div>
 
+                    {/* Profile Settings Link */}
+                    <div className="px-2 py-1">
+                        <button
+                            onClick={() => {
+                                const role = user.role.toLowerCase();
+                                navigate(`/${role}/profile-settings`);
+                                setIsOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                        >
+                            <Settings className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                            <span className="text-sm font-medium">Profile Settings</span>
+                        </button>
+                    </div>
+
+                    {/* Student Specific Links */}
+                    {user.role === 'student' && (
+                        <>
+                            <div className="px-2 py-1">
+                                <button
+                                    onClick={() => {
+                                        navigate('/student/dashboard');
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                >
+                                    <LayoutDashboard className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                                    <span className="text-sm font-medium">Analysis</span>
+                                </button>
+                            </div>
+
+                            <div className="px-2 py-1 border-b border-border-custom">
+                                <button
+                                    onClick={() => {
+                                        navigate('/student/join');
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                >
+                                    <Link2 className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                                    <span className="text-sm font-medium">Join Master Test</span>
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Homepage Link */}
+                    <div className="px-2 py-1">
+                        <button
+                            onClick={() => {
+                                navigate('/');
+                                setIsOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                        >
+                            <Home className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                            <span className="text-sm font-medium">Homepage</span>
+                        </button>
+                    </div>
+
                     {/* Logout Section */}
                     <div className="p-2 border-t border-border-custom">
-                        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                        <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
                             <LogOut className="w-4 h-4" />
                             <span className="text-sm font-medium">Logout</span>
                         </button>
