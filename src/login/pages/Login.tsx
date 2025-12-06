@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, User as UserIcon, ArrowRight, Eye, EyeOff, Home, GraduationCap, School } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -16,7 +16,7 @@ export default function Login() {
     const [selectedRole, setSelectedRole] = useState<Role>(null);
 
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { login, signup } = useAuth();
     const { theme } = useTheme();
 
     // Form hooks for Sign In
@@ -56,12 +56,26 @@ export default function Login() {
     };
 
 
-    const onSignUpSubmit = (data: any) => {
+    const onSignUpSubmit = async (data: any) => {
         console.log('Sign Up Data:', { ...data, role: selectedRole });
-        alert('Registration successful! Please sign in.');
-        setActiveTab('signin');
-        setSignupStep(1);
-        setSelectedRole(null);
+        try {
+            const { user, error } = await signup(data.email, data.password, data.username, selectedRole!);
+            if (error) {
+                alert(`Registration failed: ${error.message}`);
+                console.error(error);
+                return;
+            }
+            if (user) {
+                alert('Registration successful! Please check your email for confirmation if enabled, or sign in.');
+                setActiveTab('signin');
+                setSignupStep(1);
+                setSelectedRole(null);
+            }
+        } catch (err) {
+            console.error('Unexpected error during signup:', err);
+            alert('An unexpected error occurred.');
+        }
+
     };
 
     const togglePasswordVisibility = () => setShowPassword(!showPassword);
@@ -72,18 +86,19 @@ export default function Login() {
 
     const onSignIn = async (data: any) => {
         try {
-            const user = await login(data.username);
+            const user = await login(data.email, data.password);
+
             if (user) {
                 if (user.role === 'admin') navigate('/admin');
                 else if (user.role === 'faculty') navigate('/faculty');
-                else if (user.role === 'student') navigate('/');
+                else if (user.role === 'student' || user.role === 'teacher') navigate('/'); // Student and Teacher go to home for now
                 else navigate('/');
             } else {
-                alert('Invalid credentials');
+                // Alert handled in catch or by check
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Login failed:', error);
-            alert('Login failed. Please try again.');
+            alert('Login failed: ' + (error.message || 'Invalid credentials'));
         }
     };
 
@@ -160,16 +175,17 @@ export default function Login() {
 
                             <form onSubmit={handleSubmitSignIn(onSignIn)} className="space-y-5">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Username</label>
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Email</label>
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                            <UserIcon className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            <Mail className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
                                         </div>
                                         <Input
-                                            {...registerSignIn('username', { required: 'Username is required' })}
-                                            placeholder="Enter your username"
+                                            type="email"
+                                            {...registerSignIn('email', { required: 'Email is required' })}
+                                            placeholder="Enter your email"
                                             className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl transition-all text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
-                                            error={errorsSignIn.username?.message as string}
+                                            error={errorsSignIn.email?.message as string}
                                         />
                                     </div>
                                 </div>
@@ -206,7 +222,7 @@ export default function Login() {
                                         </div>
                                         <span className="text-sm text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors">Remember Me</span>
                                     </label>
-                                    <a href="#" className="text-sm font-semibold text-primary hover:text-blue-600 transition-colors">Forgot Password?</a>
+                                    <Link to="/forgot-password" className="text-sm font-semibold text-primary hover:text-blue-600 transition-colors">Forgot Password?</Link>
                                 </div>
 
                                 <Button type="submit" className="w-full h-14 text-lg font-bold rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600 text-white shadow-lg shadow-blue-500/20 transform hover:-translate-y-0.5 transition-all duration-200 mt-4">

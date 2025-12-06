@@ -1,8 +1,10 @@
 export interface User {
     id: string;
-    name: string;
+    name?: string; // Optional as we capture username first
+    username?: string;
     email: string;
-    role: 'student' | 'faculty' | 'admin';
+    role: 'student' | 'faculty' | 'admin' | 'teacher';
+    created_at?: string;
 }
 
 export interface Quiz {

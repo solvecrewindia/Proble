@@ -8,6 +8,7 @@ import StudentApp from './student/App'
 import { AuthProvider, useAuth } from './shared/context/AuthContext'
 import { ThemeProvider } from './shared/context/ThemeContext';
 import Header from './shared/components/Header';
+import ForgotPassword from './login/pages/ForgotPassword';
 import { useState } from 'react';
 
 // Protected Route Component
@@ -34,13 +35,14 @@ function AppContent() {
 
     return (
         <div className="app-container">
-            {location.pathname !== '/login' && !location.pathname.startsWith('/faculty') && !location.pathname.startsWith('/admin') && !location.pathname.includes('/practice/setup') && !location.pathname.includes('/practice/test') && !location.pathname.includes('/practice/mcq') && (
+            {location.pathname !== '/login' && location.pathname !== '/forgot-password' && !location.pathname.startsWith('/faculty') && !location.pathname.startsWith('/admin') && !location.pathname.includes('/practice/setup') && !location.pathname.includes('/practice/test') && !location.pathname.includes('/practice/mcq') && (
                 <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
             )}
             <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<HomepageApp searchQuery={searchQuery} />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/course/:id" element={<QuizDetails />} />
 
                 {/* Protected Routes */}
