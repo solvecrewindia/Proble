@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta nameviewport="width=device-width, initial-scale=1.0">
+    <title>Proble – MCQ Test</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        html, body, * {
+            font-family: "Montserrat", sans-serif !important;
+        }
+
+        :root {
+            --cyan: #0ebcdb;
+            --black: #000000;
+            --grey: #6b7280;
+            --light: #F7F9FC;
+        }
+
+        body {
+            margin: 0;
+            background: var(--light);
+        }
+
+        /* HEADER */
+        .header {
+            padding: 12px 28px;
+            box-shadow: 0 1px 4px rgba(16, 24, 40, 0.06);
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* PROGRESS */
+        .header-progress {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 260px;
+        }
+
+        .progress-text {
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .progress-bg {
+            flex: 1;
+            height: 10px;
+            background: #DCEBFF;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            width: 20%;
+            height: 100%;
+            background: var(--cyan);
+            border-radius: 20px;
+        }
+
+        /* TIMER */
+        .timer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .timer-icon {
+            width: 36px;
+            height: 36px;
+            background: #F2F2F2;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        /* MAIN */
+        .main-wrapper {
+            padding: 40px 60px;
+        }
+
+        .test-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+
+        .row {
+            display: flex;
+            gap: 40px;
+        }
+
+        /* LEFT */
+        .left {
+            flex: 1;
+        }
+
+        .question-box {
+            background: #F7F9FC;
+            padding: 40px;
+        }
+
+        .q-title {
+            font-size: 15px;
+            opacity: .6;
+        }
+
+        .q-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        /* OPTIONS (INVERTED COLORS) */
+        .option {
+            background: #eeeeee;
+            border-radius: 14px;
+            margin-top: 16px;
+            padding: 16px;
+            box-shadow: 0 1px 4px rgba(16, 24, 40, 0.06);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: .2s;
+        }
+
+        .option:hover {
+            background: #e4e4e4;
+        }
+
+        .option.selected {
+            background: white;
+            border: 2px solid var(--cyan);
+            font-weight: 600;
+        }
+
+        .circle {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #666;
+            border-radius: 50%;
+        }
+
+        .option.selected .circle {
+            background: var(--cyan);
+            border-color: white;
+        }
+
+        /* BUTTONS */
+        .nav-buttons {
+            margin-top: 30px;
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .nav-btn {
+            padding: 12px 28px;
+            border-radius: 30px;
+            border: none;
+            background: #EAEEF5;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .finish-btn {
+            padding: 12px 28px;
+            border-radius: 30px;
+            background: black;
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* RIGHT SIDE — FIXED GRID */
+        .right {
+            width: 240px;
+            align-self: flex-start;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            align-content: start;   /* fixes big empty space */
+        }
+
+        /* CLEAN EXTRA-SMALL BUTTONS */
+        .grid-btn {
+            background: var(--cyan);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+
+            aspect-ratio: 1 / 1;
+            width: 32px;
+            font-size: 12px;
+            font-weight: 600;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .grid-btn.active {
+            background: #dcdcdc;
+            color: black;
+        }
+
+        .brand img {
+            height: 38px;
+            border-radius: 6px;
+        }
+
+    </style>
+
+    <script>
+        function selectOption(el) {
+            document.querySelectorAll(".option").forEach(o => o.classList.remove("selected"));
+            el.classList.add("selected");
+        }
+
+        function switchQuestion(no) {
+            document.querySelectorAll(".grid-btn").forEach(btn => btn.classList.remove("active"));
+            document.getElementById("q" + no).classList.add("active");
+
+            document.getElementById("questionNumber").innerText = "Question " + no;
+
+            let pct = (no / 10) * 100;
+            document.querySelector(".progress-fill").style.width = pct + "%";
+            document.querySelector(".progress-text").innerText = Math.round(pct) + "%";
+        }
+    </script>
+
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="brand">
+            <img src="proble.png" />
+        </div>
+
+        <div class="header-progress">
+            <div class="progress-text">20%</div>
+            <div class="progress-bg">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="timer">
+            <div class="timer-icon">⏱</div>
+            <div>
+                <div class="timer-text">00.00 Min</div>
+                <div class="timer-sub">Time Left</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-wrapper">
+
+        <div class="test-title">NPTEL – Session 1 MCQ Test</div>
+
+        <div class="row">
+
+            <div class="left">
+                <div class="question-box">
+                    <div id="questionNumber" class="q-title">Question 1</div>
+
+                    <div class="q-text">
+                        The Indian Contract Act 1872 came into force on...
+                    </div>
+
+                    <div class="option selected" onclick="selectOption(this)">
+                        Option A <div class="circle"></div>
+                    </div>
+
+                    <div class="option" onclick="selectOption(this)">
+                        Option B <div class="circle"></div>
+                    </div>
+
+                    <div class="option" onclick="selectOption(this)">
+                        Option C <div class="circle"></div>
+                    </div>
+
+                    <div class="option" onclick="selectOption(this)">
+                        Option D <div class="circle"></div>
+                    </div>
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="nav-btn">Previous</button>
+                    <button class="nav-btn">Next</button>
+                    <button class="finish-btn">Finish</button>
+                </div>
+            </div>
+
+            <div class="right">
+
+                <h3>Questions</h3>
+
+                <div class="grid">
+                    <div class="grid-btn active" id="q1" onclick="switchQuestion(1)">1</div>
+                    <div class="grid-btn" id="q2" onclick="switchQuestion(2)">2</div>
+                    <div class="grid-btn" id="q3" onclick="switchQuestion(3)">3</div>
+                    <div class="grid-btn" id="q4" onclick="switchQuestion(4)">4</div>
+                    <div class="grid-btn" id="q5" onclick="switchQuestion(5)">5</div>
+                    <div class="grid-btn" id="q6" onclick="switchQuestion(6)">6</div>
+                    <div class="grid-btn" id="q7" onclick="switchQuestion(7)">7</div>
+                    <div class="grid-btn" id="q8" onclick="switchQuestion(8)">8</div>
+                    <div class="grid-btn" id="q9" onclick="switchQuestion(9)">9</div>
+                    <div class="grid-btn" id="q10" onclick="switchQuestion(10)">10</div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

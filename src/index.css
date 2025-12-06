@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --color-primary: 0 199 230;
+        --color-background: 248 250 252;
+        --color-surface: 255 255 255;
+        --color-muted: 100 116 139;
+        --color-text: 15 23 42;
+        --border-color-custom: 229 231 235;
+        /* #E5E7EB (Gray-200) - Light Mode Border */
+    }
+
+    .dark {
+        --color-background: 11 11 11;
+        /* #0B0B0B */
+        --color-surface: 24 24 27;
+        /* #18181B */
+        --color-muted: 75 85 99;
+        /* #4B5563 */
+        --color-text: 248 250 252;
+        --border-color-custom: 107 114 128;
+        /* #6B7280 (Gray-500) - Visible Light Gray for Dark Mode */
+    }
+
+    body {
+        @apply bg-background text-text;
+    }
+
+    *,
+    ::before,
+    ::after {
+        border-width: 0;
+        border-style: solid;
+        border-color: rgb(var(--border-color-custom));
+    }
+}
+
+@layer utilities {
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* Custom Animations */
+    .animate-in {
+        animation-duration: 0.5s;
+        animation-fill-mode: both;
+        animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .fade-in {
+        animation-name: fadeIn;
+    }
+
+    .slide-in-from-right-8 {
+        animation-name: slideInRight;
+    }
+
+    .slide-in-from-left-8 {
+        animation-name: slideInLeft;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(2rem);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes slideInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-2rem);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+}

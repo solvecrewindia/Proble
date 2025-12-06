@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer base {
+  :root {
+    --color-primary: 0 199 230;
+    --color-background: 248 250 252;
+    --color-surface: 255 255 255;
+    --color-muted: 100 116 139;
+    --color-text: 15 23 42;
+    --border-color-custom: 229 231 235;
+    /* #E5E7EB (Gray-200) */
+  }
+
+  .dark {
+    --color-background: 11 11 11;
+    /* #0B0B0B */
+    --color-surface: 24 24 27;
+    /* #18181B */
+    --color-muted: 75 85 99;
+    /* #4B5563 */
+    --color-text: 248 250 252;
+    --border-color-custom: 107 114 128;
+    /* #6B7280 (Gray-500) */
+  }
+
+  body {
+    @apply bg-bg text-neutral-900 font-sans antialiased;
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-width: 0;
+    border-style: solid;
+    border-color: rgb(var(--border-color-custom));
+  }
+}
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
