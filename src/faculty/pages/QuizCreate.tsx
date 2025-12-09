@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Save, ChevronRight, ChevronLeft, Check } from 'lucide-react';
@@ -35,27 +37,88 @@ export default function QuizCreate() {
             allowRetake: false
         }
     });
-    const [questions, setQuestions] = useState<Question[]>([]);
-    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [questions, setQuestions] = useState<any[]>([]); // Using any[] temporarily to avoid type import issues if not present, but likely Question[]
     const [isSaving, setIsSaving] = useState(false);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-    // Autosave Logic
+    const { user } = useAuth();
+
+    // Generating access code
+    const generateCode = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+    };
+
+    // Autosave & Final Save Logic
     const saveMutation = useMutation({
         mutationFn: async (data: any) => {
-            // Mock API call
-            await new Promise(resolve => setTimeout(resolve, 500));
-            return { success: true };
+            // Ensure user is authenticated
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            const userId = currentUser?.id || user?.id;
+
+            if (!userId) throw new Error("Not authenticated");
+
+            const isMaster = data.type === 'master';
+            const quizPayload = {
+                title: data.title,
+                description: data.description,
+                type: data.type,
+                code: isMaster ? (data.code || generateCode()) : null,
+                settings: data.settings,
+                created_by: userId
+            };
+
+            // 1. Upsert Quiz
+            let quizId = (data as any).id;
+            let result;
+
+            if (quizId) {
+                result = await supabase.from('quizzes').update(quizPayload).eq('id', quizId).select().single();
+            } else {
+                result = await supabase.from('quizzes').insert(quizPayload).select().single();
+            }
+
+            if (result.error) throw result.error;
+            const savedQuiz = result.data;
+
+            // 2. Upsert Questions
+            if (quizId) {
+                await supabase.from('questions').delete().eq('quiz_id', quizId);
+            }
+
+            if (questions.length > 0) {
+                const questionsPayload = questions.map(q => ({
+                    quiz_id: savedQuiz.id,
+                    text: q.stem,
+                    choices: q.options || [],
+                    correct_answer: q.correct || '',
+                }));
+                const qResult = await supabase.from('questions').insert(questionsPayload);
+                if (qResult.error) throw qResult.error;
+            }
+
+            return savedQuiz;
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             setLastSaved(new Date());
             setIsSaving(false);
+            setQuizData(prev => ({ ...prev, id: data.id, code: data.code }));
         },
+        onError: (error) => {
+            console.error("Save failed:", error);
+            setIsSaving(false);
+        }
     });
 
     // Debounced save
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (quizData.title) {
+            // Only autosave if title exists and we have some valid state
+            if (quizData.title && (quizData.title.length > 3)) {
                 setIsSaving(true);
                 saveMutation.mutate({ ...quizData, questions });
             }

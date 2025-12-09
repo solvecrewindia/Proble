@@ -36,9 +36,8 @@ export function StepMetadata({ data, update }: any) {
                             value={data.settings?.antiCheatLevel || 'standard'}
                             onChange={(e) => update({ settings: { ...data.settings, antiCheatLevel: e.target.value } })}
                         >
-                            <option value="low">Low (Basic Monitoring)</option>
-                            <option value="standard">Standard (Tab Switching + Webcam)</option>
-                            <option value="strict">Strict (Full Lockdown)</option>
+                            <option value="standard">Standard (Tab Switching & Fullscreen)</option>
+                            <option value="strict">Strict (1 Strike Tolerance)</option>
                         </select>
                     </div>
 

@@ -15,9 +15,9 @@ const UserProfileDropdown: React.FC = () => {
     const toggleDropdown = () => setIsOpen(!isOpen);
     const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
-    const handleLogout = () => {
-        logout();
-        navigate('/');
+    const handleLogout = async () => {
+        await logout();
+        navigate('/login');
         setIsOpen(false);
     };
 

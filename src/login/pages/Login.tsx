@@ -14,6 +14,7 @@ export default function Login() {
     const [activeTab, setActiveTab] = useState<Tab>('signin');
     const [signupStep, setSignupStep] = useState(1);
     const [selectedRole, setSelectedRole] = useState<Role>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const navigate = useNavigate();
     const { login, signup } = useAuth();
@@ -25,6 +26,8 @@ export default function Login() {
         handleSubmit: handleSubmitSignIn,
         formState: { errors: errorsSignIn }
     } = useForm();
+
+
 
 
     const [showPassword, setShowPassword] = useState(false);
@@ -85,20 +88,31 @@ export default function Login() {
     };
 
     const onSignIn = async (data: any) => {
+        console.log("Login: onSignIn called with", data.email);
         try {
+            setIsLoading(true);
+            console.log("Login: calling auth.login...");
             const user = await login(data.email, data.password);
+            console.log("Login: auth.login returned:", user);
 
             if (user) {
-                if (user.role === 'admin') navigate('/admin');
-                else if (user.role === 'faculty') navigate('/faculty');
-                else if (user.role === 'student' || user.role === 'teacher') navigate('/'); // Student and Teacher go to home for now
-                else navigate('/');
+                // Determine path based on role
+                let path = '/';
+                if (user.role === 'admin') path = '/admin';
+                else if (user.role === 'faculty' || user.role === 'teacher') path = '/faculty';
+
+                console.log(`Login: Navigating to ${path} for role ${user.role}`);
+                navigate(path);
             } else {
-                // Alert handled in catch or by check
+                console.error("Login: User object is null/undefined after successful login call.");
+                alert("Login succeeded, but user profile could not be loaded. Please contact support.");
             }
         } catch (error: any) {
-            console.error('Login failed:', error);
+            console.error('Login: failed with error:', error);
             alert('Login failed: ' + (error.message || 'Invalid credentials'));
+        } finally {
+            console.log("Login: finally block - resetting isLoading");
+            setIsLoading(false);
         }
     };
 
@@ -225,8 +239,12 @@ export default function Login() {
                                     <Link to="/forgot-password" className="text-sm font-semibold text-primary hover:text-blue-600 transition-colors">Forgot Password?</Link>
                                 </div>
 
-                                <Button type="submit" className="w-full h-14 text-lg font-bold rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600 text-white shadow-lg shadow-blue-500/20 transform hover:-translate-y-0.5 transition-all duration-200 mt-4">
-                                    Login
+                                <Button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full h-14 text-lg font-bold rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600 text-white shadow-lg shadow-blue-500/20 transform hover:-translate-y-0.5 transition-all duration-200 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? 'Logging in...' : 'Login'}
                                 </Button>
                             </form>
                         </div>

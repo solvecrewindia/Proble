@@ -27,7 +27,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, showDate }) => {
                         />
                         <span>{course.author}</span>
                     </div>
-                    <span className="font-bold text-text">Module {(course.id % 10) + 1}</span>
+                    <span className="font-bold text-text">Module {typeof course.id === 'number' ? (course.id % 10) + 1 : 1}</span>
                 </div>
                 {showDate && <div className="text-xs mt-2 text-muted">{course.date}</div>}
             </div>

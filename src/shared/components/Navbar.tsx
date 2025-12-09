@@ -7,9 +7,21 @@ export const Navbar = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        logout();
-        navigate('/');
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/login'); // Better UX to go to login than home for explicit logout? User said "properly".
+            // Actually, usually home is fine, but login is clearer "I am out".
+            // Let's stick to '/' as per previous code, or ask yourself?
+            // The previous code had logout -> '/'.
+            // Let's keep '/' as it is safer unless user asked otherwise.
+            // Wait, "without disturbing others". Maybe redirect to Home is "disturbing" if they want to login as someone else?
+            // Redirecting to '/login' makes more sense for "switching users".
+            // I'll change it to '/login'.
+        } catch (error) {
+            console.error("Logout failed:", error);
+            navigate('/');
+        }
     };
 
     return (

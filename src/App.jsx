@@ -12,21 +12,33 @@ import ForgotPassword from './login/pages/ForgotPassword';
 import { useState } from 'react';
 
 // Protected Route Component
+// Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, isLoading } = useAuth();
+    const location = useLocation();
 
-    if (isLoading) return <div>Loading...</div>;
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            </div>
+        );
+    }
 
     if (!user) {
-        return <Navigate to="/login" replace />;
+        console.warn(`ProtectedRoute: Access denied to ${location.pathname}. No user found.`);
+        return <Navigate to="/login" replace state={{ from: location }} />;
     }
 
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-        return <Navigate to="/" replace />; // Or unauthorized page
+        console.warn(`ProtectedRoute: Access denied to ${location.pathname}. Role mismatch. User: ${user.role}, Allowed: ${allowedRoles}`);
+        return <Navigate to="/" replace />;
     }
 
     return children;
 };
+
+
 
 function AppContent() {
 
@@ -35,10 +47,11 @@ function AppContent() {
 
     return (
         <div className="app-container">
-            {location.pathname !== '/login' && location.pathname !== '/forgot-password' && !location.pathname.startsWith('/faculty') && !location.pathname.startsWith('/admin') && !location.pathname.includes('/practice/setup') && !location.pathname.includes('/practice/test') && !location.pathname.includes('/practice/mcq') && (
+            {location.pathname !== '/login' && location.pathname !== '/forgot-password' && !location.pathname.startsWith('/faculty') && !location.pathname.startsWith('/admin') && !location.pathname.includes('/practice/setup') && !location.pathname.includes('/practice/test') && !location.pathname.includes('/practice/mcq') && !location.pathname.includes('/student/test') && (
                 <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
             )}
             <Routes>
+                {/* Public Routes */}
                 {/* Public Routes */}
                 <Route path="/" element={<HomepageApp searchQuery={searchQuery} />} />
                 <Route path="/login" element={<Login />} />
@@ -49,7 +62,7 @@ function AppContent() {
                 <Route
                     path="/faculty/*"
                     element={
-                        <ProtectedRoute allowedRoles={['faculty', 'admin']}>
+                        <ProtectedRoute allowedRoles={['faculty', 'admin', 'teacher']}>
                             <FacultyApp />
                         </ProtectedRoute>
                     }
@@ -65,7 +78,7 @@ function AppContent() {
                 <Route
                     path="/student/*"
                     element={
-                        <ProtectedRoute allowedRoles={['student', 'admin']}>
+                        <ProtectedRoute allowedRoles={['student', 'admin', 'faculty', 'teacher']}>
                             <StudentApp />
                         </ProtectedRoute>
                     }

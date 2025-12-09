@@ -5,10 +5,14 @@ import { queryClient } from './faculty/lib/queryClient'
 import './index.css'
 import App from './App.jsx'
 
+import ErrorBoundary from './shared/components/ErrorBoundary.jsx'
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

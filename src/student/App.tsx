@@ -47,6 +47,7 @@ const StudentApp = () => {
             </Route>
 
             <Route path="practice/mcq/:id" element={<MCQTest />} />
+            <Route path="test/:id" element={<MCQTest />} />
             <Route path="practice/test/:id" element={<PracticeTest />} />
         </Routes>
     );

@@ -52,6 +52,7 @@ export interface Quiz {
         antiCheatLevel: 'low' | 'standard' | 'strict';
         allowRetake: boolean;
     };
+    created_by: string; // Foreign Key to profiles
     createdAt: string;
     updatedAt: string;
 }

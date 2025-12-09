@@ -1,11 +1,36 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Plus, Globe, BarChart2, Share2 } from 'lucide-react';
+import { BarChart2, Share2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import type { Quiz } from '../types';
 
 export default function Global() {
     const navigate = useNavigate();
+    const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchQuizzes = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('quizzes')
+                .select('*')
+                .eq('created_by', user.id)
+                .eq('type', 'global')
+                .order('created_at', { ascending: false });
+
+            if (data) setQuizzes(data as any);
+            setLoading(false);
+        };
+
+        fetchQuizzes();
+    }, []);
+
+    if (loading) return <div className="p-8 text-center">Loading quizzes...</div>;
 
     return (
         <div className="space-y-6">
@@ -14,53 +39,65 @@ export default function Global() {
                     <h1 className="text-2xl font-bold text-text">My Global Tests</h1>
                     <p className="text-muted">Manage your public assessments and view analytics.</p>
                 </div>
-
+                <Button onClick={() => navigate('/faculty/create')}>
+                    <Plus className="mr-2 h-4 w-4" /> Create New
+                </Button>
             </div>
 
             <div className="grid gap-6">
-                {/* Mock Item */}
-                <Card className="bg-surface border-border-custom">
-                    <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row gap-6">
-                            <div className="h-32 w-48 bg-blue-500 rounded-lg shrink-0" />
-                            <div className="flex-1 space-y-4">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-text">Introduction to Computer Science</h3>
-                                        <p className="text-sm text-muted">Published on Oct 15, 2024 • Technology</p>
+                {quizzes.length === 0 ? (
+                    <div className="text-center py-12 border-2 border-dashed border-border-custom rounded-lg">
+                        <p className="text-muted">No global quizzes found.</p>
+                        <Button variant="ghost" className="text-primary underline" onClick={() => navigate('/faculty/create')}>Create one now</Button>
+                    </div>
+                ) : (
+                    quizzes.map(quiz => (
+                        <Card key={quiz.id} className="bg-surface border-border-custom hover:border-primary transition-colors">
+                            <CardContent className="p-6">
+                                <div className="flex flex-col md:flex-row gap-6">
+                                    <div className="h-32 w-48 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shrink-0 flex items-center justify-center text-white font-bold text-3xl">
+                                        {quiz.title.charAt(0)}
                                     </div>
-                                    <div className="flex gap-2">
-                                        <Button variant="outline" size="sm" className="text-text border-border-custom hover:bg-background">
-                                            <Share2 className="h-4 w-4 mr-2" /> Share
-                                        </Button>
-                                        <Button variant="outline" size="sm" className="text-text border-border-custom hover:bg-background">
-                                            <BarChart2 className="h-4 w-4 mr-2" /> Analytics
-                                        </Button>
-                                    </div>
-                                </div>
+                                    <div className="flex-1 space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-xl font-bold text-text">{quiz.title}</h3>
+                                                <p className="text-sm text-muted">{new Date(quiz.createdAt || (quiz as any).created_at).toLocaleDateString()} • {quiz.description || 'No description'}</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button variant="outline" size="sm" className="text-text border-border-custom hover:bg-background">
+                                                    <Share2 className="h-4 w-4 mr-2" /> Share
+                                                </Button>
+                                                <Button variant="outline" size="sm" className="text-text border-border-custom hover:bg-background">
+                                                    <BarChart2 className="h-4 w-4 mr-2" /> Analytics
+                                                </Button>
+                                            </div>
+                                        </div>
 
-                                <div className="grid grid-cols-4 gap-4 py-4 border-y border-border-custom">
-                                    <div>
-                                        <div className="text-2xl font-bold text-text">1,250</div>
-                                        <div className="text-xs text-muted">Participants</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-2xl font-bold text-text">4.8</div>
-                                        <div className="text-xs text-muted">Rating</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-2xl font-bold text-text">85%</div>
-                                        <div className="text-xs text-muted">Avg. Score</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">Active</div>
-                                        <div className="text-xs text-muted">Status</div>
+                                        <div className="grid grid-cols-4 gap-4 py-4 border-y border-border-custom">
+                                            <div>
+                                                <div className="text-2xl font-bold text-text">-</div>
+                                                <div className="text-xs text-muted">Participants</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl font-bold text-text">-</div>
+                                                <div className="text-xs text-muted">Rating</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl font-bold text-text">-</div>
+                                                <div className="text-xs text-muted">Avg. Score</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl font-bold text-green-600 dark:text-green-400">Active</div>
+                                                <div className="text-xs text-muted">Status</div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
             </div>
         </div>
     );

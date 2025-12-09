@@ -1,36 +1,180 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Loader2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+
+import { useAntiCheat } from '../hooks/useAntiCheat';
+import { AlertTriangle, ShieldAlert } from 'lucide-react';
 
 const MCQTest = () => {
     const navigate = useNavigate();
+    const { id } = useParams();
     const { theme, setTheme } = useTheme();
     const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
-    const [currentQuestion, setCurrentQuestion] = useState(1);
-    const [selectedOption, setSelectedOption] = useState<number | null>(null);
-    const [timeLeft, setTimeLeft] = useState(1200); // 20 minutes in seconds
 
-    // Mock Questions
-    const questions = Array.from({ length: 10 }, (_, i) => ({
-        id: i + 1,
-        question: i === 0 ? "The Indian Contract Act 1872 came into force on..." : `Question ${i + 1} text placeholder...`,
-        options: ["Option A", "Option B", "Option C", "Option D"]
-    }));
+    const [questions, setQuestions] = useState<any[]>([]);
+    const [currentQuestion, setCurrentQuestion] = useState(1);
+    // Persist answers: Record<questionId, selectedOptionIndex>
+    const [answers, setAnswers] = useState<Record<number, number>>({});
+
+    // Results State
+    const [showResults, setShowResults] = useState(false);
+    const [score, setScore] = useState(0);
+
+    const [timeLeft, setTimeLeft] = useState(1200);
+    const [loading, setLoading] = useState(true);
+    const [testActive, setTestActive] = useState(false);
+
+    // Quiz Metadata
+    const [quizSettings, setQuizSettings] = useState<any>(null);
+
+    // Anti-Cheat Integration
+    const {
+        violations,
+        isFullScreen,
+        warning,
+        enterFullScreen,
+        remainingStrikes
+    } = useAntiCheat({
+        enabled: testActive && !showResults, // Disable anti-cheat when showing results
+        level: quizSettings?.antiCheatLevel || 'standard',
+        maxViolations: 3,
+        onAutoSubmit: () => {
+            alert("Test terminated due to multiple violations.");
+            calculateAndShowResults();
+        }
+    });
 
     useEffect(() => {
+        const fetchQuestions = async () => {
+            if (!id) return;
+
+            // 1. Fetch Quiz Settings (for anti-cheat level)
+            const { data: quizData } = await supabase
+                .from('quizzes')
+                .select('settings')
+                .eq('id', id)
+                .single();
+
+            if (quizData && quizData.settings) {
+                setQuizSettings(quizData.settings);
+            }
+
+            // Fetch questions from Supabase
+            const { data, error } = await supabase
+                .from('questions')
+                .select('*')
+                .eq('quiz_id', id)
+                .order('id'); // Ensure stable order or use created_at
+
+            if (data && data.length > 0) {
+                const mapped = data.map((q: any, index: number) => ({
+                    id: index + 1, // logical number
+                    dbId: q.id,
+                    question: q.text,
+                    options: q.choices,
+                    correct: q.correct_answer // Expecting text match usually, need to check if it's index or text
+                }));
+                setQuestions(mapped);
+                setLoading(false);
+            } else {
+                setLoading(false);
+            }
+        };
+
+        fetchQuestions();
+    }, [id]);
+
+    useEffect(() => {
+        if (loading || showResults) return;
         const timer = setInterval(() => {
-            setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    calculateAndShowResults();
+                    return 0;
+                }
+                return prev - 1;
+            });
         }, 1000);
         return () => clearInterval(timer);
-    }, []);
+    }, [loading, showResults]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}.${secs.toString().padStart(2, '0')} Min`;
     };
+
+    const handleOptionSelect = (optionIndex: number) => {
+        setAnswers(prev => ({
+            ...prev,
+            [currentQuestion]: optionIndex
+        }));
+    };
+
+    const calculateAndShowResults = () => {
+        let calculatedScore = 0;
+        questions.forEach((q) => {
+            const userAnswerIndex = answers[q.id];
+            if (userAnswerIndex !== undefined) {
+                const userAnswerText = q.options[userAnswerIndex];
+                // Check exact match with correct answer string
+                if (userAnswerText === q.correct) {
+                    calculatedScore++;
+                }
+            }
+        });
+        setScore(calculatedScore);
+        setShowResults(true);
+        setTestActive(false); // Stop anti-cheat monitoring
+
+        // Optional: Exit fullscreen for results
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(err => console.log(err));
+        }
+    };
+
+    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+
+    if (showResults) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+                <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+                    <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Test Completed</h1>
+
+                    <div className="mb-8">
+                        <div className="text-6xl font-bold text-primary mb-2">
+                            {Math.round((score / questions.length) * 100)}%
+                        </div>
+                        <p className="text-gray-500">
+                            You scored {score} out of {questions.length}
+                        </p>
+                    </div>
+
+                    <p className="text-sm text-gray-400 mb-8">
+                        Violations Recorded: {violations}
+                    </p>
+
+                    <button
+                        onClick={() => navigate('/student/dashboard')}
+                        className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition"
+                    >
+                        Return to Dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (questions.length === 0) return (
+        <div className="h-screen flex flex-col items-center justify-center">
+            <h2 className="text-xl font-bold">No questions found for this quiz.</h2>
+            <button onClick={() => navigate(-1)} className="mt-4 text-primary">Go Back</button>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-[#F7F9FC] dark:bg-background font-sans text-black dark:text-text">
@@ -72,9 +216,45 @@ const MCQTest = () => {
                 </div>
             </header>
 
+            {/* Anti-Cheat: Full Screen Enforcer / Start Screen */}
+            {(!testActive || !isFullScreen) && (
+                <div className="fixed inset-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-4">
+                    <div className="bg-white dark:bg-black border border-red-200 dark:border-red-900 shadow-2xl rounded-2xl p-8 max-w-md text-center">
+                        <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                        <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">
+                            {!testActive ? "Exam Security Protocol" : "Security Violation Detected!"}
+                        </h2>
+                        <p className="text-gray-600 dark:text-gray-400 mb-6">
+                            {!testActive
+                                ? "This exam is monitored. Full screen mode is required. Switching tabs or exiting full screen will result in warnings and potential termination."
+                                : "You have exited full screen mode. Please return to full screen immediately to continue your exam."}
+                        </p>
+                        <button
+                            onClick={async () => {
+                                await enterFullScreen();
+                                setTestActive(true);
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full transition-all transform hover:scale-105"
+                        >
+                            {!testActive ? "I Understand, Start Exam" : "Return to Exam"}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Anti-Cheat: Active Violation Warning Toast */}
+            {warning && (
+                <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[70] animate-bounce">
+                    <div className="bg-red-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3 font-bold border-2 border-white">
+                        <AlertTriangle className="w-5 h-5 fill-current" />
+                        {warning}
+                    </div>
+                </div>
+            )}
+
             {/* Main Content */}
             <div className="p-10 max-w-[1400px] mx-auto">
-                <h1 className="text-3xl font-semibold mb-6">NPTEL – Session 1 MCQ Test</h1>
+                <h1 className="text-3xl font-semibold mb-6">Quiz Session</h1>
 
                 <div className="flex gap-10 items-start">
                     {/* Left Side - Question */}
@@ -86,19 +266,19 @@ const MCQTest = () => {
                             </div>
 
                             <div className="space-y-4">
-                                {questions[currentQuestion - 1].options.map((opt, idx) => (
+                                {questions[currentQuestion - 1].options.map((opt: string, idx: number) => (
                                     <div
                                         key={idx}
-                                        onClick={() => setSelectedOption(idx)}
+                                        onClick={() => handleOptionSelect(idx)}
                                         className={cn(
                                             "bg-[#eeeeee] dark:bg-gray-800 rounded-[14px] p-4 shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none cursor-pointer flex justify-between items-center transition-colors hover:bg-[#e4e4e4] dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100",
-                                            selectedOption === idx && "bg-white dark:bg-gray-800 border-2 border-[#0ebcdb] font-semibold"
+                                            answers[currentQuestion] === idx && "bg-white dark:bg-gray-800 border-2 border-[#0ebcdb] font-semibold"
                                         )}
                                     >
                                         {opt}
                                         <div className={cn(
                                             "w-[18px] h-[18px] border-2 border-[#666] dark:border-gray-400 rounded-full",
-                                            selectedOption === idx && "bg-[#0ebcdb] border-white dark:border-gray-800"
+                                            answers[currentQuestion] === idx && "bg-[#0ebcdb] border-white dark:border-gray-800"
                                         )} />
                                     </div>
                                 ))}
@@ -117,7 +297,6 @@ const MCQTest = () => {
                                 className="px-7 py-3 rounded-full bg-[#EAEEF5] dark:bg-gray-800 font-semibold text-gray-900 dark:text-gray-100 hover:bg-[#dfe4ef] dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
                                 onClick={() => {
                                     setCurrentQuestion(prev => Math.min(questions.length, prev + 1));
-                                    setSelectedOption(null);
                                 }}
                                 disabled={currentQuestion === questions.length}
                             >
@@ -125,7 +304,7 @@ const MCQTest = () => {
                             </button>
                             <button
                                 className="px-7 py-3 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
-                                onClick={() => navigate('/student/practice')}
+                                onClick={calculateAndShowResults}
                             >
                                 Finish
                             </button>
@@ -144,7 +323,9 @@ const MCQTest = () => {
                                         "aspect-square rounded-md text-xs font-semibold flex items-center justify-center transition-colors",
                                         currentQuestion === q.id
                                             ? "bg-[#dcdcdc] dark:bg-gray-700 text-black dark:text-gray-100"
-                                            : "bg-[#0ebcdb] text-white"
+                                            : answers[q.id] !== undefined
+                                                ? "bg-[#0ebcdb] text-white"
+                                                : "bg-gray-200 dark:bg-gray-800 text-gray-500"
                                     )}
                                 >
                                     {q.id}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
     BarChart2,
@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export function Sidebar() {
     const { logout } = useAuth();
+    const navigate = useNavigate();
 
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', to: '/faculty/dashboard' },
@@ -46,7 +47,18 @@ export function Sidebar() {
                     ))}
                 </nav>
 
-
+                <div className="p-3 mt-auto mb-4">
+                    <button
+                        onClick={async () => {
+                            await logout();
+                            navigate('/login');
+                        }}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-red-500 hover:bg-red-50/10 hover:text-red-600"
+                    >
+                        <LogOut className="mr-3 h-5 w-5" />
+                        Logout
+                    </button>
+                </div>
             </div>
         </aside>
     );

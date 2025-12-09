@@ -1,19 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
 import { Star, Clock, BookOpen, ArrowLeft } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const QuizDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [userRating, setUserRating] = React.useState(0);
+    const [quiz, setQuiz] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Mock data
-    const quizzes: Record<string, any> = {
+    // Mock data for fallback or specific IDs if needed, but primarily use Supabase
+    const mockQuizzes: Record<string, any> = {
         '1': {
             id: '1',
             title: 'Programming, Data Structures and Algorithms Using Python',
-            description: 'This course introduces the concepts of programming, data structures and algorithms using Python. It covers basic data types, control flow, functions, lists, dictionaries, scaling up to complex data structures like trees and graphs.',
+            description: 'This course introduces the concepts of programming, data structures and algorithms using Python.',
             rating: 4.8,
             totalRatings: 342,
             duration: '120 mins',
@@ -21,42 +24,54 @@ const QuizDetails = () => {
             difficulty: 'Intermediate',
             author: 'Prof. Madhavan Mukund'
         },
-        '2': {
-            id: '2',
-            title: 'Database Management System',
-            description: 'A comprehensive study of Database Management Systems, covering areas like ER models, Relational Algebra, SQL, Normalization, Indexing and Transaction Processing.',
-            rating: 4.6,
-            totalRatings: 215,
-            duration: '90 mins',
-            questions: 45,
-            difficulty: 'Hard',
-            author: 'Prof. Partha Pratim Das'
-        },
-        '3': {
-            id: '3',
-            title: 'Operating System Fundamentals',
-            description: 'Dive deep into the core of computer systems. Learn about Processes, Threads, Scheduling, Synchronization, Deadlocks, Memory Management and File Systems.',
-            rating: 4.7,
-            totalRatings: 189,
-            duration: '90 mins',
-            questions: 50,
-            difficulty: 'Hard',
-            author: 'Prof. Chester Rebeiro'
-        },
-        '4': {
-            id: '4',
-            title: 'Machine Learning by IIT Madras',
-            description: 'An introduction to Machine Learning covering Supervised and Unsupervised Learning, Regression, Classification, Clustering, Neural Networks and Deep Learning.',
-            rating: 4.9,
-            totalRatings: 560,
-            duration: '150 mins',
-            questions: 75,
-            difficulty: 'Expert',
-            author: 'Prof. Balaraman Ravindran'
-        },
+        // ... (keep other mocks if desired, or remove)
     };
 
-    const quiz = quizzes[id || '1'] || quizzes['1'];
+    useEffect(() => {
+        const fetchQuiz = async () => {
+            if (!id) return;
+
+            // Check if it's a mock ID (optional, for demo continuity)
+            if (mockQuizzes[id]) {
+                setQuiz(mockQuizzes[id]);
+                setLoading(false);
+                return;
+            }
+
+            // Fetch from Supabase
+            const { data: quizData, error } = await supabase
+                .from('quizzes')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (quizData) {
+                // Fetch question count
+                const { count } = await supabase
+                    .from('questions')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('quiz_id', id);
+
+                setQuiz({
+                    id: quizData.id,
+                    title: quizData.title,
+                    description: quizData.description,
+                    rating: 4.5, // Default/Mock for now
+                    totalRatings: 0,
+                    duration: (quizData.settings?.duration || 60) + ' mins',
+                    questions: count || 0,
+                    difficulty: 'Intermediate', // logic or default
+                    author: 'Faculty' // or fetch profile
+                });
+            }
+            setLoading(false);
+        };
+
+        fetchQuiz();
+    }, [id]);
+
+    if (loading) return <div className="p-10 text-center">Loading details...</div>;
+    if (!quiz) return <div className="p-10 text-center text-red-500">Quiz not found.</div>;
 
     return (
         <div className="bg-surface w-full min-h-screen pb-12">
@@ -160,9 +175,9 @@ const QuizDetails = () => {
                         variant="primary"
                         size="lg"
                         className="w-full sm:w-48 h-12 text-base shadow-lg shadow-primary/25"
-                        onClick={() => navigate(`/student/practice/mcq/${id}`)}
+                        onClick={() => navigate(`/student/test/${id}`)}
                     >
-                        Mock Test
+                        Start Assessment
                     </Button>
                 </div>
             </div>
