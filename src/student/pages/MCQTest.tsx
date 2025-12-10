@@ -26,6 +26,7 @@ const MCQTest = () => {
     const [timeLeft, setTimeLeft] = useState(1200);
     const [loading, setLoading] = useState(true);
     const [testActive, setTestActive] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
 
     // Quiz Metadata
     const [quizSettings, setQuizSettings] = useState<any>(null);
@@ -54,12 +55,17 @@ const MCQTest = () => {
             // 1. Fetch Quiz Settings (for anti-cheat level)
             const { data: quizData } = await supabase
                 .from('quizzes')
-                .select('settings')
+                .select('settings, status')
                 .eq('id', id)
                 .single();
 
             if (quizData && quizData.settings) {
                 setQuizSettings(quizData.settings);
+            }
+            if (quizData && quizData.status !== 'active' && quizData.status !== 'paused') {
+                alert("This test is not currently active.");
+                navigate('/student/dashboard');
+                return;
             }
 
             // Fetch questions from Supabase
@@ -86,6 +92,45 @@ const MCQTest = () => {
 
         fetchQuestions();
     }, [id]);
+
+    useEffect(() => {
+        if (!id || loading || showResults) return;
+
+        // Join Realtime Channel
+        const channel = supabase.channel(`quiz_session:${id}`, {
+            config: {
+                presence: {
+                    key: (supabase.auth.getSession() as any)?.user?.id || 'anon',
+                },
+            },
+        });
+
+        channel
+            .on('broadcast', { event: 'test_ended' }, (payload) => {
+                alert('The teacher has ended this test session.');
+                calculateAndShowResults();
+            })
+            .on('broadcast', { event: 'test_paused' }, () => {
+                setTestActive(false); // Disable anti-cheat to pause
+                setIsPaused(true);
+            })
+            .on('broadcast', { event: 'test_resumed' }, () => {
+                setIsPaused(false);
+                setTestActive(true);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                        await channel.track({ student_id: user.id, online_at: new Date().toISOString() });
+                    }
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [id, loading, showResults]);
 
     useEffect(() => {
         if (loading || showResults) return;
@@ -115,7 +160,7 @@ const MCQTest = () => {
         }));
     };
 
-    const calculateAndShowResults = () => {
+    const calculateAndShowResults = async () => {
         let calculatedScore = 0;
         questions.forEach((q) => {
             const userAnswerIndex = answers[q.id];
@@ -134,6 +179,23 @@ const MCQTest = () => {
         // Optional: Exit fullscreen for results
         if (document.fullscreenElement) {
             document.exitFullscreen().catch(err => console.log(err));
+        }
+
+        // Save Results to Supabase
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user && id) {
+                const { error } = await supabase.from('quiz_results').insert({
+                    quiz_id: id,
+                    student_id: user.id,
+                    score: calculatedScore,
+                    total_questions: questions.length,
+                    percentage: (calculatedScore / questions.length) * 100
+                });
+                if (error) console.error("Error saving results:", error);
+            }
+        } catch (err) {
+            console.error("Unexpected error saving results:", err);
         }
     };
 
@@ -242,8 +304,21 @@ const MCQTest = () => {
                 </div>
             )}
 
+            {/* Pause Overlay */}
+            {isPaused && (
+                <div className="fixed inset-0 z-[80] bg-white/95 dark:bg-gray-900/95 backdrop-blur flex flex-col items-center justify-center p-4">
+                    <div className="text-center">
+                        <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                        <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">Test Paused</h2>
+                        <p className="text-xl text-gray-600 dark:text-gray-400">
+                            The faculty has paused this test. Please wait...
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Anti-Cheat: Active Violation Warning Toast */}
-            {warning && (
+            {warning && !isPaused && (
                 <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[70] animate-bounce">
                     <div className="bg-red-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3 font-bold border-2 border-white">
                         <AlertTriangle className="w-5 h-5 fill-current" />

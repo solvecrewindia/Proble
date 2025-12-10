@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './shared/context/AuthContext'
 import { ThemeProvider } from './shared/context/ThemeContext';
 import Header from './shared/components/Header';
 import ForgotPassword from './login/pages/ForgotPassword';
+import SharedQuizHandler from './shared/components/SharedQuizHandler';
 import { useState } from 'react';
 
 // Protected Route Component
@@ -57,6 +58,7 @@ function AppContent() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/course/:id" element={<QuizDetails />} />
+                <Route path="/quiz/:code" element={<SharedQuizHandler />} />
 
                 {/* Protected Routes */}
                 <Route

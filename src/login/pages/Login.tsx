@@ -96,6 +96,14 @@ export default function Login() {
             console.log("Login: auth.login returned:", user);
 
             if (user) {
+                // Check if there's a return path in state
+                const state = (location as any).state;
+                if (state?.from?.pathname) {
+                    const from = state.from.pathname + (state.from.search || '');
+                    navigate(from, { replace: true });
+                    return;
+                }
+
                 // Determine path based on role
                 let path = '/';
                 if (user.role === 'admin') path = '/admin';

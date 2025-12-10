@@ -38,6 +38,7 @@ create table public.quizzes (
   description text,
   type text check (type in ('master', 'global')),
   code text unique, -- For Master quizzes
+  status text default 'active' check (status in ('draft', 'active', 'paused', 'completed')),
   settings jsonb default '{}'::jsonb,
   created_by uuid references public.profiles(id) not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null

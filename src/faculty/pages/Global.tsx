@@ -1,10 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { BarChart2, Share2, Plus } from 'lucide-react';
+import { BarChart2, Share2, Plus, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Quiz } from '../types';
+
+function ShareButton({ quizCode, quizId }: { quizCode?: string; quizId: string }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleShare = async () => {
+        // Use code if available, otherwise fallback to ID (though code is preferred for cleaner URLs)
+        const identifier = quizCode || quizId;
+        const link = `${window.location.origin}/quiz/${identifier}`;
+
+        try {
+            await navigator.clipboard.writeText(link);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+        }
+    };
+
+    return (
+        <Button
+            variant="outline"
+            size="sm"
+            className="text-text border-border-custom hover:bg-background"
+            onClick={handleShare}
+        >
+            {copied ? (
+                <>
+                    <Check className="h-4 w-4 mr-2" /> Copied
+                </>
+            ) : (
+                <>
+                    <Share2 className="h-4 w-4 mr-2" /> Share
+                </>
+            )}
+        </Button>
+    );
+}
 
 export default function Global() {
     const navigate = useNavigate();
@@ -65,9 +102,10 @@ export default function Global() {
                                                 <p className="text-sm text-muted">{new Date(quiz.createdAt || (quiz as any).created_at).toLocaleDateString()} • {quiz.description || 'No description'}</p>
                                             </div>
                                             <div className="flex gap-2">
-                                                <Button variant="outline" size="sm" className="text-text border-border-custom hover:bg-background">
-                                                    <Share2 className="h-4 w-4 mr-2" /> Share
-                                                </Button>
+                                                <ShareButton
+                                                    quizCode={(quiz as any).code || quiz.accessCode}
+                                                    quizId={quiz.id}
+                                                />
                                                 <Button variant="outline" size="sm" className="text-text border-border-custom hover:bg-background">
                                                     <BarChart2 className="h-4 w-4 mr-2" /> Analytics
                                                 </Button>

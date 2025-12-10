@@ -42,7 +42,7 @@ export interface Quiz {
     title: string;
     description: string;
     type: 'global' | 'master';
-    status: 'draft' | 'published' | 'archived';
+    status: 'draft' | 'active' | 'completed' | 'paused';
     accessCode?: string;
     scheduledAt?: string;
     questions: Question[];

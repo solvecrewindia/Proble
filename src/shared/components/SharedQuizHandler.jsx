@@ -1,0 +1,38 @@
+import { useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+const SharedQuizHandler = () => {
+    const { code } = useParams();
+    const { user, loading } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        if (loading) return;
+
+        if (!user) {
+            // User not logged in, redirect to login
+            // Pass the current location so they can be redirected back after login
+            navigate('/login', {
+                state: { from: location },
+                replace: true
+            });
+        } else {
+            // User logged in, redirect to student join page with code
+            navigate(`/student/join?code=${code}`, { replace: true });
+        }
+    }, [user, loading, code, navigate, location]);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-background">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    return null;
+};
+
+export default SharedQuizHandler;
