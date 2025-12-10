@@ -3,6 +3,8 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Quizzes from './pages/Quizzes';
+import QuizList from './pages/QuizList';
+import AdminQuizCreate from './pages/AdminQuizCreate';
 import ProblemRequests from './pages/ProblemRequests';
 import Settings from './pages/Settings';
 import ProfileSettings from '../shared/pages/ProfileSettings';
@@ -18,6 +20,8 @@ function AdminApp() {
           <Route index element={<Dashboard />} />
           <Route path="users" element={<Users />} />
           <Route path="quizzes" element={<Quizzes />} />
+          <Route path="quizzes/:category" element={<QuizList />} />
+          <Route path="quizzes/:category/create" element={<AdminQuizCreate />} />
           <Route path="problem-requests" element={<ProblemRequests />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />

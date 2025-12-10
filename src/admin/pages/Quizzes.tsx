@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { BookOpen, GraduationCap, Globe, Server, Plus, X, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpen, GraduationCap, Server, Plus, X, Check } from 'lucide-react';
 
 const Quizzes = () => {
+    const navigate = useNavigate();
     const [modules, setModules] = useState([
         {
             id: 1,
@@ -29,15 +31,6 @@ const Quizzes = () => {
             icon: Server,
             color: 'text-purple-500',
             bg: 'bg-purple-500/10',
-        },
-        {
-            id: 4,
-            title: 'Global',
-            description: 'International Standards & General Knowledge',
-            count: '1000+ Quizzes',
-            icon: Globe,
-            color: 'text-orange-500',
-            bg: 'bg-orange-500/10',
         },
     ]);
 
@@ -92,9 +85,12 @@ const Quizzes = () => {
                         </p>
                         <div className="flex items-center justify-between border-t border-surface pt-4 mt-auto">
                             <span className="text-xs font-medium text-text">{module.count}</span>
-                            <span className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                                onClick={() => navigate(`/admin/quizzes/${module.title.toLowerCase()}`)}
+                                className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
+                            >
                                 View All &rarr;
-                            </span>
+                            </button>
                         </div>
                     </div>
                 ))}
