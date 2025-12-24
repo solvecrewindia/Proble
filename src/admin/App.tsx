@@ -8,6 +8,7 @@ import AdminQuizCreate from './pages/AdminQuizCreate';
 import ProblemRequests from './pages/ProblemRequests';
 import Settings from './pages/Settings';
 import ProfileSettings from '../shared/pages/ProfileSettings';
+import AdminSelectType from './pages/AdminSelectType';
 import { ThemeProvider } from './context/ThemeContext';
 import './index.css';
 
@@ -18,6 +19,7 @@ function AdminApp() {
         <Route path="profile-settings" element={<ProfileSettings />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
+          <Route path="create" element={<AdminSelectType />} />
           <Route path="users" element={<Users />} />
           <Route path="quizzes" element={<Quizzes />} />
           <Route path="quizzes/:category" element={<QuizList />} />

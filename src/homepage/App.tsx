@@ -12,36 +12,7 @@ import dbmsBanner from '../assets/dbms_banner.png';
 import osBanner from '../assets/os_banner.png';
 import mlBanner from '../assets/ml_banner.png';
 
-const sampleCourses: Course[] = [
-  {
-    id: 1,
-    title: "Programming, Data Structures and Algorithms Using Python",
-    author: "Proble",
-    date: "Dec 10",
-    image: pythonBanner
-  },
-  {
-    id: 2,
-    title: "Database Management System",
-    author: "Proble",
-    date: "Dec 11",
-    image: dbmsBanner
-  },
-  {
-    id: 3,
-    title: "Operating System Fundamentals",
-    author: "Proble",
-    date: "Dec 12",
-    image: osBanner
-  },
-  {
-    id: 4,
-    title: "Machine Learning by IIT Madras",
-    author: "Proble",
-    date: "Dec 13",
-    image: mlBanner
-  }
-];
+// Sample courses removed in favor of Supabase fetching
 
 interface AppProps {
   searchQuery?: string;
@@ -49,34 +20,50 @@ interface AppProps {
 
 function App({ searchQuery = '' }: AppProps) {
   const [activeTab, setActiveTab] = useState<TabType>('nptel');
-  const [globalQuizzes, setGlobalQuizzes] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [joining, setJoining] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch Global Quizzes
+  // Fetch Quizzes based on Active Tab
   useEffect(() => {
-    const fetchGlobal = async () => {
-      const { data } = await supabase
-        .from('quizzes')
-        .select('*')
-        .eq('type', 'global')
-        .order('created_at', { ascending: false })
-        .limit(10);
+    const fetchQuizzes = async () => {
+      setLoading(true);
+      try {
+        // Map tab to DB type if needed, or use directly if 1:1
+        // TabType: 'nptel' | 'gate' | 'srm' | 'global'
+        // DB Type: 'nptel', 'gate', 'srm', 'global' (assumed 1:1 based on AdminQuizCreate update)
 
-      if (data) {
-        const mapped: Course[] = data.map((q: any) => ({
-          id: q.id, // Keep string ID if CourseCard supports it (it expects number/string collision, let's type hack if needed)
-          title: q.title,
-          author: 'Faculty', // Or fetch author name
-          date: new Date(q.created_at).toLocaleDateString(),
-          image: `https://ui-avatars.com/api/?name=${q.title}&background=random&size=400` // Placeholder
-        }));
-        setGlobalQuizzes(mapped);
+        const { data, error } = await supabase
+          .from('quizzes')
+          .select('*')
+          .eq('type', activeTab) // specific type
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data) {
+          const mapped: Course[] = data.map((q: any) => ({
+            id: q.id,
+            title: q.title,
+            author: 'Faculty', // Could be dynamic if we joined profiles
+            date: new Date(q.created_at).toLocaleDateString(),
+            image: q.image_url || `https://ui-avatars.com/api/?name=${q.title}&background=random&size=400` // Use uploaded image or placeholder
+          }));
+          setCourses(mapped);
+        } else {
+          setCourses([]);
+        }
+      } catch (err) {
+        console.error('Error fetching quizzes:', err);
+        setCourses([]); // Fallback to empty
+      } finally {
+        setLoading(false);
       }
     };
-    fetchGlobal();
-  }, []);
+    fetchQuizzes();
+  }, [activeTab]);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,21 +92,13 @@ function App({ searchQuery = '' }: AppProps) {
   };
 
   const filteredCourses = useMemo(() => {
-    let list = sampleCourses;
-
-    // Tab filtering logic
-    if (activeTab === 'nptel') list = sampleCourses.slice(0, 4);
-    else if (activeTab === 'gate') list = sampleCourses.slice(2, 6);
-    else if (activeTab === 'srm') list = sampleCourses.slice(1, 5);
-    else if (activeTab === 'global') list = globalQuizzes; // Use fetched data
-
+    let list = courses;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter((c) => c.title.toLowerCase().includes(q));
     }
-
     return list;
-  }, [activeTab, searchQuery, globalQuizzes]);
+  }, [courses, searchQuery]);
 
   const getTabLabel = (tab: TabType) => {
     switch (tab) {

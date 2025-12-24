@@ -24,8 +24,19 @@ export default function Login() {
     const {
         register: registerSignIn,
         handleSubmit: handleSubmitSignIn,
+        setValue: setSignInValue,
         formState: { errors: errorsSignIn }
     } = useForm();
+
+    const [rememberMe, setRememberMe] = useState(false);
+
+    React.useEffect(() => {
+        const savedEmail = localStorage.getItem('rememberedEmail');
+        if (savedEmail) {
+            setSignInValue('email', savedEmail);
+            setRememberMe(true);
+        }
+    }, [setSignInValue]);
 
 
 
@@ -96,6 +107,12 @@ export default function Login() {
             console.log("Login: auth.login returned:", user);
 
             if (user) {
+                if (rememberMe) {
+                    localStorage.setItem('rememberedEmail', data.email);
+                } else {
+                    localStorage.removeItem('rememberedEmail');
+                }
+
                 // Check if there's a return path in state
                 const state = (location as any).state;
                 if (state?.from?.pathname) {
@@ -238,7 +255,12 @@ export default function Login() {
                                 <div className="flex items-center justify-between pt-2">
                                     <label className="flex items-center space-x-2 cursor-pointer group">
                                         <div className="relative">
-                                            <input type="checkbox" className="peer sr-only" />
+                                            <input
+                                                type="checkbox"
+                                                className="peer sr-only"
+                                                checked={rememberMe}
+                                                onChange={(e) => setRememberMe(e.target.checked)}
+                                            />
                                             <div className="w-5 h-5 border-2 border-neutral-300 dark:border-neutral-600 rounded bg-background peer-checked:bg-primary peer-checked:border-primary transition-all"></div>
                                             <svg className="w-3.5 h-3.5 absolute top-1 left-1 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
                                         </div>

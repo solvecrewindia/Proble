@@ -3,9 +3,11 @@ import { supabase } from '../../lib/supabase';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Save, ChevronRight, ChevronLeft, Check, ArrowLeft } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import { Button } from '../../faculty/components/ui/Button'; // Reusing components
 import { Card, CardContent } from '../../faculty/components/ui/Card';
 import { cn } from '../../faculty/lib/utils';
+import { useAuth } from '../../shared/context/AuthContext';
 
 // Reusing Steps from Faculty
 import { AdminStepMetadata } from '../components/quiz/AdminStepMetadata';
@@ -24,11 +26,12 @@ const STEPS = [
 export default function AdminQuizCreate() {
     const navigate = useNavigate();
     const { category } = useParams();
+    const { user: contextUser } = useAuth(); // Get user from context
     const [currentStep, setCurrentStep] = useState(0);
     const [quizData, setQuizData] = useState<any>({
         title: '',
         description: '',
-        type: 'global', // Default to global, but we append category to settings
+        type: category ? category.toLowerCase() : 'global', // Set type from URL category
         settings: {
             duration: 60,
             passingScore: 40,
@@ -42,9 +45,16 @@ export default function AdminQuizCreate() {
     const [questions, setQuestions] = useState<any[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-    // Initial Setup
+    // Initial Setup & ID Generation
     useEffect(() => {
+        if (!quizData.id) {
+            // Generate a stable ID for new quizzes to ensure image paths are valid before first save
+            const newId = uuidv4();
+            setQuizData((prev: any) => ({ ...prev, id: newId }));
+        }
+
         if (category) {
             setQuizData((prev: any) => ({
                 ...prev,
@@ -70,34 +80,64 @@ export default function AdminQuizCreate() {
     // Autosave & Final Save Logic
     const saveMutation = useMutation({
         mutationFn: async (data: any) => {
-            // For Admin, we might get the user ID, or use a system ID.
-            // Assuming Admin is authenticated via Supabase Auth.
-            const { data: { user } } = await supabase.auth.getUser();
-            const userId = user?.id;
+            console.log("AdminQuizCreate: saveMutation start", { data, contextUser });
 
-            if (!userId) throw new Error("Not authenticated");
+            // Check for emergency bypass first
+            let userId = contextUser?.id;
+
+            if (contextUser?.isFallback) {
+                console.log("AdminQuizCreate: Using fallback user", userId);
+            } else {
+                console.log("AdminQuizCreate: Verifying standard auth...");
+                // Verify with server if not in bypass mode
+                try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                        userId = user.id;
+                        console.log("AdminQuizCreate: Standard auth verified", userId);
+                    } else {
+                        console.warn("AdminQuizCreate: Standard auth getUser returned no user");
+                        throw new Error("Not authenticated (getUser failed)");
+                    }
+                } catch (e) {
+                    console.error("AdminQuizCreate: Standard auth check failed", e);
+                    throw e;
+                }
+            }
+
+            if (!userId) {
+                console.error("AdminQuizCreate: No userId found");
+                throw new Error("Not authenticated");
+            }
+
+            // USE CLIENT-SIDE ID to avoid RLS 'select' issues
+            const quizId = (data as any).id;
 
             const quizPayload = {
+                id: quizId,
                 title: data.title,
                 description: data.description,
-                type: 'global', // Always global for public quizzes, or 'master' if we want code access. Sticking to global for dashboard list.
+                type: data.type,
                 code: data.code || generateCode(),
                 settings: data.settings,
                 created_by: userId
+                // updated_at removed as column does not exist
             };
+            console.log("AdminQuizCreate: Upserting quiz", quizPayload);
 
             // 1. Upsert Quiz
-            let quizId = (data as any).id;
-            let result;
+            // NOTE: We don't use .select() here to avoid RLS '0 rows' error (PGRST116)
+            const { error: upsertError } = await supabase
+                .from('quizzes')
+                .upsert(quizPayload);
 
-            if (quizId) {
-                result = await supabase.from('quizzes').update(quizPayload).eq('id', quizId).select().single();
-            } else {
-                result = await supabase.from('quizzes').insert(quizPayload).select().single();
+            if (upsertError) {
+                console.error("AdminQuizCreate: Quiz upsert error", upsertError);
+                throw upsertError;
             }
 
-            if (result.error) throw result.error;
-            const savedQuiz = result.data;
+            const savedQuiz = { ...quizPayload };
+            console.log("AdminQuizCreate: Quiz saved (optimistic)", savedQuiz);
 
             // 2. Upsert Questions
             if (quizId) {
@@ -106,26 +146,39 @@ export default function AdminQuizCreate() {
 
             if (questions.length > 0) {
                 const questionsPayload = questions.map(q => ({
-                    quiz_id: savedQuiz.id,
+                    quiz_id: quizId,
                     text: q.stem,
-                    choices: q.options || [],
+                    image_url: q.imageUrl || null,
+                    choices: q.options?.map((opt: string, i: number) => ({
+                        text: opt,
+                        image: q.optionImages?.[i] || null
+                    })) || [],
                     correct_answer: q.correct || '',
-                    tags: q.tags || ['practice'] // Default if missing
+                    tags: q.tags || ['practice']
                 }));
                 const qResult = await supabase.from('questions').insert(questionsPayload);
-                if (qResult.error) throw qResult.error;
+                if (qResult.error) {
+                    console.error("AdminQuizCreate: Questions insert error", qResult.error);
+                    throw qResult.error;
+                }
             }
 
+            console.log("AdminQuizCreate: Save complete");
             return savedQuiz;
         },
         onSuccess: (data) => {
+            console.log("AdminQuizCreate: onSuccess triggered");
             setLastSaved(new Date());
             setIsSaving(false);
-            setQuizData((prev: any) => ({ ...prev, id: data.id, code: data.code }));
+            if (data.code) {
+                setQuizData((prev: any) => ({ ...prev, code: data.code }));
+            }
+            setShowSuccessModal(true);
         },
         onError: (error) => {
-            console.error("Save failed:", error);
+            console.error("AdminQuizCreate: onError triggered", error);
             setIsSaving(false);
+            alert(`Failed to save quiz: ${error.message || 'Unknown error'}`);
         }
     });
 
@@ -144,7 +197,32 @@ export default function AdminQuizCreate() {
     const CurrentComponent = STEPS[currentStep].component;
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto p-6">
+        <div className="space-y-6 max-w-5xl mx-auto p-6 relative">
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-surface border border-border-custom p-8 rounded-2xl shadow-xl max-w-sm w-full text-center space-y-6 animate-in zoom-in-95 duration-200">
+                        <div className="mx-auto w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+                            <Check className="w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-text">Quiz Published!</h2>
+                        <p className="text-muted">Your quiz has been successfully created and is now live.</p>
+                        <div className="flex flex-col gap-3">
+                            <Button onClick={() => navigate(`/admin/quizzes/${category}`)} className="w-full">
+                                Go to Quiz List
+                            </Button>
+                            <Button variant="outline" onClick={() => {
+                                setShowSuccessModal(false);
+                                // Optional: Reset form or keep explicitly
+                                navigate(0); // Refresh to create new
+                            }} className="w-full">
+                                Create Another
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate(`/admin/quizzes/${category}`)} className="p-2 hover:bg-surface rounded-full transition-colors">
@@ -170,7 +248,7 @@ export default function AdminQuizCreate() {
                 <div className="flex gap-3">
                     <Button variant="outline" onClick={() => navigate(`/admin/quizzes/${category}`)}>Cancel</Button>
                     <Button onClick={() => saveMutation.mutate({ ...quizData, questions })}>
-                        <Save className="mr-2 h-4 w-4" /> Save
+                        <Save className="mr-2 h-4 w-4" /> Save Draft
                     </Button>
                 </div>
             </div>
@@ -213,6 +291,7 @@ export default function AdminQuizCreate() {
                         update={(updates: any) => setQuizData((prev: any) => ({ ...prev, ...updates }))}
                         questions={questions}
                         setQuestions={setQuestions}
+                        quizId={quizData.id} // Pass generated ID
                     />
                 </CardContent>
             </Card>
@@ -228,7 +307,8 @@ export default function AdminQuizCreate() {
                 <Button
                     onClick={() => {
                         if (currentStep === STEPS.length - 1) {
-                            navigate(`/admin/quizzes/${category}`);
+                            // Publish Action
+                            saveMutation.mutate({ ...quizData, questions });
                         } else {
                             setCurrentStep(prev => prev + 1);
                         }

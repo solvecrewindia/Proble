@@ -40,13 +40,13 @@ export function StepPreview({ data, questions }: any) {
 
                             {q.type === 'mcq' && q.options && (
                                 <div className="space-y-2">
-                                    {q.options.map((opt, i) => (
+                                    {q.options.map((opt: any, i) => (
                                         <div
                                             key={i}
                                             className="flex items-center p-3 border border-border-custom rounded-lg hover:bg-surface transition-colors"
                                         >
                                             <div className="h-4 w-4 rounded-full border border-border-custom mr-3" />
-                                            <span className="text-text">{opt}</span>
+                                            <span className="text-text">{typeof opt === 'object' ? opt.text : opt}</span>
                                         </div>
                                     ))}
                                 </div>

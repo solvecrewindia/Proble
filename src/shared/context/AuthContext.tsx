@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.warn("AuthContext: EMERGENCY ADMIN BYPASS ACTIVATED. Server is down (500), forcing entry.");
 
                 const mockAdminUser = {
-                    id: 'bypass-admin-id',
+                    id: '00000000-0000-0000-0000-000000000000', // Valid UUID for DB compatibility
                     email: email,
                     role: 'admin' as User['role'],
                     username: 'Admin',

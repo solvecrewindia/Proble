@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Sun, Moon, LogOut, User, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, Sun, Moon, LogOut, User, Settings, Plus } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const TopBar = () => {
     const { theme, setTheme } = useTheme();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -31,6 +34,16 @@ const TopBar = () => {
 
             {/* Right Actions */}
             <div className="flex items-center gap-4">
+                <button
+                    onClick={() => navigate('/admin/create')}
+                    className={`inline-flex items-center justify-center h-8 px-3 text-sm gap-2 rounded-full transition-colors font-medium ${theme === 'dark'
+                        ? 'bg-white text-black hover:bg-neutral-200'
+                        : 'bg-black text-white hover:bg-neutral-800'
+                        }`}
+                >
+                    <Plus className="h-4 w-4" /> Create
+                </button>
+
                 {/* Profile Dropdown */}
                 <div className="relative" ref={dropdownRef}>
                     <button

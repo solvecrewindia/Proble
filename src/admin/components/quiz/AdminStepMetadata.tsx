@@ -11,49 +11,7 @@ export function AdminStepMetadata({ data, update }: any) {
             </div>
 
             <div className="space-y-4">
-                <div className="space-y-3">
-                    <label className="text-sm font-medium text-text">Quiz Availability</label>
-                    <div className="flex flex-col gap-3 rounded-xl border border-border-custom bg-background p-4">
-                        <div className="flex items-start gap-3">
-                            <input
-                                type="checkbox"
-                                id="mode-practice"
-                                className="mt-1 h-4 w-4 rounded border-border-custom text-primary focus:ring-primary"
-                                checked={data.settings?.modes?.includes('practice')}
-                                onChange={(e) => {
-                                    const currentModes = data.settings?.modes || [];
-                                    const newModes = e.target.checked
-                                        ? [...currentModes, 'practice']
-                                        : currentModes.filter((m: string) => m !== 'practice');
-                                    update({ settings: { ...data.settings, modes: newModes } });
-                                }}
-                            />
-                            <div>
-                                <label htmlFor="mode-practice" className="font-medium text-sm text-text block">Practice Mode</label>
-                                <p className="text-xs text-muted">Allow students to take this as a practice quiz with immediate feedback.</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3 border-t border-border-custom pt-3">
-                            <input
-                                type="checkbox"
-                                id="mode-mock"
-                                className="mt-1 h-4 w-4 rounded border-border-custom text-primary focus:ring-primary"
-                                checked={data.settings?.modes?.includes('mock_test')}
-                                onChange={(e) => {
-                                    const currentModes = data.settings?.modes || [];
-                                    const newModes = e.target.checked
-                                        ? [...currentModes, 'mock_test']
-                                        : currentModes.filter((m: string) => m !== 'mock_test');
-                                    update({ settings: { ...data.settings, modes: newModes } });
-                                }}
-                            />
-                            <div>
-                                <label htmlFor="mode-mock" className="font-medium text-sm text-text block">Mock Test Mode</label>
-                                <p className="text-xs text-muted">Allow students to take this as a timed mock exam.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {/* Quiz Availability removed as per request */}
 
                 <Input
                     label="Quiz Title"

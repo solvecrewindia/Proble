@@ -32,7 +32,9 @@ export interface Question {
     quizId: string;
     type: 'mcq' | 'text' | 'numeric' | 'code';
     stem: string;
+    imageUrl?: string;
     options?: string[];
+    optionImages?: string[];
     correct?: any;
     weight: number;
 }

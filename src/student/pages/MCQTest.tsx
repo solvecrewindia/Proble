@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
-import { Moon, Sun, Loader2 } from 'lucide-react';
+import { Moon, Sun, Loader2, Maximize2, X, ZoomIn } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 import { useAntiCheat } from '../hooks/useAntiCheat';
@@ -28,6 +28,9 @@ const MCQTest = () => {
     const [testActive, setTestActive] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
 
+    // Image Zoom State
+    const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
     // Quiz Metadata
     const [quizSettings, setQuizSettings] = useState<any>(null);
 
@@ -43,8 +46,9 @@ const MCQTest = () => {
         level: quizSettings?.antiCheatLevel || 'standard',
         maxViolations: 3,
         onAutoSubmit: () => {
-            alert("Test terminated due to multiple violations.");
-            calculateAndShowResults();
+            // alert("Test terminated due to multiple violations."); // Disabled to prevent interruption
+            // calculateAndShowResults(); // Disabled auto-submit per user request
+            console.warn("Anti-cheat auto-submit trigger suppressed.");
         }
     });
 
@@ -80,6 +84,7 @@ const MCQTest = () => {
                     id: index + 1, // logical number
                     dbId: q.id,
                     question: q.text,
+                    imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null, // Add timestamp to force reload
                     options: q.choices,
                     correct: q.correct_answer // Expecting text match usually, need to check if it's index or text
                 }));
@@ -166,9 +171,21 @@ const MCQTest = () => {
             const userAnswerIndex = answers[q.id];
             if (userAnswerIndex !== undefined) {
                 const userAnswerText = q.options[userAnswerIndex];
-                // Check exact match with correct answer string
-                if (userAnswerText === q.correct) {
-                    calculatedScore++;
+
+                // Fix: Check if correct answer is an index (number) or text
+                const correct = q.correct;
+                const isNumeric = !isNaN(Number(correct));
+
+                if (isNumeric) {
+                    // Compare indices
+                    if (userAnswerIndex === Number(correct)) {
+                        calculatedScore++;
+                    }
+                } else {
+                    // Check exact match with correct answer string (fallback)
+                    if (userAnswerText === correct) {
+                        calculatedScore++;
+                    }
                 }
             }
         });
@@ -317,6 +334,21 @@ const MCQTest = () => {
                 </div>
             )}
 
+            {/* Image Zoom Modal */}
+            {zoomedImage && (
+                <div className="fixed inset-0 z-[90] bg-black/90 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setZoomedImage(null)}>
+                    <button className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors">
+                        <X className="w-8 h-8" />
+                    </button>
+                    <img
+                        src={zoomedImage}
+                        alt="Zoomed"
+                        className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
+
             {/* Anti-Cheat: Active Violation Warning Toast */}
             {warning && !isPaused && (
                 <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[70] animate-bounce">
@@ -339,6 +371,25 @@ const MCQTest = () => {
                             <div className="text-lg font-semibold mb-6 text-black dark:text-gray-100">
                                 {questions[currentQuestion - 1].question}
                             </div>
+                            {/* Robust Image Check: only show if string length > 5 to avoid empty/broken URLs */}
+                            {questions[currentQuestion - 1].imageUrl && questions[currentQuestion - 1].imageUrl.length > 5 && (
+                                <div className="mb-8 relative group w-fit">
+                                    <img
+                                        src={questions[currentQuestion - 1].imageUrl}
+                                        alt="Question"
+                                        className="max-h-[400px] w-auto rounded-xl object-contain border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-black/20"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => setZoomedImage(questions[currentQuestion - 1].imageUrl)}
+                                        className="absolute bottom-4 right-4 p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <ZoomIn className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            )}
 
                             <div className="space-y-4">
                                 {questions[currentQuestion - 1].options.map((opt: string, idx: number) => (
@@ -346,13 +397,38 @@ const MCQTest = () => {
                                         key={idx}
                                         onClick={() => handleOptionSelect(idx)}
                                         className={cn(
-                                            "bg-[#eeeeee] dark:bg-gray-800 rounded-[14px] p-4 shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none cursor-pointer flex justify-between items-center transition-colors hover:bg-[#e4e4e4] dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100",
+                                            "bg-[#eeeeee] dark:bg-gray-800 rounded-[14px] p-4 shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none cursor-pointer flex justify-between items-center transition-all hover:bg-[#e4e4e4] dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 group",
                                             answers[currentQuestion] === idx && "bg-white dark:bg-gray-800 border-2 border-[#0ebcdb] font-semibold"
                                         )}
                                     >
-                                        {opt}
+                                        <div className="flex items-center gap-4 w-full">
+                                            {typeof opt === 'object' && (opt as any).image && (opt as any).image.length > 5 && (
+                                                <div
+                                                    className="relative flex-shrink-0 group/img"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setZoomedImage((opt as any).image ? `${(opt as any).image}?t=${Date.now()}` : '');
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={(opt as any).image}
+                                                        alt={`Option ${idx + 1}`}
+                                                        className="h-24 w-24 rounded-lg object-cover border border-gray-300 dark:border-gray-600 bg-white hover:opacity-90 transition-opacity"
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover/img:opacity-100">
+                                                        <ZoomIn className="w-6 h-6 text-white drop-shadow-md" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <span className="flex-1 text-base leading-relaxed">
+                                                {typeof opt === 'object' ? (opt as any).text : opt}
+                                            </span>
+                                        </div>
                                         <div className={cn(
-                                            "w-[18px] h-[18px] border-2 border-[#666] dark:border-gray-400 rounded-full",
+                                            "w-[20px] h-[20px] border-2 border-[#666] dark:border-gray-400 rounded-full flex-shrink-0 ml-4",
                                             answers[currentQuestion] === idx && "bg-[#0ebcdb] border-white dark:border-gray-800"
                                         )} />
                                     </div>

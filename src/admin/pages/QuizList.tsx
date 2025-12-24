@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Plus, Clock, FileText, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Plus, Clock, FileText, ChevronRight, ArrowLeft, Trash2 } from 'lucide-react';
 
 const QuizList = () => {
     const { category } = useParams();
@@ -39,6 +39,23 @@ const QuizList = () => {
             console.error('Error fetching quizzes:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteQuiz = async (e: React.MouseEvent, quizId: string) => {
+        e.stopPropagation();
+        if (!confirm('Are you sure you want to delete this quiz?')) return;
+
+        try {
+            const { error } = await supabase.from('quizzes').delete().eq('id', quizId);
+
+            if (error) throw error;
+
+            // Optimistic update or refetch
+            setQuizzes(quizzes.filter(q => q.id !== quizId));
+        } catch (error) {
+            console.error('Error deleting quiz:', error);
+            alert('Failed to delete quiz');
         }
     };
 
@@ -82,8 +99,15 @@ const QuizList = () => {
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {quizzes.map((quiz) => (
-                        <div key={quiz.id} className="group bg-surface border border-surface hover:border-primary/50 rounded-xl p-5 transition-all hover:shadow-md cursor-pointer">
+                        <div key={quiz.id} className="group relative bg-surface border border-surface hover:border-primary/50 rounded-xl p-5 transition-all hover:shadow-md cursor-pointer">
                             <h3 className="font-semibold text-text mb-2 line-clamp-1">{quiz.title}</h3>
+                            <button
+                                onClick={(e) => handleDeleteQuiz(e, quiz.id)}
+                                className="absolute top-2 right-2 p-2 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all bg-surface/80 rounded-full z-10"
+                                title="Delete Quiz"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
                             <p className="text-muted text-xs mb-4 line-clamp-2 min-h-[2.5em]">{quiz.description || 'No description provided.'}</p>
 
                             <div className="flex items-center justify-between text-xs text-muted border-t border-surface/50 pt-3">

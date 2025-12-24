@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StepQuestions } from '../../../faculty/components/quiz/StepQuestions';
 import { cn } from '../../../faculty/lib/utils'; // Adjust import path
 
-export function AdminStepQuestions({ data, update, questions, setQuestions }: any) {
+export function AdminStepQuestions({ data, update, questions, setQuestions, quizId }: any) {
     // We need to manage two sets of questions if both modes are enabled
     const modes = data.settings?.modes || ['practice'];
     const isMultiMode = modes.includes('practice') && modes.includes('mock_test');
@@ -115,6 +115,7 @@ export function AdminStepQuestions({ data, update, questions, setQuestions }: an
                         <StepQuestions
                             questions={practiceQuestions}
                             setQuestions={setPracticeQuestions}
+                            quizId={quizId}
                         />
                     </div>
                 ) : (
@@ -123,6 +124,7 @@ export function AdminStepQuestions({ data, update, questions, setQuestions }: an
                         <StepQuestions
                             questions={mockQuestions}
                             setQuestions={setMockQuestions}
+                            quizId={quizId}
                         />
                     </div>
                 )}
