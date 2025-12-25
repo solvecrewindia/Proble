@@ -81,7 +81,7 @@ const Quizzes = () => {
                         <p className="mb-4 text-sm text-muted flex-1">
                             {module.description}
                         </p>
-                        <div className="flex items-center justify-between border-t border-surface pt-4 mt-auto">
+                        <div className="flex items-center justify-between mt-auto">
                             <span className="text-xs font-medium text-text">{module.count} Quizzes</span>
                             <span
                                 className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:underline"

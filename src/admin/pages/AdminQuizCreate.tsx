@@ -25,20 +25,21 @@ const STEPS = [
 
 export default function AdminQuizCreate() {
     const navigate = useNavigate();
-    const { category } = useParams();
-    const { user: contextUser } = useAuth(); // Get user from context
+    const { category, quizId } = useParams(); // Get quizId from URL
+    const { user: contextUser } = useAuth();
     const [currentStep, setCurrentStep] = useState(0);
     const [quizData, setQuizData] = useState<any>({
         title: '',
         description: '',
-        type: category ? category.toLowerCase() : 'global', // Set type from URL category
+        image_url: '',
+        type: category ? category.toLowerCase() : 'global',
         settings: {
             duration: 60,
             passingScore: 40,
             antiCheatLevel: 'standard',
             allowRetake: false,
-            modes: ['practice'], // Default modes
-            category: category ? category.toUpperCase() : 'GLOBAL' // Injected category
+            modes: ['practice'],
+            category: category ? category.toUpperCase() : 'GLOBAL'
         }
     });
 
@@ -46,16 +47,93 @@ export default function AdminQuizCreate() {
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Initial Setup & ID Generation
+    // Initial Setup & ID Generation or Fetching
     useEffect(() => {
-        if (!quizData.id) {
-            // Generate a stable ID for new quizzes to ensure image paths are valid before first save
+        if (quizId) {
+            // EDIT MODE: Fetch existing quiz
+            const fetchQuiz = async () => {
+                setIsLoading(true);
+                try {
+                    // Fetch Quiz
+                    const { data: quiz, error: quizError } = await supabase
+                        .from('quizzes')
+                        .select('*')
+                        .eq('id', quizId)
+                        .single();
+
+                    if (quizError) throw quizError;
+
+                    // Fetch Questions
+                    const { data: qData, error: qError } = await supabase
+                        .from('questions')
+                        .select('*')
+                        .eq('quiz_id', quizId) // Note: confirm column name 'quizId' or 'quiz_id' in DB. Usually snake_case in DB.
+                        .order('created_at', { ascending: true }); // Keep order
+
+                    if (qError) throw qError;
+
+                    // Map DB keys to frontend keys if needed
+                    // Assuming DB has 'image_url' for quiz, and questions are compatible
+                    // Check Question casing? Frontend: quizId, imageUrl, optionImages. DB: quiz_id, image_url, option_images usually.
+                    // Need to verify DB schema for questions. 
+                    // Let's assume consistent mappings or map them here.
+
+                    /* 
+                       Wait, previously when saving, we used `upsert`. 
+                       Let's check how saving transforms data or if it saves as is.
+                       The `saveMutation` sends:
+                       questions.map(q => ({
+                            id: q.id,
+                            quiz_id: savedQuiz.id,
+                            type: q.type,
+                            stem: q.stem,
+                            image_url: q.imageUrl,
+                            options: q.options,
+                            option_images: q.optionImages,
+                            correct: q.correct,
+                            weight: q.weight
+                        }))
+                       So we need to reverse map when fetching.
+                    */
+
+                    setQuizData(quiz);
+
+                    const formattedQuestions = (qData || []).map((q: any) => ({
+                        id: q.id,
+                        quizId: q.quiz_id,
+                        type: q.type || 'mcq',
+                        stem: q.text, // Map DB 'text' to frontend 'stem'
+                        imageUrl: q.image_url,
+                        // Map DB 'choices' (jsonb) to options/optionImages
+                        options: Array.isArray(q.choices) ? q.choices.map((c: any) => c.text || '') : [],
+                        optionImages: Array.isArray(q.choices) ? q.choices.map((c: any) => c.image || '') : [],
+                        correct: typeof q.correct_answer === 'string' ? parseInt(q.correct_answer) : (q.correct_answer || 0),
+                        weight: 1 // Default
+                    }));
+
+                    setQuestions(formattedQuestions);
+
+                } catch (err) {
+                    console.error("Failed to fetch quiz", err);
+                    alert("Failed to load quiz data");
+                    navigate(`/admin/quizzes/${category}`);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            fetchQuiz();
+        } else if (!quizData.id) {
+            // CREATE MODE: Generate ID
             const newId = uuidv4();
             setQuizData((prev: any) => ({ ...prev, id: newId }));
         }
 
-        if (category) {
+        if (category && !quizId) {
+            // Only reset category settings if creating new, strict override? 
+            // Or maybe just ensure consistency.
             setQuizData((prev: any) => ({
                 ...prev,
                 settings: {
@@ -64,7 +142,7 @@ export default function AdminQuizCreate() {
                 }
             }));
         }
-    }, [category]);
+    }, [category, quizId]); // Run when ID or Category changes
 
 
     // Generating access code
@@ -85,7 +163,7 @@ export default function AdminQuizCreate() {
             // Check for emergency bypass first
             let userId = contextUser?.id;
 
-            if (contextUser?.isFallback) {
+            if ((contextUser as any)?.isFallback) {
                 console.log("AdminQuizCreate: Using fallback user", userId);
             } else {
                 console.log("AdminQuizCreate: Verifying standard auth...");
@@ -118,6 +196,7 @@ export default function AdminQuizCreate() {
                 title: data.title,
                 description: data.description,
                 type: data.type,
+                image_url: data.image_url || null,
                 code: data.code || generateCode(),
                 settings: data.settings,
                 created_by: userId
@@ -166,14 +245,17 @@ export default function AdminQuizCreate() {
             console.log("AdminQuizCreate: Save complete");
             return savedQuiz;
         },
-        onSuccess: (data) => {
+        onSuccess: (data, variables: any) => {
             console.log("AdminQuizCreate: onSuccess triggered");
             setLastSaved(new Date());
             setIsSaving(false);
             if (data.code) {
                 setQuizData((prev: any) => ({ ...prev, code: data.code }));
             }
-            setShowSuccessModal(true);
+            // Only show modal if explicitly publishing
+            if (variables.isPublishing) {
+                setShowSuccessModal(true);
+            }
         },
         onError: (error) => {
             console.error("AdminQuizCreate: onError triggered", error);
@@ -187,6 +269,7 @@ export default function AdminQuizCreate() {
         const timer = setTimeout(() => {
             if (quizData.title && (quizData.title.length > 3)) {
                 setIsSaving(true);
+                // Autosave: isPublishing is undefined/false
                 saveMutation.mutate({ ...quizData, questions });
             }
         }, 5000);
@@ -195,6 +278,17 @@ export default function AdminQuizCreate() {
     }, [quizData, questions]);
 
     const CurrentComponent = STEPS[currentStep].component;
+
+    if (isLoading) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                    <p className="text-muted text-sm">Loading quiz data...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto p-6 relative">
@@ -308,7 +402,7 @@ export default function AdminQuizCreate() {
                     onClick={() => {
                         if (currentStep === STEPS.length - 1) {
                             // Publish Action
-                            saveMutation.mutate({ ...quizData, questions });
+                            saveMutation.mutate({ ...quizData, questions, isPublishing: true });
                         } else {
                             setCurrentStep(prev => prev + 1);
                         }

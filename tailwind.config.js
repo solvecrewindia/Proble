@@ -7,29 +7,50 @@ export default {
     darkMode: 'class',
     theme: {
         extend: {
+            fontFamily: {
+                sans: ['Outfit', 'sans-serif'],
+                display: ['Outfit', 'sans-serif'],
+            },
             colors: {
                 primary: {
-                    DEFAULT: '#0ebcdb', // User requested blue
-                    600: '#0c9ab3', // Darker shade for hover
+                    DEFAULT: '#6366f1', // Indigo-500
+                    600: '#4f46e5',     // Indigo-600 (Compatibility)
+                    foreground: '#e0e7ff',
+                    glow: '#818cf8',
+                },
+                secondary: {
+                    DEFAULT: '#a855f7', // Purple-500
+                    foreground: '#f3e8ff',
                 },
                 background: 'rgb(var(--color-background) / <alpha-value>)',
                 surface: 'rgb(var(--color-surface) / <alpha-value>)',
+                'surface-highlight': 'rgb(var(--color-surface-highlight) / <alpha-value>)',
                 muted: 'rgb(var(--color-muted) / <alpha-value>)',
                 text: 'rgb(var(--color-text) / <alpha-value>)',
-                neutral: {
-                    900: '#1A1A1A',
-                    700: '#4A4A4A',
-                    500: '#858585',
+                'text-secondary': 'rgb(var(--color-text-secondary) / <alpha-value>)',
+                border: 'rgb(var(--color-border) / <alpha-value>)',
+
+                // Glassmorphism specific
+                glass: {
+                    DEFAULT: 'rgba(255, 255, 255, 0.05)',
+                    hover: 'rgba(255, 255, 255, 0.1)',
+                    border: 'rgba(255, 255, 255, 0.1)',
                 },
-                bg: '#F5F7FA',
-                'border-custom': 'rgb(var(--border-color-custom) / <alpha-value>)',
+
+                // Semantic
+                success: '#10b981',
+                warning: '#f59e0b',
+                error: '#ef4444',
             },
-            fontFamily: {
-                sans: ['Montserrat', 'sans-serif'],
+            backgroundImage: {
+                'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                'card-gradient': 'linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)',
+                'glow-gradient': 'conic-gradient(from 180deg at 50% 50%, #2a8af6 0deg, #a853ba 180deg, #e92a67 360deg)',
             },
-            spacing: {
-                '15': '3.75rem', // 60px
-            }
+            boxShadow: {
+                'glass': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                'neon': '0 0 5px theme("colors.primary.DEFAULT"), 0 0 20px theme("colors.primary.DEFAULT")',
+            },
         },
     },
     plugins: [],

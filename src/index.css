@@ -1,40 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
     :root {
-        --color-primary: 0 199 230;
+        /* Light Mode (Fallback/Clean) */
         --color-background: 248 250 252;
         --color-surface: 255 255 255;
-        --color-muted: 100 116 139;
+        --color-surface-highlight: 241 245 249;
         --color-text: 15 23 42;
-        --border-color-custom: 229 231 235;
-        /* #E5E7EB (Gray-200) - Light Mode Border */
+        --color-text-secondary: 100 116 139;
+        --color-muted: 148 163 184;
+        --color-border: 226 232 240;
     }
 
     .dark {
-        --color-background: 11 11 11;
-        /* #0B0B0B */
-        --color-surface: 24 24 27;
-        /* #18181B */
-        --color-muted: 75 85 99;
-        /* #4B5563 */
+        /* Premium Dark Mode */
+        --color-background: 10 10 12;
+        /* Deep void black/blue */
+        --color-surface: 18 18 23;
+        /* Slightly lighter for cards */
+        --color-surface-highlight: 30 30 38;
         --color-text: 248 250 252;
-        --border-color-custom: 107 114 128;
-        /* #6B7280 (Gray-500) - Visible Light Gray for Dark Mode */
+        --color-text-secondary: 148 163 184;
+        --color-muted: 71 85 105;
+        --color-border: 45 45 55;
     }
 
     body {
-        @apply bg-background text-text;
+        @apply bg-background text-text font-sans antialiased transition-colors duration-300;
+        /* Subtle background pattern/gradient for visual interest */
+        background-image:
+            radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 25%),
+            radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.08) 0%, transparent 25%);
+        background-attachment: fixed;
+    }
+}
+
+@layer components {
+    .glass-panel {
+        @apply bg-surface/50 backdrop-blur-xl border border-glass-border shadow-glass;
     }
 
-    *,
-    ::before,
-    ::after {
-        border-width: 0;
-        border-style: solid;
-        border-color: rgb(var(--border-color-custom));
+    .glass-card {
+        @apply bg-card-gradient backdrop-blur-md border border-white/5 rounded-2xl transition-all duration-300;
+    }
+
+    .glass-card:hover {
+        @apply border-primary/30 translate-y-[-2px] shadow-lg shadow-primary/5;
+    }
+
+    .btn-primary {
+        @apply bg-gradient-to-r from-primary to-secondary text-white font-medium px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-primary/25 transition-all duration-300 active:scale-95;
+    }
+
+    .text-gradient {
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-secondary-400;
     }
 }
 
@@ -46,58 +69,5 @@
     .no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
-    }
-
-    /* Custom Animations */
-    .animate-in {
-        animation-duration: 0.5s;
-        animation-fill-mode: both;
-        animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .fade-in {
-        animation-name: fadeIn;
-    }
-
-    .slide-in-from-right-8 {
-        animation-name: slideInRight;
-    }
-
-    .slide-in-from-left-8 {
-        animation-name: slideInLeft;
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-    }
-
-    @keyframes slideInRight {
-        from {
-            opacity: 0;
-            transform: translateX(2rem);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
-    @keyframes slideInLeft {
-        from {
-            opacity: 0;
-            transform: translateX(-2rem);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
     }
 }

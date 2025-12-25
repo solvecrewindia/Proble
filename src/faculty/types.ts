@@ -43,6 +43,7 @@ export interface Quiz {
     id: string;
     title: string;
     description: string;
+    image_url?: string;
     type: 'global' | 'master';
     status: 'draft' | 'active' | 'completed' | 'paused';
     accessCode?: string;
@@ -59,7 +60,7 @@ export interface Quiz {
     updatedAt: string;
 }
 
-export type QuizMeta = Pick<Quiz, 'id' | 'title' | 'description' | 'status' | 'settings' | 'type'>;
+export type QuizMeta = Pick<Quiz, 'id' | 'title' | 'description' | 'image_url' | 'status' | 'settings' | 'type'>;
 
 export interface Attempt {
     id: string;

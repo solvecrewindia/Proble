@@ -24,6 +24,7 @@ function AdminApp() {
           <Route path="quizzes" element={<Quizzes />} />
           <Route path="quizzes/:category" element={<QuizList />} />
           <Route path="quizzes/:category/create" element={<AdminQuizCreate />} />
+          <Route path="quizzes/:category/edit/:quizId" element={<AdminQuizCreate />} />
           <Route path="problem-requests" element={<ProblemRequests />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />

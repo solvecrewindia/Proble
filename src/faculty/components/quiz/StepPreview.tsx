@@ -36,6 +36,15 @@ export function StepPreview({ data, questions }: any) {
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {q.imageUrl && (
+                                <div className="mb-4 rounded-lg overflow-hidden border border-border-custom bg-black/20">
+                                    <img
+                                        src={q.imageUrl}
+                                        alt="Question"
+                                        className="max-h-[300px] w-full object-contain mx-auto"
+                                    />
+                                </div>
+                            )}
                             <p className="text-lg font-medium text-text">{q.stem}</p>
 
                             {q.type === 'mcq' && q.options && (
@@ -46,7 +55,16 @@ export function StepPreview({ data, questions }: any) {
                                             className="flex items-center p-3 border border-border-custom rounded-lg hover:bg-surface transition-colors"
                                         >
                                             <div className="h-4 w-4 rounded-full border border-border-custom mr-3" />
-                                            <span className="text-text">{typeof opt === 'object' ? opt.text : opt}</span>
+                                            <div className="flex-1">
+                                                {q.optionImages?.[i] && (
+                                                    <img
+                                                        src={q.optionImages[i]}
+                                                        alt={`Option ${i + 1}`}
+                                                        className="h-24 w-auto object-contain rounded-md border border-border-custom mb-2"
+                                                    />
+                                                )}
+                                                <span className="text-text">{typeof opt === 'object' ? opt.text : opt}</span>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

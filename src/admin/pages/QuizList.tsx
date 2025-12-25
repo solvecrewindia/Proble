@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Plus, Clock, FileText, ChevronRight, ArrowLeft, Trash2 } from 'lucide-react';
+import { Plus, Clock, FileText, ChevronRight, ArrowLeft, Trash2, Search } from 'lucide-react';
 
 const QuizList = () => {
     const { category } = useParams();
     const navigate = useNavigate();
     const [quizzes, setQuizzes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Filter state could be added here for search if needed in future
+    // const [searchTerm, setSearchTerm] = useState('');
 
     const categoryTitle = category ? category.toUpperCase() : 'Global';
 
@@ -18,17 +21,11 @@ const QuizList = () => {
     const fetchQuizzes = async () => {
         try {
             setLoading(true);
-            // Fetch quizzes where settings->>category matches. 
-            // Note: IF category is 'global', we might use type='global' OR settings->>category='global'
-            // For now, assuming we use settings->category for all custom categories.
-
             let query = supabase.from('quizzes').select('*');
 
             if (categoryTitle === 'GLOBAL') {
-                // For global, maybe fetch type = global
                 query = query.eq('type', 'global');
             } else {
-                // For others, use the JSONB column
                 query = query.contains('settings', { category: categoryTitle });
             }
 
@@ -48,10 +45,7 @@ const QuizList = () => {
 
         try {
             const { error } = await supabase.from('quizzes').delete().eq('id', quizId);
-
             if (error) throw error;
-
-            // Optimistic update or refetch
             setQuizzes(quizzes.filter(q => q.id !== quizId));
         } catch (error) {
             console.error('Error deleting quiz:', error);
@@ -60,63 +54,96 @@ const QuizList = () => {
     };
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex items-center gap-4">
-                <button onClick={() => navigate('/admin/quizzes')} className="p-2 hover:bg-surface rounded-full transition-colors">
-                    <ArrowLeft className="w-5 h-5 text-text" />
-                </button>
-                <div>
-                    <h1 className="text-2xl font-bold text-text">{categoryTitle} Quizzes</h1>
-                    <p className="text-muted text-sm">Manage quizzes for {categoryTitle} module</p>
-                </div>
-                <div className="ml-auto">
+        <div className="p-8 space-y-8 animate-in fade-in duration-500">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate(`/admin/quizzes/${category}/create`)}
-                        className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+                        onClick={() => navigate('/admin/quizzes')}
+                        className="p-3 hover:bg-white/5 rounded-full transition-all duration-200 group border border-transparent hover:border-white/10"
                     >
-                        <Plus className="h-4 w-4" />
-                        Create Quiz
+                        <ArrowLeft className="w-5 h-5 text-text-secondary group-hover:text-white" />
                     </button>
+                    <div>
+                        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
+                            {categoryTitle} Quizzes
+                        </h1>
+                        <p className="text-text-secondary mt-1">Manage and track {categoryTitle.toLowerCase()} assessments</p>
+                    </div>
                 </div>
+
+                <button
+                    onClick={() => navigate(`/admin/quizzes/${category}/create`)}
+                    className="btn-primary flex items-center gap-2 shadow-lg shadow-primary/20"
+                >
+                    <Plus className="h-5 w-5" />
+                    <span className="font-semibold">Create New Quiz</span>
+                </button>
             </div>
 
+            {/* Content Section */}
             {loading ? (
-                <div className="text-center py-10 text-muted">Loading quizzes...</div>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="h-48 bg-white/5 rounded-2xl animate-pulse backdrop-blur-sm border border-white/5" />
+                    ))}
+                </div>
             ) : quizzes.length === 0 ? (
-                <div className="text-center py-20 bg-surface rounded-2xl border border-surface">
-                    <div className="block mb-4">
-                        <FileText className="w-12 h-12 text-muted mx-auto opacity-50" />
+                <div className="text-center py-20 bg-surface/30 backdrop-blur-md rounded-3xl border border-dashed border-white/10">
+                    <div className="inline-flex p-4 rounded-full bg-white/5 mb-6">
+                        <FileText className="w-8 h-8 text-muted" />
                     </div>
-                    <h3 className="text-lg font-medium text-text">No Quizzes Found</h3>
-                    <p className="text-muted mb-4">Create your first quiz for this module.</p>
+                    <h3 className="text-xl font-medium text-text mb-2">No Quizzes Found</h3>
+                    <p className="text-text-secondary mb-6 max-w-md mx-auto">
+                        There are no quizzes in this category yet. Get started by creating your first assessment.
+                    </p>
                     <button
                         onClick={() => navigate(`/admin/quizzes/${category}/create`)}
-                        className="text-primary hover:underline text-sm font-medium"
+                        className="text-primary hover:text-primary-glow font-medium transition-colors"
                     >
-                        Create New Quiz
+                        Create Now &rarr;
                     </button>
                 </div>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {quizzes.map((quiz) => (
-                        <div key={quiz.id} className="group relative bg-surface border border-surface hover:border-primary/50 rounded-xl p-5 transition-all hover:shadow-md cursor-pointer">
-                            <h3 className="font-semibold text-text mb-2 line-clamp-1">{quiz.title}</h3>
-                            <button
-                                onClick={(e) => handleDeleteQuiz(e, quiz.id)}
-                                className="absolute top-2 right-2 p-2 text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all bg-surface/80 rounded-full z-10"
-                                title="Delete Quiz"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                            <p className="text-muted text-xs mb-4 line-clamp-2 min-h-[2.5em]">{quiz.description || 'No description provided.'}</p>
+                        <div
+                            key={quiz.id}
+                            onClick={() => navigate(`/admin/quizzes/${category}/edit/${quiz.id}`)}
+                            className="glass-card group p-6 relative flex flex-col h-full cursor-pointer"
+                        >
+                            <div className="flex justify-between items-start mb-4">
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${quiz.settings?.duration > 45
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    }`}>
+                                    {quiz.settings?.duration || 60} min
+                                </span>
 
-                            <div className="flex items-center justify-between text-xs text-muted border-t border-surface/50 pt-3">
-                                <div className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{quiz.settings?.duration || 60} mins</span>
+                                <button
+                                    onClick={(e) => handleDeleteQuiz(e, quiz.id)}
+                                    className="p-2 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Delete Quiz"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <h3 className="text-lg font-semibold text-text mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                                {quiz.title}
+                            </h3>
+
+                            <p className="text-text-secondary text-sm mb-6 line-clamp-2 flex-grow">
+                                {quiz.description || 'No description provided for this assessment.'}
+                            </p>
+
+                            <div className="flex items-center justify-between mt-auto">
+                                <div className="flex items-center gap-2 text-xs text-text-secondary">
+                                    <Clock className="w-3.5 h-3.5" />
+                                    <span>Last updated today</span>
                                 </div>
-                                <span className="flex items-center text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                                    Edit <ChevronRight className="w-3 h-3 ml-1" />
+                                <span className="flex items-center text-primary text-sm font-medium group-hover:translate-x-1 transition-transform">
+                                    Edit <ChevronRight className="w-4 h-4 ml-1" />
                                 </span>
                             </div>
                         </div>

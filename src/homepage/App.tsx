@@ -35,10 +35,16 @@ function App({ searchQuery = '' }: AppProps) {
         // TabType: 'nptel' | 'gate' | 'srm' | 'global'
         // DB Type: 'nptel', 'gate', 'srm', 'global' (assumed 1:1 based on AdminQuizCreate update)
 
+        // Map tab IDs to database 'type' values
+        let dbType: string = activeTab;
+        if (activeTab === 'srm') dbType = 'srmist';
+        if (activeTab === 'gate') dbType = 'gate';
+        if (activeTab === 'nptel') dbType = 'nptel';
+
         const { data, error } = await supabase
           .from('quizzes')
           .select('*')
-          .eq('type', activeTab) // specific type
+          .eq('type', dbType) // use mapped type
           .order('created_at', { ascending: false });
 
         if (error) throw error;
