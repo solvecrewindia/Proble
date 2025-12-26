@@ -1,52 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
-import { Star, Clock, BookOpen, ArrowLeft } from 'lucide-react';
+import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../shared/context/AuthContext';
 
 const QuizDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [userRating, setUserRating] = React.useState(0);
+    const { user } = useAuth();
+
     const [quiz, setQuiz] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    // Mock data for fallback or specific IDs if needed, but primarily use Supabase
-    const mockQuizzes: Record<string, any> = {
-        '1': {
-            id: '1',
-            title: 'Programming, Data Structures and Algorithms Using Python',
-            description: 'This course introduces the concepts of programming, data structures and algorithms using Python.',
-            rating: 4.8,
-            totalRatings: 342,
-            duration: '120 mins',
-            questions: 60,
-            difficulty: 'Intermediate',
-            author: 'Prof. Madhavan Mukund'
-        },
-        // ... (keep other mocks if desired, or remove)
-    };
+    // Rating State
+    const [userRating, setUserRating] = useState(0);
+    const [averageRating, setAverageRating] = useState(0);
+    const [totalRatings, setTotalRatings] = useState(0);
+
+    // Practice State
+    const [isAddedToPractice, setIsAddedToPractice] = useState(false);
+    const [practiceLoading, setPracticeLoading] = useState(false);
+    const [moduleId, setModuleId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchQuiz = async () => {
             if (!id) return;
-
-            // Check if it's a mock ID (optional, for demo continuity)
-            if (mockQuizzes[id]) {
-                setQuiz(mockQuizzes[id]);
-                setLoading(false);
-                return;
-            }
-
-            // Fetch from Supabase
-            const { data: quizData, error } = await supabase
+            const { data: quizData } = await supabase
                 .from('quizzes')
                 .select('*')
                 .eq('id', id)
                 .single();
 
             if (quizData) {
-                // Fetch question count
                 const { count } = await supabase
                     .from('questions')
                     .select('*', { count: 'exact', head: true })
@@ -56,114 +42,250 @@ const QuizDetails = () => {
                     id: quizData.id,
                     title: quizData.title,
                     description: quizData.description,
-                    rating: 4.5, // Default/Mock for now
-                    totalRatings: 0,
+                    type: quizData.type,
                     duration: (quizData.settings?.duration || 60) + ' mins',
                     questions: count || 0,
-                    difficulty: 'Intermediate', // logic or default
-                    author: 'Faculty' // or fetch profile
+                    difficulty: 'Intermediate',
                 });
+
+                if (quizData.module_id) {
+                    setModuleId(quizData.module_id);
+                    checkPracticeStatus(quizData.module_id, quizData.id);
+                } else {
+                    setModuleId(null);
+                    checkPracticeStatus(null, quizData.id);
+                }
+
+                if (quizData.type === 'global') {
+                    fetchRatings(quizData.id);
+                }
             }
             setLoading(false);
         };
 
-        fetchQuiz();
-    }, [id]);
+        const checkPracticeStatus = async (modId: string | null, quizId: string) => {
+            if (!user) return;
 
-    if (loading) return <div className="p-10 text-center">Loading details...</div>;
-    if (!quiz) return <div className="p-10 text-center text-red-500">Quiz not found.</div>;
+            let query = supabase.from('user_practice').select('id').eq('user_id', user.id);
+
+            if (modId) {
+                query = query.eq('module_id', modId);
+            } else {
+                query = query.eq('quiz_id', quizId);
+            }
+
+            const { data } = await query.single();
+            if (data) setIsAddedToPractice(true);
+        };
+
+        const fetchRatings = async (quizId: string) => {
+            // Fetch Average
+            const { data: ratings } = await supabase
+                .from('quiz_ratings')
+                .select('rating')
+                .eq('quiz_id', quizId);
+
+            if (ratings && ratings.length > 0) {
+                const avg = ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length;
+                setAverageRating(Math.round(avg * 10) / 10);
+                setTotalRatings(ratings.length);
+            }
+
+            // Fetch User Rating
+            if (user) {
+                const { data: myRating } = await supabase
+                    .from('quiz_ratings')
+                    .select('rating')
+                    .eq('quiz_id', quizId)
+                    .eq('user_id', user.id)
+                    .single();
+                if (myRating) setUserRating(myRating.rating);
+            }
+        };
+
+        fetchQuiz();
+    }, [id, user]);
+
+    const handleRating = async (rating: number) => {
+        if (!user || !quiz) return;
+
+        // Optimistic UI
+        setUserRating(rating);
+
+        const { error } = await supabase
+            .from('quiz_ratings')
+            .upsert({
+                user_id: user.id,
+                quiz_id: quiz.id,
+                rating: rating
+            }, { onConflict: 'user_id, quiz_id' });
+
+        if (error) {
+            console.error('Error submitting rating:', error);
+            // Revert on error? For now just log
+        } else {
+            // Refetch average to keep it sync
+            const { data: ratings } = await supabase
+                .from('quiz_ratings')
+                .select('rating')
+                .eq('quiz_id', quiz.id);
+            if (ratings && ratings.length > 0) {
+                const avg = ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length;
+                setAverageRating(Math.round(avg * 10) / 10);
+                setTotalRatings(ratings.length);
+            }
+        }
+    };
+
+    const togglePractice = async () => {
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+        if (practiceLoading || !quiz) return;
+
+        setPracticeLoading(true);
+        try {
+            if (isAddedToPractice) {
+                let query = supabase.from('user_practice').delete().eq('user_id', user.id);
+
+                if (moduleId) {
+                    query = query.eq('module_id', moduleId);
+                } else {
+                    query = query.eq('quiz_id', quiz.id);
+                }
+
+                const { error } = await query;
+                if (error) throw error;
+                setIsAddedToPractice(false);
+            } else {
+                const payload: any = { user_id: user.id };
+                if (moduleId) {
+                    payload.module_id = moduleId;
+                } else {
+                    payload.quiz_id = quiz.id;
+                }
+
+                const { error } = await supabase
+                    .from('user_practice')
+                    .insert(payload);
+                if (error) throw error;
+                setIsAddedToPractice(true);
+            }
+        } catch (err) {
+            console.error('Error toggling practice:', err);
+        } finally {
+            setPracticeLoading(false);
+        }
+    };
+
+    if (loading) return <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">Loading...</div>;
+    if (!quiz) return <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">Quiz not found.</div>;
 
     return (
-        <div className="bg-surface w-full min-h-screen pb-12">
-            <div className="max-w-7xl ml-0 px-8 py-6 space-y-8">
+        <div className="min-h-screen bg-[#09090b] text-white font-sans selection:bg-blue-500/30">
+            <div className="max-w-6xl mx-auto px-6 pt-8 pb-20">
                 {/* Back Button */}
-                <div>
-                    <Button
-                        variant="ghost"
-                        className="gap-2 pl-0 hover:bg-transparent hover:text-primary"
-                        onClick={() => navigate(-1)}
-                    >
-                        <ArrowLeft className="w-4 h-4" /> Back
-                    </Button>
+                <button
+                    onClick={() => navigate(-1)}
+                    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-12 group"
+                >
+                    <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+                    <span className="text-sm font-medium">Back</span>
+                </button>
+
+                {/* Header Content */}
+                <div className="space-y-4 mb-8">
+                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white leading-tight">
+                        {quiz.title}
+                    </h1>
+                    <p className="text-gray-400 text-lg leading-relaxed max-w-3xl">
+                        {quiz.description || "No description available for this assessment."}
+                    </p>
                 </div>
 
-                {/* Header Section */}
-                <div className="space-y-6">
-                    <div>
-                        <h1 className="text-4xl font-bold text-text">{quiz.title}</h1>
-                        <p className="text-muted mt-3 text-lg leading-relaxed">{quiz.description}</p>
+                {/* Metadata Row */}
+                <div className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm text-gray-400 mb-16 border-b border-white/10 pb-16">
+                    <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        <span>{quiz.duration}</span>
                     </div>
 
-                    {/* Meta Data & Rating Line */}
-                    <div className="flex flex-wrap items-center gap-6 pt-2 pb-4">
-                        <div className="flex items-center gap-2 text-muted">
-                            <Clock className="w-5 h-5" />
-                            <span className="font-medium">{quiz.duration}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted">
-                            <BookOpen className="w-5 h-5" />
-                            <span className="font-medium">{quiz.questions} Questions</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted">
-                            <span className="px-3 py-1 rounded-full bg-background border border-border-custom text-xs uppercase tracking-wider font-semibold">
-                                {quiz.difficulty}
-                            </span>
-                        </div>
+                    <div className="flex items-center gap-2">
+                        <BookOpen className="w-4 h-4" />
+                        <span>{quiz.questions} Questions</span>
+                    </div>
 
-                        {/* Divider */}
-                        <div className="h-4 w-px bg-border-custom hidden sm:block"></div>
 
-                        {/* Rating */}
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1 bg-yellow-500/10 px-3 py-1 rounded-full">
-                                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                                <span className="font-semibold text-yellow-700 dark:text-yellow-400">{quiz.rating}</span>
-                                <span className="text-xs text-muted">({quiz.totalRatings})</span>
+
+                    {quiz.type === 'global' && (
+                        <div className="flex items-center gap-6 ml-2 animate-in fade-in duration-500">
+                            <div className="flex items-center gap-1.5 bg-yellow-500/10 px-2.5 py-0.5 rounded text-yellow-500 border border-yellow-500/20">
+                                <Star className="w-4 h-4 fill-yellow-500" />
+                                <span className="font-bold">{averageRating || 0}</span>
+                                <span className="text-yellow-500/50 text-xs">({totalRatings})</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <span className="text-sm text-muted mr-2">Rate:</span>
+
+                            <div className="flex items-center gap-1 group">
+                                <span className="text-gray-600 mr-2 text-xs uppercase font-bold tracking-wider group-hover:text-gray-400 transition-colors">Rate:</span>
                                 {[1, 2, 3, 4, 5].map((star) => (
                                     <button
                                         key={star}
-                                        onClick={() => setUserRating(star)}
-                                        className="focus:outline-none transition-transform hover:scale-110"
+                                        onClick={() => handleRating(star)}
+                                        className="focus:outline-none transition-all hover:scale-110 active:scale-95"
                                     >
                                         <Star
-                                            className={`w-4 h-4 ${star <= userRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
+                                            className={`w-4 h-4 ${star <= userRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-800 hover:text-gray-600'}`}
                                         />
                                     </button>
                                 ))}
                             </div>
                         </div>
-                    </div>
+                    )}
+
+                    {!moduleId && (
+                        <button
+                            onClick={togglePractice}
+                            disabled={practiceLoading}
+                            className={`ml-auto px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-xl
+                                ${isAddedToPractice
+                                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20'
+                                    : 'bg-[#6366f1] hover:bg-[#5558e6] text-white shadow-indigo-500/25 hover:shadow-indigo-500/40'
+                                }`}
+                        >
+                            {practiceLoading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : isAddedToPractice ? (
+                                <>
+                                    <Check className="w-4 h-4" />
+                                    <span>Added</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>Add to My Practice</span>
+                                    <ArrowRight className="w-4 h-4" />
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
-            </div>
-
-            {/* Full Width Separator */}
-            <div className="w-full border-b border-border-custom"></div>
-
-            {/* Centered Section: Modules & Actions */}
-            <div className="max-w-7xl mx-auto px-8 space-y-8 mt-12">
-                {/* Syllabus Section Removed */}
 
                 {/* Action Buttons */}
-                <div className="pt-8 flex flex-col sm:flex-row gap-4 justify-center items-center pb-12">
-                    <Button
-                        variant="secondary"
-                        size="lg"
-                        className="w-full sm:w-48 h-12 text-base shadow-sm border-border-custom"
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+
+
+                    <button
                         onClick={() => navigate(`/student/practice/setup/${id}`)}
+                        className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-white text-black font-semibold hover:bg-gray-100 transition-all active:scale-95 text-sm"
                     >
                         Practice Test
-                    </Button>
-                    <Button
-                        variant="primary"
-                        size="lg"
-                        className="w-full sm:w-48 h-12 text-base shadow-lg shadow-primary/25"
+                    </button>
+                    <button
                         onClick={() => navigate(`/student/test/${id}`)}
+                        className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] active:scale-95 text-sm"
                     >
                         Start Assessment
-                    </Button>
+                    </button>
                 </div>
             </div>
         </div>

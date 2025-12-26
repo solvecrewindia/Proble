@@ -36,7 +36,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, showDate }) => {
                     {course.type === 'module' ? (
                         <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-[10px] uppercase">Module</span>
                     ) : (
-                        <span className="font-bold text-text">Test {typeof course.id === 'string' ? course.id.slice(0, 4) : course.id}</span>
+                        <span className="font-bold text-text">Test</span>
                     )}
                 </div>
                 {showDate && <div className="text-xs mt-2 text-muted">{course.date}</div>}

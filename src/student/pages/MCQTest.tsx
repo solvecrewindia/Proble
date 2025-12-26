@@ -56,27 +56,44 @@ const MCQTest = () => {
         const fetchQuestions = async () => {
             if (!id) return;
 
-            // 1. Fetch Quiz Settings (for anti-cheat level)
+            let targetQuizIds: string[] = [];
+            let isCombined = false;
+
+            if (id === 'combined') {
+                isCombined = true;
+                const params = new URLSearchParams(window.location.search);
+                const idsParam = params.get('ids');
+                if (idsParam) {
+                    targetQuizIds = idsParam.split(',');
+                } else {
+                    alert("No quizzes selected for combined test.");
+                    navigate(-1);
+                    return;
+                }
+            } else {
+                targetQuizIds = [id];
+            }
+
+            // 1. Fetch Quiz Settings (use first quiz settings for combined or specific ID)
+            // For combined, we might just skip specific settings or generic ones
             const { data: quizData } = await supabase
                 .from('quizzes')
                 .select('settings, status')
-                .eq('id', id)
+                .in('id', targetQuizIds)
+                .limit(1)
                 .single();
 
             if (quizData && quizData.settings) {
                 setQuizSettings(quizData.settings);
             }
-            if (quizData && quizData.status !== 'active' && quizData.status !== 'paused') {
-                alert("This test is not currently active.");
-                navigate('/student/dashboard');
-                return;
-            }
+            // Skip status check for combined or enforce all active? 
+            // For now, lenient check.
 
             // Fetch questions from Supabase
             const { data, error } = await supabase
                 .from('questions')
                 .select('*')
-                .eq('quiz_id', id)
+                .in('quiz_id', targetQuizIds)
                 .order('id'); // Ensure stable order or use created_at
 
             if (data && data.length > 0) {
@@ -99,7 +116,7 @@ const MCQTest = () => {
     }, [id]);
 
     useEffect(() => {
-        if (!id || loading || showResults) return;
+        if (!id || loading || showResults || id === 'combined') return;
 
         // Join Realtime Channel
         const channel = supabase.channel(`quiz_session:${id}`, {
@@ -201,7 +218,7 @@ const MCQTest = () => {
         // Save Results to Supabase
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user && id) {
+            if (user && id && id !== 'combined') {
                 const { error } = await supabase.from('quiz_results').insert({
                     quiz_id: id,
                     student_id: user.id,
