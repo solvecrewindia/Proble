@@ -5,6 +5,7 @@ import Users from './pages/Users';
 import Quizzes from './pages/Quizzes';
 import QuizList from './pages/QuizList';
 import AdminQuizCreate from './pages/AdminQuizCreate';
+import AdminModuleCreate from './pages/AdminModuleCreate';
 import ProblemRequests from './pages/ProblemRequests';
 import Settings from './pages/Settings';
 import ProfileSettings from '../shared/pages/ProfileSettings';
@@ -25,6 +26,8 @@ function AdminApp() {
           <Route path="quizzes/:category" element={<QuizList />} />
           <Route path="quizzes/:category/create" element={<AdminQuizCreate />} />
           <Route path="quizzes/:category/edit/:quizId" element={<AdminQuizCreate />} />
+          <Route path="modules/:category/create" element={<AdminModuleCreate />} />
+          <Route path="modules/:moduleId" element={<QuizList />} />
           <Route path="problem-requests" element={<ProblemRequests />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />

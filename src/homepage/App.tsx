@@ -27,43 +27,85 @@ function App({ searchQuery = '' }: AppProps) {
   const navigate = useNavigate();
 
   // Fetch Quizzes based on Active Tab
+  // Fetch Quizzes based on Active Tab
   useEffect(() => {
     const fetchQuizzes = async () => {
       setLoading(true);
       try {
-        // Map tab to DB type if needed, or use directly if 1:1
-        // TabType: 'nptel' | 'gate' | 'srm' | 'global'
-        // DB Type: 'nptel', 'gate', 'srm', 'global' (assumed 1:1 based on AdminQuizCreate update)
-
-        // Map tab IDs to database 'type' values
         let dbType: string = activeTab;
-        if (activeTab === 'srm') dbType = 'srmist';
-        if (activeTab === 'gate') dbType = 'gate';
-        if (activeTab === 'nptel') dbType = 'nptel';
+        let moduleCategory = 'NPTEL';
 
-        const { data, error } = await supabase
-          .from('quizzes')
-          .select('*')
-          .eq('type', dbType) // use mapped type
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (data) {
-          const mapped: Course[] = data.map((q: any) => ({
-            id: q.id,
-            title: q.title,
-            author: 'Faculty', // Could be dynamic if we joined profiles
-            date: new Date(q.created_at).toLocaleDateString(),
-            image: q.image_url || `https://ui-avatars.com/api/?name=${q.title}&background=random&size=400` // Use uploaded image or placeholder
-          }));
-          setCourses(mapped);
-        } else {
-          setCourses([]);
+        if (activeTab === 'srm') {
+          dbType = 'srmist';
+          moduleCategory = 'SRMIST';
+        } else if (activeTab === 'gate') {
+          dbType = 'gate';
+          moduleCategory = 'GATE';
+        } else if (activeTab === 'nptel') {
+          dbType = 'nptel';
+          moduleCategory = 'NPTEL';
+        } else if (activeTab === 'placement') {
+          dbType = 'placement';
+          moduleCategory = 'Placement';
+        } else if (activeTab === 'global') {
+          dbType = 'global';
+          moduleCategory = 'Global';
         }
+
+        const [modulesRes, quizzesRes] = await Promise.all([
+          supabase.from('modules').select('*').eq('category', moduleCategory),
+          supabase.from('quizzes').select('*').eq('type', dbType).is('module_id', null).order('created_at', { ascending: false })
+        ]);
+
+        const modules = modulesRes.data || [];
+        const quizzes = quizzesRes.data || [];
+
+        // Collect all distinct created_by IDs
+        const userIds = new Set<string>();
+        modules.forEach((m: any) => { if (m.created_by) userIds.add(m.created_by); });
+        quizzes.forEach((q: any) => { if (q.created_by) userIds.add(q.created_by); });
+
+        // Fetch profiles for these users
+        let userMap = new Map<string, string>(); // id -> role
+        if (userIds.size > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, role')
+            .in('id', Array.from(userIds));
+
+          if (profiles) {
+            profiles.forEach((p: any) => userMap.set(p.id, p.role));
+          }
+        }
+
+        const getAuthorName = (uid: string) => {
+          const role = userMap.get(uid);
+          if (role === 'admin') return 'Admin';
+          return 'Faculty'; // Default to Faculty for teachers/faculty/unknown
+        };
+
+        const mappedModules: Course[] = modules.map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          author: m.created_by ? getAuthorName(m.created_by) : 'Faculty',
+          date: new Date(m.created_at).toLocaleDateString(),
+          image: m.image_url || `https://ui-avatars.com/api/?name=${m.title}&background=random&size=400`,
+          type: 'module'
+        }));
+
+        const mappedQuizzes: Course[] = quizzes.map((q: any) => ({
+          id: q.id,
+          title: q.title,
+          author: q.created_by ? getAuthorName(q.created_by) : 'Faculty',
+          date: new Date(q.created_at).toLocaleDateString(),
+          image: q.image_url || `https://ui-avatars.com/api/?name=${q.title}&background=random&size=400`,
+          type: 'quiz'
+        }));
+
+        setCourses([...mappedModules, ...mappedQuizzes]);
       } catch (err) {
-        console.error('Error fetching quizzes:', err);
-        setCourses([]); // Fallback to empty
+        console.error('Error fetching data:', err);
+        setCourses([]);
       } finally {
         setLoading(false);
       }
@@ -111,6 +153,7 @@ function App({ searchQuery = '' }: AppProps) {
       case 'nptel': return 'NPTEL';
       case 'gate': return 'GATE';
       case 'srm': return 'SRMIST';
+      case 'placement': return 'Placement Preparation';
       case 'global': return 'Global Challenges';
       default: return 'NPTEL';
     }

@@ -1,9 +1,10 @@
-import React from 'react';
-import { BookOpen, GraduationCap, Server, Briefcase } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookOpen, GraduationCap, Server, Briefcase, FileText, FolderPlus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminSelectType() {
     const navigate = useNavigate();
+    const [selectedType, setSelectedType] = useState<string | null>(null);
 
     const options = [
         {
@@ -40,8 +41,20 @@ export default function AdminSelectType() {
         },
     ];
 
+    const handleSelect = (id: string) => {
+        // Categories that support modules
+        const moduleSupported = ['NPTEL', 'GATE', 'SRMIST', 'PLACEMENT'];
+
+        if (moduleSupported.includes(id)) {
+            setSelectedType(id);
+        } else {
+            // Fallback for others if any
+            navigate(`/admin/quizzes/${id}/create`);
+        }
+    };
+
     return (
-        <div className="max-w-6xl mx-auto p-8 space-y-12 min-h-[calc(100vh-6rem)] flex flex-col justify-center animate-in fade-in duration-700">
+        <div className="max-w-6xl mx-auto p-8 space-y-12 min-h-[calc(100vh-6rem)] flex flex-col justify-center animate-in fade-in duration-700 relative">
             <div className="text-center space-y-4">
                 <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-primary-glow to-secondary-foreground drop-shadow-sm">
                     Select Assessment Type
@@ -56,7 +69,7 @@ export default function AdminSelectType() {
                 {options.map((option) => (
                     <button
                         key={option.id}
-                        onClick={() => navigate(`/admin/quizzes/${option.id}/create`)}
+                        onClick={() => handleSelect(option.id)}
                         className="group relative p-1 rounded-3xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/10"
                     >
                         {/* Gradient Border Background */}
@@ -82,6 +95,53 @@ export default function AdminSelectType() {
                     </button>
                 ))}
             </div>
+
+            {/* Selection Modal */}
+            {selectedType && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-surface border border-white/10 rounded-3xl p-8 max-w-lg w-full relative shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                        <button
+                            onClick={() => setSelectedType(null)}
+                            className="absolute top-4 right-4 p-2 text-text-secondary hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="text-center mb-8">
+                            <h2 className="text-2xl font-bold text-text mb-2">Create {selectedType} Content</h2>
+                            <p className="text-text-secondary">Choose how you want to organize this content.</p>
+                        </div>
+
+                        <div className="grid gap-4">
+                            <button
+                                onClick={() => navigate(`/admin/quizzes/${selectedType}/create`)}
+                                className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-primary/50 transition-all group text-left"
+                            >
+                                <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                                    <FileText className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-text group-hover:text-primary transition-colors">Single Module</h3>
+                                    <p className="text-sm text-text-secondary">Create a standalone quiz directly.</p>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => navigate(`/admin/modules/${selectedType}/create`)}
+                                className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-primary/50 transition-all group text-left"
+                            >
+                                <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                    <FolderPlus className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-text group-hover:text-primary transition-colors">Multiple Modules</h3>
+                                    <p className="text-sm text-text-secondary">Create a folder to group multiple quizzes.</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

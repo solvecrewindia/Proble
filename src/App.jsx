@@ -3,6 +3,7 @@ import FacultyApp from './faculty/App'
 import Login from './login/pages/Login'
 import HomepageApp from './homepage/App'
 import QuizDetails from './student/pages/QuizDetails';
+import ModuleDetails from './homepage/ModuleDetails';
 import AdminApp from './admin/App'
 import StudentApp from './student/App'
 import { AuthProvider, useAuth } from './shared/context/AuthContext'
@@ -58,6 +59,7 @@ function AppContent() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/course/:id" element={<QuizDetails />} />
+                <Route path="/module/:id" element={<ModuleDetails />} />
                 <Route path="/quiz/:code" element={<SharedQuizHandler />} />
 
                 {/* Protected Routes */}

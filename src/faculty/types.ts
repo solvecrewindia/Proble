@@ -49,18 +49,30 @@ export interface Quiz {
     accessCode?: string;
     scheduledAt?: string;
     questions: Question[];
+    module_id?: string;
     settings: {
         duration: number; // minutes
         passingScore: number;
         antiCheatLevel: 'low' | 'standard' | 'strict';
         allowRetake: boolean;
+        category?: string;
     };
     created_by: string; // Foreign Key to profiles
     createdAt: string;
     updatedAt: string;
 }
 
-export type QuizMeta = Pick<Quiz, 'id' | 'title' | 'description' | 'image_url' | 'status' | 'settings' | 'type'>;
+export interface Module {
+    id: string;
+    title: string;
+    description?: string;
+    image_url?: string;
+    category: string;
+    created_by: string;
+    created_at: string;
+}
+
+export type QuizMeta = Pick<Quiz, 'id' | 'title' | 'description' | 'image_url' | 'status' | 'settings' | 'type' | 'module_id'>;
 
 export interface Attempt {
     id: string;

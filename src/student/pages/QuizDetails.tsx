@@ -144,22 +144,7 @@ const QuizDetails = () => {
 
             {/* Centered Section: Modules & Actions */}
             <div className="max-w-7xl mx-auto px-8 space-y-8 mt-12">
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
-                    <h2 className="text-2xl font-bold text-text">Syllabus & Modules</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {[
-                            { title: 'Section 1: Fundamentals', desc: 'Basic concepts and terminology.' },
-                            { title: 'Section 2: Core Logic', desc: 'Deep dive into problem solving.' },
-                            { title: 'Section 3: Advanced Topics', desc: 'Complex scenarios and edge cases.' },
-                            { title: 'Section 4: Practical Application', desc: 'Real-world examples and case studies.' }
-                        ].map((module, idx) => (
-                            <div key={idx} className="p-4 rounded-xl border border-border-custom bg-background/50 hover:bg-background transition-colors">
-                                <h3 className="font-semibold text-text mb-1">{module.title}</h3>
-                                <p className="text-sm text-muted">{module.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* Syllabus Section Removed */}
 
                 {/* Action Buttons */}
                 <div className="pt-8 flex flex-col sm:flex-row gap-4 justify-center items-center pb-12">

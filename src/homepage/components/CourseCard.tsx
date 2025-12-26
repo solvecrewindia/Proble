@@ -12,7 +12,13 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, showDate }) => {
 
     return (
         <div
-            onClick={() => navigate(`/course/${course.id}`)}
+            onClick={() => {
+                if (course.type === 'module') {
+                    navigate(`/module/${course.id}`);
+                } else {
+                    navigate(`/course/${course.id}`);
+                }
+            }}
             className="bg-surface rounded-xl shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none overflow-hidden transition-transform duration-200 hover:-translate-y-1 border border-border-custom cursor-pointer"
         >
             <img src={course.image} alt={course.title} className="w-full h-[150px] object-cover" />
@@ -21,13 +27,17 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, showDate }) => {
                 <div className="flex justify-between text-xs text-muted items-center">
                     <div className="flex items-center gap-2">
                         <img
-                            src={`https://i.pravatar.cc/100?img=${course.id}`}
+                            src={`https://ui-avatars.com/api/?name=${course.author}&background=random`}
                             alt={course.author}
                             className="w-[26px] h-[26px] rounded-full"
                         />
                         <span>{course.author}</span>
                     </div>
-                    <span className="font-bold text-text">Module {typeof course.id === 'number' ? (course.id % 10) + 1 : 1}</span>
+                    {course.type === 'module' ? (
+                        <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-[10px] uppercase">Module</span>
+                    ) : (
+                        <span className="font-bold text-text">Test {typeof course.id === 'string' ? course.id.slice(0, 4) : course.id}</span>
+                    )}
                 </div>
                 {showDate && <div className="text-xs mt-2 text-muted">{course.date}</div>}
             </div>

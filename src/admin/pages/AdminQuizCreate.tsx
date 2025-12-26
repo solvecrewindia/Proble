@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Save, ChevronRight, ChevronLeft, Check, ArrowLeft } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -25,7 +25,9 @@ const STEPS = [
 
 export default function AdminQuizCreate() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { category, quizId } = useParams(); // Get quizId from URL
+    const moduleId = location.state?.moduleId;
     const { user: contextUser } = useAuth();
     const [currentStep, setCurrentStep] = useState(0);
     const [quizData, setQuizData] = useState<any>({
@@ -199,6 +201,7 @@ export default function AdminQuizCreate() {
                 image_url: data.image_url || null,
                 code: data.code || generateCode(),
                 settings: data.settings,
+                module_id: moduleId || data.module_id || null, // Priority: passed state -> existing data -> null
                 created_by: userId
                 // updated_at removed as column does not exist
             };
