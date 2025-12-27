@@ -443,6 +443,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                 <option value="mcq">Multiple Choice</option>
                                 <option value="text">Descriptive Text</option>
                                 <option value="numeric">Numeric Answer</option>
+                                <option value="range">Range Answer</option>
                                 <option value="code">Code Snippet</option>
                             </select>
                             <Button size="sm" onClick={addQuestion}>
@@ -635,6 +636,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                 >
                                                     <option value="mcq">Single Correct (MCQ)</option>
                                                     <option value="msq">Multi Correct (MSQ)</option>
+                                                    <option value="range">Range Answer</option>
                                                 </select>
                                             </div>
                                             <div className="w-24">
@@ -723,6 +725,61 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                 ))}
                                             </div>
                                         )}
+
+                                        <div className="flex gap-4 p-4 border rounded-lg bg-surface/50 border-border-custom">
+                                            <div className="flex-1 space-y-1">
+                                                <label className="text-xs font-medium text-text-secondary">Min Value</label>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="Min"
+                                                    value={(() => {
+                                                        if (typeof q.correct === 'object' && q.correct !== null && 'min' in q.correct) {
+                                                            return (q.correct as any).min ?? '';
+                                                        }
+                                                        try {
+                                                            const parsed = typeof q.correct === 'string' ? JSON.parse(q.correct) : {};
+                                                            return parsed.min ?? '';
+                                                        } catch { return ''; }
+                                                    })()}
+                                                    onChange={(e) => {
+                                                        let current: any = {};
+                                                        if (typeof q.correct === 'object' && q.correct !== null) {
+                                                            current = { ...q.correct };
+                                                        } else if (typeof q.correct === 'string') {
+                                                            try { current = JSON.parse(q.correct); } catch { }
+                                                        }
+                                                        const newVal = { ...current, min: Number(e.target.value) };
+                                                        updateQuestion(index, { correct: newVal });
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex-1 space-y-1">
+                                                <label className="text-xs font-medium text-text-secondary">Max Value</label>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="Max"
+                                                    value={(() => {
+                                                        if (typeof q.correct === 'object' && q.correct !== null && 'max' in q.correct) {
+                                                            return (q.correct as any).max ?? '';
+                                                        }
+                                                        try {
+                                                            const parsed = typeof q.correct === 'string' ? JSON.parse(q.correct) : {};
+                                                            return parsed.max ?? '';
+                                                        } catch { return ''; }
+                                                    })()}
+                                                    onChange={(e) => {
+                                                        let current: any = {};
+                                                        if (typeof q.correct === 'object' && q.correct !== null) {
+                                                            current = { ...q.correct };
+                                                        } else if (typeof q.correct === 'string') {
+                                                            try { current = JSON.parse(q.correct); } catch { }
+                                                        }
+                                                        const newVal = { ...current, max: Number(e.target.value) };
+                                                        updateQuestion(index, { correct: newVal });
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </Card>

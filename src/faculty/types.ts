@@ -30,12 +30,12 @@ export interface Student {
 export interface Question {
     id: string;
     quizId: string;
-    type: 'mcq' | 'msq' | 'text' | 'numeric' | 'code';
+    type: 'mcq' | 'msq' | 'text' | 'numeric' | 'code' | 'range';
     stem: string;
     imageUrl?: string;
     options?: string[];
     optionImages?: string[];
-    correct?: number | number[] | string;
+    correct?: number | number[] | string | { min: number; max: number };
     weight: number;
 }
 

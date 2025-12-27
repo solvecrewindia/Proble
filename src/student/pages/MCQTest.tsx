@@ -16,8 +16,8 @@ const MCQTest = () => {
 
     const [questions, setQuestions] = useState<any[]>([]);
     const [currentQuestion, setCurrentQuestion] = useState(1);
-    // Persist answers: Record<questionId, selectedOptionT(number | number[])>
-    const [answers, setAnswers] = useState<Record<number, number | number[]>>({});
+    // Persist answers: Record<questionId, selectedOptionT(number | number[] | string)>
+    const [answers, setAnswers] = useState<Record<number, number | number[] | string>>({});
 
     // Results State
     const [showResults, setShowResults] = useState(false);
@@ -105,9 +105,19 @@ const MCQTest = () => {
                     imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null,
                     options: q.choices,
                     // Parse correct answer
-                    correct: q.type === 'msq'
-                        ? (JSON.parse(q.correct_answer || '[]'))
-                        : (Number(q.correct_answer) || 0)
+                    correct: (() => {
+                        if (q.type === 'msq') return JSON.parse(q.correct_answer || '[]');
+                        if (q.type === 'range') {
+                            try {
+                                const parsed = JSON.parse(q.correct_answer || '{}');
+                                if (typeof parsed === 'object' && parsed !== null && 'min' in parsed) {
+                                    return parsed;
+                                }
+                                return { min: 0, max: 0 };
+                            } catch { return { min: 0, max: 0 }; }
+                        }
+                        return (Number(q.correct_answer) || 0);
+                    })()
                 }));
                 setQuestions(mapped);
                 setLoading(false);
@@ -213,6 +223,19 @@ const MCQTest = () => {
                 if (userArr.length === correctArr.length &&
                     userArr.every((val: any) => correctArr.includes(val))) {
                     calculatedScore++;
+                }
+            } else if (q.type === 'range') {
+                // Range Grading
+                const userVal = Number(userAnswer);
+                if (!isNaN(userVal)) {
+                    try {
+                        const range = q.correct; // Parsed JSON {min, max} from fetch
+                        if (userVal >= range.min && userVal <= range.max) {
+                            calculatedScore++;
+                        }
+                    } catch (e) {
+                        console.error("Grading logic error for range", e);
+                    }
                 }
             } else {
                 // MCQ Grading
@@ -429,7 +452,7 @@ const MCQTest = () => {
                             )}
 
                             <div className="space-y-4">
-                                {questions[currentQuestion - 1].options.map((opt: string, idx: number) => (
+                                {questions[currentQuestion - 1].type !== 'range' && questions[currentQuestion - 1].options.map((opt: string, idx: number) => (
                                     <div
                                         key={idx}
                                         onClick={() => handleOptionSelect(idx)}
@@ -475,6 +498,24 @@ const MCQTest = () => {
                                         )} />
                                     </div>
                                 ))}
+
+                                {questions[currentQuestion - 1].type === 'range' && (
+                                    <div className="mt-6">
+                                        <input
+                                            type="number"
+                                            placeholder="Enter your answer..."
+                                            className="w-full p-4 rounded-xl border-2 border-border-custom bg-background text-lg focus:border-primary focus:outline-none transition-colors"
+                                            value={String(answers[currentQuestion] ?? '')}
+                                            onChange={(e) => {
+                                                setAnswers(prev => ({
+                                                    ...prev,
+                                                    [currentQuestion]: e.target.value
+                                                }));
+                                            }}
+                                        />
+                                        <p className="text-sm text-muted mt-2">Enter a numeric value.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

@@ -120,6 +120,13 @@ export default function AdminQuizCreate() {
                                     return [];
                                 }
                             }
+                            if (q.type === 'range') {
+                                try {
+                                    return JSON.parse(q.correct_answer);
+                                } catch {
+                                    return {};
+                                }
+                            }
                             return typeof q.correct_answer === 'string' ? parseInt(q.correct_answer) : (q.correct_answer || 0);
                         })(),
                         weight: 1
@@ -247,8 +254,8 @@ export default function AdminQuizCreate() {
                         image: q.optionImages?.[i] || null
                     })) || [],
                     // Serialize correct answer: string for MCQ index, JSON string for MSQ array
-                    correct_answer: q.type === 'msq'
-                        ? JSON.stringify(q.correct || [])
+                    correct_answer: (q.type === 'msq' || q.type === 'range')
+                        ? JSON.stringify(q.correct || (q.type === 'msq' ? [] : {}))
                         : String(q.correct || 0),
                     tags: q.tags || ['practice']
                 }));
