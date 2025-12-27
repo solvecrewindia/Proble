@@ -16,8 +16,8 @@ const MCQTest = () => {
 
     const [questions, setQuestions] = useState<any[]>([]);
     const [currentQuestion, setCurrentQuestion] = useState(1);
-    // Persist answers: Record<questionId, selectedOptionIndex>
-    const [answers, setAnswers] = useState<Record<number, number>>({});
+    // Persist answers: Record<questionId, selectedOptionT(number | number[])>
+    const [answers, setAnswers] = useState<Record<number, number | number[]>>({});
 
     // Results State
     const [showResults, setShowResults] = useState(false);
@@ -100,10 +100,14 @@ const MCQTest = () => {
                 const mapped = data.map((q: any, index: number) => ({
                     id: index + 1, // logical number
                     dbId: q.id,
+                    type: q.type || 'mcq', // Get type
                     question: q.text,
-                    imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null, // Add timestamp to force reload
+                    imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null,
                     options: q.choices,
-                    correct: q.correct_answer // Expecting text match usually, need to check if it's index or text
+                    // Parse correct answer
+                    correct: q.type === 'msq'
+                        ? (JSON.parse(q.correct_answer || '[]'))
+                        : (Number(q.correct_answer) || 0)
                 }));
                 setQuestions(mapped);
                 setLoading(false);
@@ -176,33 +180,45 @@ const MCQTest = () => {
     };
 
     const handleOptionSelect = (optionIndex: number) => {
-        setAnswers(prev => ({
-            ...prev,
-            [currentQuestion]: optionIndex
-        }));
+        const currentQ = questions[currentQuestion - 1];
+        if (currentQ.type === 'msq') {
+            // Toggle Logic for MSQ
+            setAnswers(prev => {
+                const current = (prev[currentQuestion] as number[]) || [];
+                if (current.includes(optionIndex)) {
+                    return { ...prev, [currentQuestion]: current.filter(i => i !== optionIndex) };
+                } else {
+                    return { ...prev, [currentQuestion]: [...current, optionIndex] };
+                }
+            });
+        } else {
+            // Radio Logic for MCQ
+            setAnswers(prev => ({
+                ...prev,
+                [currentQuestion]: optionIndex
+            }));
+        }
     };
 
     const calculateAndShowResults = async () => {
         let calculatedScore = 0;
         questions.forEach((q) => {
-            const userAnswerIndex = answers[q.id];
-            if (userAnswerIndex !== undefined) {
-                const userAnswerText = q.options[userAnswerIndex];
+            const userAnswer = answers[q.id];
 
-                // Fix: Check if correct answer is an index (number) or text
-                const correct = q.correct;
-                const isNumeric = !isNaN(Number(correct));
+            if (q.type === 'msq') {
+                // MSQ Grading: Exact array match (order independent)
+                const correctArr = Array.isArray(q.correct) ? q.correct : [];
+                const userArr = Array.isArray(userAnswer) ? userAnswer : [];
 
-                if (isNumeric) {
-                    // Compare indices
-                    if (userAnswerIndex === Number(correct)) {
-                        calculatedScore++;
-                    }
-                } else {
-                    // Check exact match with correct answer string (fallback)
-                    if (userAnswerText === correct) {
-                        calculatedScore++;
-                    }
+                if (userArr.length === correctArr.length &&
+                    userArr.every((val: any) => correctArr.includes(val))) {
+                    calculatedScore++;
+                }
+            } else {
+                // MCQ Grading
+                // Assume numeric index strictly now since we parse it on load
+                if (userAnswer === q.correct) {
+                    calculatedScore++;
                 }
             }
         });
@@ -419,7 +435,9 @@ const MCQTest = () => {
                                         onClick={() => handleOptionSelect(idx)}
                                         className={cn(
                                             "bg-[#eeeeee] dark:bg-gray-800 rounded-[14px] p-4 shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none cursor-pointer flex justify-between items-center transition-all hover:bg-[#e4e4e4] dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 group",
-                                            answers[currentQuestion] === idx && "bg-white dark:bg-gray-800 border-2 border-[#0ebcdb] font-semibold"
+                                            questions[currentQuestion - 1].type === 'msq'
+                                                ? (answers[currentQuestion] as number[])?.includes(idx) && "bg-white dark:bg-gray-800 border-2 border-[#0ebcdb] font-semibold"
+                                                : answers[currentQuestion] === idx && "bg-white dark:bg-gray-800 border-2 border-[#0ebcdb] font-semibold"
                                         )}
                                     >
                                         <div className="flex items-center gap-4 w-full">
@@ -449,8 +467,11 @@ const MCQTest = () => {
                                             </span>
                                         </div>
                                         <div className={cn(
-                                            "w-[20px] h-[20px] border-2 border-[#666] dark:border-gray-400 rounded-full flex-shrink-0 ml-4",
-                                            answers[currentQuestion] === idx && "bg-[#0ebcdb] border-white dark:border-gray-800"
+                                            "w-[20px] h-[20px] border-2 border-[#666] dark:border-gray-400 flex-shrink-0 ml-4 flex items-center justify-center", // Added flex center for checkbox
+                                            questions[currentQuestion - 1].type === 'msq' ? "rounded-md" : "rounded-full", // Square for MSQ
+                                            questions[currentQuestion - 1].type === 'msq'
+                                                ? (answers[currentQuestion] as number[])?.includes(idx) && "bg-[#0ebcdb] border-white dark:border-gray-800"
+                                                : answers[currentQuestion] === idx && "bg-[#0ebcdb] border-white dark:border-gray-800"
                                         )} />
                                     </div>
                                 ))}

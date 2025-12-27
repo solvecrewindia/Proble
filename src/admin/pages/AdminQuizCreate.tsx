@@ -105,14 +105,24 @@ export default function AdminQuizCreate() {
                     const formattedQuestions = (qData || []).map((q: any) => ({
                         id: q.id,
                         quizId: q.quiz_id,
-                        type: q.type || 'mcq',
-                        stem: q.text, // Map DB 'text' to frontend 'stem'
+                        type: q.type || 'mcq', // Use DB type
+                        stem: q.text,
                         imageUrl: q.image_url,
-                        // Map DB 'choices' (jsonb) to options/optionImages
                         options: Array.isArray(q.choices) ? q.choices.map((c: any) => c.text || '') : [],
                         optionImages: Array.isArray(q.choices) ? q.choices.map((c: any) => c.image || '') : [],
-                        correct: typeof q.correct_answer === 'string' ? parseInt(q.correct_answer) : (q.correct_answer || 0),
-                        weight: 1 // Default
+                        // Parse correct answer: could be int (MCQ) or JSON string of array (MSQ)
+                        correct: (() => {
+                            if (q.type === 'msq') {
+                                try {
+                                    const parsed = JSON.parse(q.correct_answer);
+                                    return Array.isArray(parsed) ? parsed : [];
+                                } catch {
+                                    return [];
+                                }
+                            }
+                            return typeof q.correct_answer === 'string' ? parseInt(q.correct_answer) : (q.correct_answer || 0);
+                        })(),
+                        weight: 1
                     }));
 
                     setQuestions(formattedQuestions);
@@ -229,13 +239,17 @@ export default function AdminQuizCreate() {
             if (questions.length > 0) {
                 const questionsPayload = questions.map(q => ({
                     quiz_id: quizId,
+                    type: q.type || 'mcq', // Save type
                     text: q.stem,
                     image_url: q.imageUrl || null,
                     choices: q.options?.map((opt: string, i: number) => ({
                         text: opt,
                         image: q.optionImages?.[i] || null
                     })) || [],
-                    correct_answer: q.correct || '',
+                    // Serialize correct answer: string for MCQ index, JSON string for MSQ array
+                    correct_answer: q.type === 'msq'
+                        ? JSON.stringify(q.correct || [])
+                        : String(q.correct || 0),
                     tags: q.tags || ['practice']
                 }));
                 const qResult = await supabase.from('questions').insert(questionsPayload);

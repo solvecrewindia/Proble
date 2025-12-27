@@ -155,15 +155,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                 const keyCorrect = findHeadeKey([/Correct\s*Answer/i, /Answer/i, /Key/i]);
 
                 if (!keyOpt1 || !keyCorrect) {
-                    // We can proceed without explicit question text strictly, but usually it's needed. 
-                    // If QText header is missing, maybe it's named something else entirely?
-                    // Let's assume strict requirement for Options/Answer at least.
-                    // If QText header missing, maybe we can fallback to finding "Question" again if strict failed? 
-                    // But strictly, let's complain if standard columns missing.
-                    if (!keyQText) {
-                        throw new Error(`Missing required 'Question' column. Found: ${headers.join(', ')}`);
-                    }
-                    throw new Error(`Missing required columns. Found: ${headers.join(', ')}`);
+                    throw new Error(`Missing required columns (Option 1, Correct Answer). Found: ${headers.join(', ')}`);
                 }
 
                 const newQuestions: Question[] = [];
@@ -178,16 +170,48 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                     const opt4 = row[keyOpt4];
                     const correctChar = row[keyCorrect];
 
-                    if (!questionText) continue;
+                    if (!questionText && !zipFile) {
+                        // If no text AND no zip file (so no potential images), then it's truly empty?
+                        // Alternatively, just allow it. The user might upload images manually later.
+                        // Let's just check if it's a completely empty row (no options/correct either?)
+                        // For now, let's just allow it, but maybe warn?
+                        // Actually user said "only images", implying they upload zip.
+                        // If they don't upload zip, they get empty questions they can edit.
+                        // So we continue ONLY if row is basically empty
+                        if (!questionText && !opt1 && !correctChar) continue;
+                    }
 
                     // Map Correct Answer
-                    let correctIndex = -1;
+                    let correct: number | number[] = -1;
+                    let type: 'mcq' | 'msq' = 'mcq';
+
                     if (correctChar) {
-                        const cleanChar = String(correctChar).trim().toUpperCase();
-                        if (['A', '1'].includes(cleanChar)) correctIndex = 0;
-                        else if (['B', '2'].includes(cleanChar)) correctIndex = 1;
-                        else if (['C', '3'].includes(cleanChar)) correctIndex = 2;
-                        else if (['D', '4'].includes(cleanChar)) correctIndex = 3;
+                        const rawStr = String(correctChar).trim().toUpperCase();
+
+                        // Check for separators (comma or semicolon)
+                        if (rawStr.includes(';') || rawStr.includes(',')) {
+                            // MSQ
+                            type = 'msq';
+                            const parts = rawStr.split(/[;,]+/).map(s => s.trim()).filter(s => s);
+                            const indices: number[] = [];
+
+                            parts.forEach(p => {
+                                if (['A', '1'].includes(p)) indices.push(0);
+                                else if (['B', '2'].includes(p)) indices.push(1);
+                                else if (['C', '3'].includes(p)) indices.push(2);
+                                else if (['D', '4'].includes(p)) indices.push(3);
+                            });
+
+                            correct = indices; // Array of indices
+                        } else {
+                            // MCQ
+                            type = 'mcq';
+                            if (['A', '1'].includes(rawStr)) correct = 0;
+                            else if (['B', '2'].includes(rawStr)) correct = 1;
+                            else if (['C', '3'].includes(rawStr)) correct = 2;
+                            else if (['D', '4'].includes(rawStr)) correct = 3;
+                            else correct = 0; // Default fallback
+                        }
                     }
 
                     // Handling Images
@@ -248,10 +272,11 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                     newQuestions.push({
                         id: uuidv4(),
                         quizId: quizId || '',
-                        type: 'mcq',
-                        stem: questionText,
+                        type: type,
+                        stem: questionText || '',
                         options: [opt1, opt2, opt3, opt4].map(o => String(o || '')),
-                        correct: correctIndex,
+
+                        correct: correct,
                         weight: 1,
                         imageUrl: qImageUrl,
                         optionImages: optionImages
@@ -345,7 +370,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
             stem: '',
             weight: 1,
             options: activeType === 'mcq' ? ['', '', '', ''] : undefined,
-            correct: activeType === 'mcq' ? 0 : '',
+            correct: activeType === 'mcq' ? 0 : activeType === 'msq' ? [] : '',
         };
         setQuestions([...questions, newQuestion]);
     };
@@ -360,10 +385,23 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
         setQuestions(questions.filter((_: any, i: number) => i !== index));
     };
 
+    const clearQuestions = () => {
+        if (window.confirm("Are you sure you want to remove ALL questions? This cannot be undone.")) {
+            setQuestions([]);
+        }
+    };
+
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold text-text">Questions Management</h2>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold text-text">Questions Management</h2>
+                </div>
+                {questions.length > 0 && (
+                    <Button variant="outline" size="sm" onClick={clearQuestions} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 border-red-200 dark:border-red-900/50">
+                        <Trash2 className="mr-2 h-4 w-4" /> Clear All Questions
+                    </Button>
+                )}
             </div>
 
 
@@ -582,6 +620,23 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                     </div>
                                                 )}
                                             </div>
+                                            <div className="w-48">
+                                                <select
+                                                    className="h-10 w-full rounded-lg border border-border-custom bg-background text-text text-sm px-2"
+                                                    value={q.type}
+                                                    onChange={(e) => {
+                                                        const newType = e.target.value as Question['type'];
+                                                        // Reset correct answer when switching types
+                                                        updateQuestion(index, {
+                                                            type: newType,
+                                                            correct: newType === 'msq' ? [] : 0
+                                                        });
+                                                    }}
+                                                >
+                                                    <option value="mcq">Single Correct (MCQ)</option>
+                                                    <option value="msq">Multi Correct (MSQ)</option>
+                                                </select>
+                                            </div>
                                             <div className="w-24">
                                                 <Input
                                                     type="number"
@@ -592,16 +647,32 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                             </div>
                                         </div>
 
-                                        {q.type === 'mcq' && q.options && (
+                                        {(q.type === 'mcq' || q.type === 'msq') && q.options && (
                                             <div className="space-y-2 pl-4 border-l-2 border-border-custom">
                                                 {q.options.map((opt, optIndex) => (
                                                     <div key={optIndex} className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-3">
                                                             <input
-                                                                type="radio"
+                                                                type={q.type === 'msq' ? "checkbox" : "radio"}
                                                                 name={`q-${q.id}`}
-                                                                checked={q.correct === optIndex}
-                                                                onChange={() => updateQuestion(index, { correct: optIndex })}
+                                                                checked={q.type === 'msq'
+                                                                    ? Array.isArray(q.correct) && q.correct.includes(optIndex)
+                                                                    : q.correct === optIndex
+                                                                }
+                                                                onChange={() => {
+                                                                    if (q.type === 'msq') {
+                                                                        const currentCorrect = Array.isArray(q.correct) ? q.correct : [];
+                                                                        let newCorrect;
+                                                                        if (currentCorrect.includes(optIndex)) {
+                                                                            newCorrect = currentCorrect.filter(i => i !== optIndex);
+                                                                        } else {
+                                                                            newCorrect = [...currentCorrect, optIndex];
+                                                                        }
+                                                                        updateQuestion(index, { correct: newCorrect });
+                                                                    } else {
+                                                                        updateQuestion(index, { correct: optIndex });
+                                                                    }
+                                                                }}
                                                                 className="h-4 w-4 text-primary focus:ring-primary accent-primary"
                                                             />
                                                             <div className="flex-1 flex gap-2">
