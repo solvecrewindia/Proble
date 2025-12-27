@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Search, Star, Users, Clock, Filter, PlayCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -94,7 +94,7 @@ export default function Dashboard() {
             </div>
 
             {/* Search and Filter */}
-            <div className="flex flex-col md:flex-row gap-4 items-center bg-surface p-4 rounded-xl border border-border-custom shadow-sm">
+            <div className="flex flex-col md:flex-row gap-4 items-center bg-surface p-4 rounded-xl border border-neutral-300 dark:border-neutral-600 shadow-sm">
                 <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted" />
                     <Input
@@ -123,7 +123,7 @@ export default function Dashboard() {
             {/* Quiz Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredQuizzes.map((quiz) => (
-                    <Card key={quiz.id} className="group hover:shadow-lg transition-all duration-300 border-border-custom overflow-hidden cursor-pointer bg-surface" onClick={() => setSelectedQuiz(quiz)}>
+                    <Card key={quiz.id} className="group hover:shadow-lg transition-all duration-300 border-neutral-300 dark:border-neutral-600 overflow-hidden cursor-pointer bg-surface" onClick={() => setSelectedQuiz(quiz)}>
                         {/* Thumbnail */}
                         <div className={`h-40 w-full ${quiz.thumbnail} relative`}>
                             <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
@@ -138,14 +138,14 @@ export default function Dashboard() {
                                     {quiz.title}
                                 </h3>
                                 <div className="flex items-center gap-2 mt-2">
-                                    <div className="h-6 w-6 rounded-full bg-background flex items-center justify-center text-xs font-bold text-muted border border-border-custom">
+                                    <div className="h-6 w-6 rounded-full bg-background flex items-center justify-center text-xs font-bold text-muted border border-neutral-300 dark:border-neutral-600">
                                         {quiz.instructor.avatar}
                                     </div>
                                     <span className="text-sm text-muted truncate">{quiz.instructor.name}</span>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-sm text-muted pt-2 border-t border-border-custom">
+                            <div className="flex items-center justify-between text-sm text-muted pt-2 border-t border-neutral-300 dark:border-neutral-600">
                                 <div className="flex items-center gap-1">
                                     <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
                                     <span className="font-medium text-text">{quiz.rating}</span>
@@ -164,13 +164,13 @@ export default function Dashboard() {
             {/* Test Details Modal */}
             {selectedQuiz && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-surface rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl animate-in fade-in zoom-in-95 duration-200 border border-border-custom">
+                    <div className="bg-surface rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl animate-in fade-in zoom-in-95 duration-200 border border-neutral-300 dark:border-neutral-600">
                         <div className={`h-32 w-full ${selectedQuiz.thumbnail} relative`}>
                             <button
                                 onClick={() => setSelectedQuiz(null)}
                                 className="absolute top-4 right-4 h-8 w-8 rounded-full bg-black/20 hover:bg-black/40 text-white flex items-center justify-center transition-colors"
                             >
-                                ✕
+                                âœ•
                             </button>
                         </div>
 
@@ -180,21 +180,21 @@ export default function Dashboard() {
                                 <h2 className="text-3xl font-bold text-text">{selectedQuiz.title}</h2>
                                 <div className="flex items-center gap-2 mt-3 text-muted">
                                     <span className="font-medium">{selectedQuiz.instructor.name}</span>
-                                    <span>•</span>
+                                    <span>â€¢</span>
                                     <span>{selectedQuiz.instructor.department}</span>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4 py-4 border-y border-border-custom">
+                            <div className="grid grid-cols-3 gap-4 py-4 border-y border-neutral-300 dark:border-neutral-600">
                                 <div className="text-center">
                                     <div className="text-2xl font-bold text-text">{selectedQuiz.questions}</div>
                                     <div className="text-xs text-muted uppercase tracking-wide">Questions</div>
                                 </div>
-                                <div className="text-center border-l border-border-custom">
+                                <div className="text-center border-l border-neutral-300 dark:border-neutral-600">
                                     <div className="text-2xl font-bold text-text">{selectedQuiz.duration}</div>
                                     <div className="text-xs text-muted uppercase tracking-wide">Minutes</div>
                                 </div>
-                                <div className="text-center border-l border-border-custom">
+                                <div className="text-center border-l border-neutral-300 dark:border-neutral-600">
                                     <div className="text-2xl font-bold text-text">{selectedQuiz.rating}</div>
                                     <div className="text-xs text-muted uppercase tracking-wide">Rating</div>
                                 </div>

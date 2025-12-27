@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User as UserIcon, Globe, Lock, Trash2, Edit, ChevronDown, Camera } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -136,7 +136,7 @@ const ProfileSettings = () => {
             <h1 className="text-3xl font-bold text-text">Settings</h1>
 
             {/* Account Section */}
-            <div className="bg-surface rounded-xl border border-border-custom p-6 shadow-sm">
+            <div className="bg-surface rounded-xl border border-neutral-300 dark:border-neutral-600 p-6 shadow-sm">
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-2">
                         <UserIcon className="w-5 h-5 text-text" />
@@ -146,7 +146,7 @@ const ProfileSettings = () => {
                     {!isEditing ? (
                         <button
                             onClick={() => setIsEditing(true)}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text border border-border-custom rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                         >
                             <Edit className="w-4 h-4" />
                             Edit
@@ -155,7 +155,7 @@ const ProfileSettings = () => {
                         <div className="flex gap-2">
                             <button
                                 onClick={handleCancel}
-                                className="px-4 py-2 text-sm font-medium text-text hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors border border-border-custom"
+                                className="px-4 py-2 text-sm font-medium text-text hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors border border-neutral-300 dark:border-neutral-600"
                             >
                                 Cancel
                             </button>
@@ -172,7 +172,7 @@ const ProfileSettings = () => {
                 <div className="flex flex-col md:flex-row gap-8">
                     {/* Profile Pic */}
                     <div className="flex-shrink-0">
-                        <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-border-custom relative group cursor-pointer">
+                        <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-neutral-300 dark:border-neutral-600 relative group cursor-pointer">
                             <img
                                 src={formData.photo}
                                 alt="Profile"
@@ -201,7 +201,7 @@ const ProfileSettings = () => {
                                     name="username"
                                     value={formData.username}
                                     onChange={handleChange}
-                                    className="w-full bg-background border border-border-custom rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="w-full bg-background border border-neutral-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             ) : (
                                 <div className="font-medium text-text px-3 py-2">{formData.username}</div>
@@ -215,7 +215,7 @@ const ProfileSettings = () => {
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
-                                    className="w-full bg-background border border-border-custom rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="w-full bg-background border border-neutral-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             ) : (
                                 <div className="font-medium text-text px-3 py-2">{formData.email}</div>
@@ -226,7 +226,7 @@ const ProfileSettings = () => {
             </div>
 
             {/* Language Section */}
-            <div className="bg-surface rounded-xl border border-border-custom p-6 shadow-sm">
+            <div className="bg-surface rounded-xl border border-neutral-300 dark:border-neutral-600 p-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-6">
                     <Globe className="w-5 h-5 text-text" />
                     <h2 className="text-lg font-bold text-text">Language</h2>
@@ -240,7 +240,7 @@ const ProfileSettings = () => {
                             value={formData.language}
                             onChange={handleChange}
                             disabled={!isEditing}
-                            className={`w-full appearance-none bg-background border border-border-custom rounded-lg px-4 py-3 text-text focus:outline-none focus:ring-2 focus:ring-primary/50 ${isEditing ? 'cursor-pointer' : 'cursor-default opacity-80'}`}
+                            className={`w-full appearance-none bg-background border border-neutral-300 dark:border-neutral-600 rounded-lg px-4 py-3 text-text focus:outline-none focus:ring-2 focus:ring-primary/50 ${isEditing ? 'cursor-pointer' : 'cursor-default opacity-80'}`}
                         >
                             <option>English</option>
                             <option>Spanish</option>
@@ -252,13 +252,13 @@ const ProfileSettings = () => {
             </div>
 
             {/* Password Section */}
-            <div className="bg-surface rounded-xl border border-border-custom p-6 shadow-sm">
+            <div className="bg-surface rounded-xl border border-neutral-300 dark:border-neutral-600 p-6 shadow-sm">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <Lock className="w-5 h-5 text-text" />
                         <h2 className="text-lg font-bold text-text">Password</h2>
                     </div>
-                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text border border-border-custom rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                         <Edit className="w-4 h-4" />
                         Edit
                     </button>
@@ -266,7 +266,7 @@ const ProfileSettings = () => {
             </div>
 
             {/* Delete Account Section */}
-            <div className="bg-surface rounded-xl border border-border-custom p-6 shadow-sm">
+            <div className="bg-surface rounded-xl border border-neutral-300 dark:border-neutral-600 p-6 shadow-sm">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <Trash2 className="w-5 h-5 text-text" />

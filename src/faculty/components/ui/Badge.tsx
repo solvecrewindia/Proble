@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { cn } from '../../lib/utils';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -9,7 +9,7 @@ export function Badge({ className, variant = 'default', ...props }: BadgeProps) 
     const variants = {
         default: 'bg-primary/10 text-primary hover:bg-primary/20',
         secondary: 'bg-neutral-100 text-neutral-900 hover:bg-neutral-200',
-        outline: 'text-neutral-900 border border-border-custom',
+        outline: 'text-neutral-900 border border-neutral-300 dark:border-neutral-600',
         success: 'bg-green-100 text-green-700',
         warning: 'bg-yellow-100 text-yellow-700',
         danger: 'bg-red-100 text-red-700',

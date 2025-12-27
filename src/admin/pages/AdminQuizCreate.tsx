@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
@@ -319,7 +319,7 @@ export default function AdminQuizCreate() {
             {/* Success Modal */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-surface border border-border-custom p-8 rounded-2xl shadow-xl max-w-sm w-full text-center space-y-6 animate-in zoom-in-95 duration-200">
+                    <div className="bg-surface border border-neutral-300 dark:border-neutral-600 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center space-y-6 animate-in zoom-in-95 duration-200">
                         <div className="mx-auto w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
                             <Check className="w-8 h-8" />
                         </div>
@@ -351,7 +351,7 @@ export default function AdminQuizCreate() {
                         <div className="flex items-center text-sm text-muted mt-1">
                             {isSaving ? (
                                 <span className="flex items-center text-primary">
-                                    <span className="animate-spin mr-2">⟳</span> Saving...
+                                    <span className="animate-spin mr-2">âŸ³</span> Saving...
                                 </span>
                             ) : lastSaved ? (
                                 <span className="flex items-center text-primary">
@@ -392,7 +392,7 @@ export default function AdminQuizCreate() {
                                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors",
                                 index <= currentStep
                                     ? "border-primary bg-primary text-white"
-                                    : "border-border-custom bg-background text-muted"
+                                    : "border-neutral-300 dark:border-neutral-600 bg-background text-muted"
                             )}>
                                 {index + 1}
                             </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Search, Sun, Moon } from 'lucide-react';
 import UserProfileDropdown from './UserProfileDropdown';
 
@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
     };
 
     return (
-        <header className="bg-surface shadow-[0_1px_4px_rgba(16,24,40,0.06)] px-7 py-3 flex items-center justify-between sticky top-0 z-50 transition-colors duration-200 border-b border-border-custom">
+        <header className="bg-surface shadow-[0_1px_4px_rgba(16,24,40,0.06)] px-7 py-3 flex items-center justify-between sticky top-0 z-50 transition-colors duration-200 border-b border-neutral-300 dark:border-neutral-600">
             <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
                 <img
                     src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
@@ -39,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
 
             <div className="flex-1 flex justify-center">
                 {!location.pathname.startsWith('/student') && (
-                    <div className="w-[60%] max-w-[480px] bg-background rounded-[50px] px-3 py-1.5 flex items-center border border-border-custom">
+                    <div className="w-[60%] max-w-[480px] bg-background rounded-[50px] px-3 py-1.5 flex items-center border border-neutral-300 dark:border-neutral-600">
                         <input
                             type="text"
                             placeholder="What you want to learn?"

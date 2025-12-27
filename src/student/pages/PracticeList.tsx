@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../shared/components/Card';
 import { Button } from '../../shared/components/Button';
@@ -102,7 +102,7 @@ const PracticeList = () => {
                             <div
                                 key={item.id}
                                 onClick={() => navigate(`/module/${module.id}`)}
-                                className="bg-surface rounded-xl shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none overflow-hidden transition-transform duration-200 hover:-translate-y-1 border border-border-custom cursor-pointer group relative"
+                                className="bg-surface rounded-xl shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none overflow-hidden transition-transform duration-200 hover:-translate-y-1 border border-neutral-300 dark:border-neutral-600 cursor-pointer group relative"
                             >
                                 <div className="relative">
                                     <img

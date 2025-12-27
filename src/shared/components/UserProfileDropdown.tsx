@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Sun, Moon, LogOut, Home, Settings, LayoutDashboard, List, Link2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
@@ -46,9 +46,9 @@ const UserProfileDropdown: React.FC = () => {
             {/* Trigger Button */}
             <button
                 onClick={toggleDropdown}
-                className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full border border-border-custom hover:bg-background transition-colors duration-200 cursor-pointer bg-surface"
+                className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full border border-neutral-300 dark:border-neutral-600 hover:bg-background transition-colors duration-200 cursor-pointer bg-surface"
             >
-                <div className="w-8 h-8 rounded-full overflow-hidden border border-border-custom">
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-neutral-300 dark:border-neutral-600">
                     <img
                         src={avatarSrc}
                         alt="User Avatar"
@@ -63,12 +63,12 @@ const UserProfileDropdown: React.FC = () => {
 
             {/* Dropdown Menu */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-surface rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-border-custom overflow-hidden z-50 animate-fadeInScale origin-top-right">
+                <div className="absolute right-0 mt-2 w-64 bg-surface rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-neutral-300 dark:border-neutral-600 overflow-hidden z-50 animate-fadeInScale origin-top-right">
 
                     {/* Header Section */}
-                    <div className="px-4 py-3 border-b border-border-custom">
+                    <div className="px-4 py-3 border-b border-neutral-300 dark:border-neutral-600">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full overflow-hidden border border-border-custom shrink-0">
+                            <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-300 dark:border-neutral-600 shrink-0">
                                 <img
                                     src={avatarSrc}
                                     alt="User Avatar"
@@ -144,7 +144,7 @@ const UserProfileDropdown: React.FC = () => {
                                 </button>
                             </div>
 
-                            <div className="px-2 py-1 border-b border-border-custom">
+                            <div className="px-2 py-1 border-b border-neutral-300 dark:border-neutral-600">
                                 <button
                                     onClick={() => {
                                         navigate('/student/join');
@@ -174,7 +174,7 @@ const UserProfileDropdown: React.FC = () => {
                     </div>
 
                     {/* Logout Section */}
-                    <div className="p-2 border-t border-border-custom">
+                    <div className="p-2 border-t border-neutral-300 dark:border-neutral-600">
                         <button
                             onClick={handleLogout}
                             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

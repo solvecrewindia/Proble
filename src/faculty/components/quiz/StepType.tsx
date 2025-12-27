@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Globe, Lock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -17,7 +17,7 @@ export function StepType({ data, update }: any) {
                         "relative p-8 rounded-2xl border-2 text-left transition-all hover:shadow-lg group",
                         data.type === 'global'
                             ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-border-custom hover:border-primary/50 bg-surface"
+                            : "border-neutral-300 dark:border-neutral-600 hover:border-primary/50 bg-surface"
                     )}
                 >
                     <div className={cn(
@@ -39,7 +39,7 @@ export function StepType({ data, update }: any) {
                         "relative p-8 rounded-2xl border-2 text-left transition-all hover:shadow-lg group",
                         data.type === 'master'
                             ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-border-custom hover:border-primary/50 bg-surface"
+                            : "border-neutral-300 dark:border-neutral-600 hover:border-primary/50 bg-surface"
                     )}
                 >
                     <div className={cn(

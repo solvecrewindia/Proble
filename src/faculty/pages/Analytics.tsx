@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Bar, Line } from 'react-chartjs-2';
@@ -148,7 +148,7 @@ export default function Analytics() {
 
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Card className="bg-surface border-border-custom">
+                <Card className="bg-surface border-neutral-300 dark:border-neutral-600">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="p-3 bg-blue-100 rounded-full text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                             <Users className="h-6 w-6" />
@@ -159,7 +159,7 @@ export default function Analytics() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-surface border-border-custom">
+                <Card className="bg-surface border-neutral-300 dark:border-neutral-600">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="p-3 bg-yellow-100 rounded-full text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400">
                             <Star className="h-6 w-6" />
@@ -170,7 +170,7 @@ export default function Analytics() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-surface border-border-custom">
+                <Card className="bg-surface border-neutral-300 dark:border-neutral-600">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="p-3 bg-green-100 rounded-full text-green-600 dark:bg-green-900/30 dark:text-green-400">
                             <TrendingUp className="h-6 w-6" />
@@ -185,7 +185,7 @@ export default function Analytics() {
 
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="bg-surface border-border-custom">
+                <Card className="bg-surface border-neutral-300 dark:border-neutral-600">
                     <CardHeader>
                         <CardTitle className="text-text">Assessment Activity</CardTitle>
                     </CardHeader>
@@ -194,7 +194,7 @@ export default function Analytics() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-surface border-border-custom">
+                <Card className="bg-surface border-neutral-300 dark:border-neutral-600">
                     <CardHeader>
                         <CardTitle className="text-text">Quiz Performance</CardTitle>
                     </CardHeader>

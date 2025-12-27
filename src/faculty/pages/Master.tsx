@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -163,8 +163,8 @@ export default function Master() {
             {/* Results Modal Overlay */}
             {viewingResults && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-surface border border-border-custom rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
-                        <div className="p-6 border-b border-border-custom flex justify-between items-center">
+                    <div className="bg-surface border border-neutral-300 dark:border-neutral-600 rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+                        <div className="p-6 border-b border-neutral-300 dark:border-neutral-600 flex justify-between items-center">
                             <h2 className="text-xl font-bold text-text">Student Results</h2>
                             <Button variant="ghost" onClick={() => setViewingResults(false)}>Close</Button>
                         </div>
@@ -174,7 +174,7 @@ export default function Master() {
                             ) : (
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="border-b border-border-custom text-muted text-sm uppercase">
+                                        <tr className="border-b border-neutral-300 dark:border-neutral-600 text-muted text-sm uppercase">
                                             <th className="pb-3">Student</th>
                                             <th className="pb-3">Score</th>
                                             <th className="pb-3">Percentage</th>
@@ -183,7 +183,7 @@ export default function Master() {
                                     </thead>
                                     <tbody className="text-text">
                                         {results.map((res: any) => (
-                                            <tr key={res.id} className="border-b border-border-custom last:border-0 hover:bg-background/50">
+                                            <tr key={res.id} className="border-b border-neutral-300 dark:border-neutral-600 last:border-0 hover:bg-background/50">
                                                 <td className="py-4">
                                                     <div className="font-bold">{res.profiles?.username || 'Unknown'}</div>
                                                     <div className="text-xs text-muted">{res.profiles?.email}</div>
@@ -218,7 +218,7 @@ export default function Master() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-4 border-b border-border-custom">
+            <div className="flex gap-4 border-b border-neutral-300 dark:border-neutral-600">
                 {['ongoing', 'scheduled', 'completed'].map((tab) => (
                     <button
                         key={tab}
@@ -236,13 +236,13 @@ export default function Master() {
             {/* Content */}
             <div className="grid gap-4">
                 {filteredQuizzes.length === 0 ? (
-                    <div className="text-center py-12 border-2 border-dashed border-border-custom rounded-lg">
+                    <div className="text-center py-12 border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-lg">
                         <p className="text-muted">No {activeTab} master tests found.</p>
                         <Button variant="ghost" className="text-primary underline" onClick={() => navigate('/faculty/create')}>Create one now</Button>
                     </div>
                 ) : (
                     filteredQuizzes.map(quiz => (
-                        <Card key={quiz.id} className="border-l-4 border-l-green-500 bg-surface border-border-custom">
+                        <Card key={quiz.id} className="border-l-4 border-l-green-500 bg-surface border-neutral-300 dark:border-neutral-600">
                             <CardContent className="p-6">
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -301,15 +301,15 @@ export default function Master() {
                                 </div>
 
                                 <div className="mt-6 grid grid-cols-4 gap-4">
-                                    <div className="bg-background p-3 rounded-lg border border-border-custom">
+                                    <div className="bg-background p-3 rounded-lg border border-neutral-300 dark:border-neutral-600">
                                         <div className="text-2xl font-bold text-text">{activeStudents[quiz.id] || 0}</div>
                                         <div className="text-xs text-muted">Active Students</div>
                                     </div>
-                                    <div className="bg-background p-3 rounded-lg border border-border-custom">
+                                    <div className="bg-background p-3 rounded-lg border border-neutral-300 dark:border-neutral-600">
                                         <div className="text-2xl font-bold text-red-500">-</div>
                                         <div className="text-xs text-muted">Flagged Incidents</div>
                                     </div>
-                                    <div className="bg-background p-3 rounded-lg border border-border-custom">
+                                    <div className="bg-background p-3 rounded-lg border border-neutral-300 dark:border-neutral-600">
                                         <div className="text-2xl font-bold text-text">-</div>
                                         <div className="text-xs text-muted">Avg. Progress</div>
                                     </div>

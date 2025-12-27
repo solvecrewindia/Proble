@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Input } from '../ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 
@@ -21,7 +21,7 @@ export function StepMetadata({ data, update }: any) {
                 <div className="space-y-1.5">
                     <label className="text-sm font-medium text-text">Description</label>
                     <textarea
-                        className="flex min-h-[100px] w-full rounded-xl border border-border-custom bg-background px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text"
+                        className="flex min-h-[100px] w-full rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text"
                         placeholder="Enter instructions or description..."
                         value={data.description || ''}
                         onChange={(e) => update({ description: e.target.value })}
@@ -32,7 +32,7 @@ export function StepMetadata({ data, update }: any) {
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-text">Anti-Cheat Level</label>
                         <select
-                            className="w-full h-10 rounded-xl border border-border-custom bg-background px-3 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text"
+                            className="w-full h-10 rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background px-3 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text"
                             value={data.settings?.antiCheatLevel || 'standard'}
                             onChange={(e) => update({ settings: { ...data.settings, antiCheatLevel: e.target.value } })}
                         >
@@ -45,7 +45,7 @@ export function StepMetadata({ data, update }: any) {
                         <input
                             type="checkbox"
                             id="allowRetake"
-                            className="h-4 w-4 rounded border-border-custom text-primary focus:ring-primary"
+                            className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary"
                             checked={data.settings?.allowRetake || false}
                             onChange={(e) => update({ settings: { ...data.settings, allowRetake: e.target.checked } })}
                         />

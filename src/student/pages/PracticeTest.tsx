@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn } from 'lucide-react';
@@ -218,7 +218,7 @@ const PracticeTest = () => {
                                             "w-5 h-5 rounded-full border flex items-center justify-center transition-colors flex-shrink-0",
                                             isAnswered && idx === q.correct ? "border-green-500 bg-green-500" :
                                                 isAnswered && idx === selectedOpt ? "border-red-500 bg-red-500" :
-                                                    "border-neutral-300 dark:border-neutral-600 group-hover:border-primary/60"
+                                                    "border-neutral-300 dark:border-neutral-300 dark:border-neutral-600 group-hover:border-primary/60"
                                         )}>
                                             {isAnswered && idx === q.correct && <Check className="w-3.5 h-3.5 text-white" />}
                                             {isAnswered && idx === selectedOpt && idx !== q.correct && <X className="w-3.5 h-3.5 text-white" />}

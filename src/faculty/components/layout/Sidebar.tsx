@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -23,7 +23,7 @@ export function Sidebar() {
     ];
 
     return (
-        <aside className="fixed left-0 top-[63px] z-40 h-[calc(100vh-63px)] w-64 bg-surface shadow-sm transition-transform border-r border-border-custom">
+        <aside className="fixed left-0 top-[63px] z-40 h-[calc(100vh-63px)] w-64 bg-surface shadow-sm transition-transform border-r border-neutral-300 dark:border-neutral-600">
             <div className="flex h-full flex-col">
 
                 <nav className="flex-1 space-y-1 px-3 py-4">

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Calendar, Clock, Lock } from 'lucide-react'; // Removing Key, Link, Shield, Copy, Check
 import { Input } from '../../../faculty/components/ui/Input';
 import { Card } from '../../../faculty/components/ui/Card';
@@ -42,7 +42,7 @@ export function AdminStepSchedule({ data, update }: any) {
                     </div>
                 </div>
 
-                <div className="pt-6 border-t border-border-custom">
+                <div className="pt-6 border-t border-neutral-300 dark:border-neutral-600">
                     <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-orange-700 dark:text-orange-300">
                         <Lock className="h-5 w-5" />
                         <div>

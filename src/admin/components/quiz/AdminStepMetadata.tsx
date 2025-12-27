@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Input } from '../../../faculty/components/ui/Input';
 import { supabase } from '../../../lib/supabase';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
@@ -62,7 +62,7 @@ export function AdminStepMetadata({ data, update }: any) {
                     <label className="text-sm font-medium text-text">Quiz Banner</label>
                     <div className="flex items-start gap-6">
                         {/* Preview Area */}
-                        <div className={`relative w-40 h-24 rounded-lg border-2 border-dashed border-border-custom flex items-center justify-center overflow-hidden bg-surface group transition-all ${!data.image_url ? 'hover:border-primary/50' : 'border-none'}`}>
+                        <div className={`relative w-40 h-24 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center overflow-hidden bg-surface group transition-all ${!data.image_url ? 'hover:border-primary/50' : 'border-none'}`}>
                             {data.image_url ? (
                                 <>
                                     <img src={data.image_url} alt="Banner" className="w-full h-full object-cover" />
@@ -123,7 +123,7 @@ export function AdminStepMetadata({ data, update }: any) {
                 <div className="space-y-1.5">
                     <label className="text-sm font-medium text-text">Description</label>
                     <textarea
-                        className="flex min-h-[100px] w-full rounded-xl border border-border-custom bg-background px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text transition-all"
+                        className="flex min-h-[100px] w-full rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text transition-all"
                         placeholder="Enter instructions or description..."
                         value={data.description || ''}
                         onChange={(e) => update({ description: e.target.value })}
@@ -134,7 +134,7 @@ export function AdminStepMetadata({ data, update }: any) {
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-text">Anti-Cheat Level</label>
                         <select
-                            className="w-full h-10 rounded-xl border border-border-custom bg-background px-3 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text transition-all"
+                            className="w-full h-10 rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background px-3 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text transition-all"
                             value={data.settings?.antiCheatLevel || 'standard'}
                             onChange={(e) => update({ settings: { ...data.settings, antiCheatLevel: e.target.value } })}
                         >
@@ -147,7 +147,7 @@ export function AdminStepMetadata({ data, update }: any) {
                         <input
                             type="checkbox"
                             id="allowRetake"
-                            className="h-4 w-4 rounded border-border-custom text-primary focus:ring-primary accent-primary"
+                            className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary accent-primary"
                             checked={data.settings?.allowRetake || false}
                             onChange={(e) => update({ settings: { ...data.settings, allowRetake: e.target.checked } })}
                         />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { BarChart2, Share2, Plus, Check } from 'lucide-react';
@@ -27,7 +27,7 @@ function ShareButton({ quizCode, quizId }: { quizCode?: string; quizId: string }
         <Button
             variant="outline"
             size="sm"
-            className="text-text border-border-custom hover:bg-background"
+            className="text-text border-neutral-300 dark:border-neutral-600 hover:bg-background"
             onClick={handleShare}
         >
             {copied ? (
@@ -83,13 +83,13 @@ export default function Global() {
 
             <div className="grid gap-6">
                 {quizzes.length === 0 ? (
-                    <div className="text-center py-12 border-2 border-dashed border-border-custom rounded-lg">
+                    <div className="text-center py-12 border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-lg">
                         <p className="text-muted">No global quizzes found.</p>
                         <Button variant="ghost" className="text-primary underline" onClick={() => navigate('/faculty/create')}>Create one now</Button>
                     </div>
                 ) : (
                     quizzes.map(quiz => (
-                        <Card key={quiz.id} className="bg-surface border-border-custom hover:border-primary transition-colors">
+                        <Card key={quiz.id} className="bg-surface border-neutral-300 dark:border-neutral-600 hover:border-primary transition-colors">
                             <CardContent className="p-6">
                                 <div className="flex flex-col md:flex-row gap-6">
                                     <div className="h-32 w-48 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shrink-0 flex items-center justify-center text-white font-bold text-3xl">
@@ -99,20 +99,20 @@ export default function Global() {
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <h3 className="text-xl font-bold text-text">{quiz.title}</h3>
-                                                <p className="text-sm text-muted">{new Date(quiz.createdAt || (quiz as any).created_at).toLocaleDateString()} • {quiz.description || 'No description'}</p>
+                                                <p className="text-sm text-muted">{new Date(quiz.createdAt || (quiz as any).created_at).toLocaleDateString()} â€¢ {quiz.description || 'No description'}</p>
                                             </div>
                                             <div className="flex gap-2">
                                                 <ShareButton
                                                     quizCode={(quiz as any).code || quiz.accessCode}
                                                     quizId={quiz.id}
                                                 />
-                                                <Button variant="outline" size="sm" className="text-text border-border-custom hover:bg-background">
+                                                <Button variant="outline" size="sm" className="text-text border-neutral-300 dark:border-neutral-600 hover:bg-background">
                                                     <BarChart2 className="h-4 w-4 mr-2" /> Analytics
                                                 </Button>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-4 gap-4 py-4 border-y border-border-custom">
+                                        <div className="grid grid-cols-4 gap-4 py-4 border-y border-neutral-300 dark:border-neutral-600">
                                             <div>
                                                 <div className="text-2xl font-bold text-text">-</div>
                                                 <div className="text-xs text-muted">Participants</div>

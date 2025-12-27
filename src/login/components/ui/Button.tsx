@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { cn } from '../../lib/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -12,8 +12,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ({ className, variant = 'primary', size = 'md', isLoading, children, ...props }, ref) => {
         const variants = {
             primary: 'bg-primary hover:bg-primary-600 text-white shadow-sm',
-            secondary: 'bg-surface hover:bg-background text-text shadow-sm border border-border-custom',
-            outline: 'border-2 border-border-custom hover:border-primary hover:text-primary text-text bg-transparent',
+            secondary: 'bg-surface hover:bg-background text-text shadow-sm border border-neutral-300 dark:border-neutral-600',
+            outline: 'border-2 border-neutral-300 dark:border-neutral-600 hover:border-primary hover:text-primary text-text bg-transparent',
             ghost: 'hover:bg-background text-text',
             danger: 'bg-red-500 hover:bg-red-600 text-white',
         };

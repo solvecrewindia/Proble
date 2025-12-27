@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
@@ -405,13 +405,13 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
             </div>
 
 
-            <div className="flex border-b border-border-custom">
+            <div className="flex border-b border-neutral-300 dark:border-neutral-600">
                 <button
                     className={cn(
                         "px-6 py-3 text-sm font-medium border-b-2 transition-colors",
                         view === 'list'
                             ? "border-primary text-primary"
-                            : "border-transparent text-muted hover:text-text hover:border-border-custom"
+                            : "border-transparent text-muted hover:text-text hover:border-neutral-300 dark:border-neutral-600"
                     )}
                     onClick={() => setView('list')}
                 >
@@ -423,7 +423,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                         "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
                         view === 'import'
                             ? "border-primary text-primary"
-                            : "border-transparent text-muted hover:text-text hover:border-border-custom"
+                            : "border-transparent text-muted hover:text-text hover:border-neutral-300 dark:border-neutral-600"
                     )}
                     onClick={() => setView('import')}
                 >
@@ -436,7 +436,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                     <div className="flex justify-end mb-4">
                         <div className="flex gap-2">
                             <select
-                                className="h-9 rounded-lg border border-border-custom bg-background text-text text-sm px-2"
+                                className="h-9 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-2"
                                 value={activeType}
                                 onChange={(e) => setActiveType(e.target.value as any)}
                             >
@@ -467,7 +467,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                             </h3>
                             <div {...getZipRootProps()} className={cn(
                                 "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors relative",
-                                isZipDragActive ? "border-primary bg-primary/5" : "border-border-custom hover:border-primary",
+                                isZipDragActive ? "border-primary bg-primary/5" : "border-neutral-300 dark:border-neutral-600 hover:border-primary",
                                 zipFile ? "bg-green-500/5 border-green-500/30" : ""
                             )}>
                                 <input {...getZipInputProps()} />
@@ -505,7 +505,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                             </h3>
                             <div {...getExcelRootProps()} className={cn(
                                 "border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors",
-                                isExcelDragActive ? "border-primary bg-primary/5" : "border-border-custom hover:border-primary",
+                                isExcelDragActive ? "border-primary bg-primary/5" : "border-neutral-300 dark:border-neutral-600 hover:border-primary",
                                 error ? "border-red-300 bg-red-50" : "",
                                 isProcessing ? "pointer-events-none opacity-50" : ""
                             )}>
@@ -544,13 +544,13 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                 <table className="w-full text-xs text-left text-muted">
                                     <thead className="bg-background">
                                         <tr>
-                                            <th className="px-3 py-2 border-b border-border-custom">Question No</th>
-                                            <th className="px-3 py-2 border-b border-border-custom">Question</th>
-                                            <th className="px-3 py-2 border-b border-border-custom">Option 1</th>
-                                            <th className="px-3 py-2 border-b border-border-custom">Option 2</th>
-                                            <th className="px-3 py-2 border-b border-border-custom">Option 3</th>
-                                            <th className="px-3 py-2 border-b border-border-custom">Option 4</th>
-                                            <th className="px-3 py-2 border-b border-border-custom">Correct Answer</th>
+                                            <th className="px-3 py-2 border-b border-neutral-300 dark:border-neutral-600">Question No</th>
+                                            <th className="px-3 py-2 border-b border-neutral-300 dark:border-neutral-600">Question</th>
+                                            <th className="px-3 py-2 border-b border-neutral-300 dark:border-neutral-600">Option 1</th>
+                                            <th className="px-3 py-2 border-b border-neutral-300 dark:border-neutral-600">Option 2</th>
+                                            <th className="px-3 py-2 border-b border-neutral-300 dark:border-neutral-600">Option 3</th>
+                                            <th className="px-3 py-2 border-b border-neutral-300 dark:border-neutral-600">Option 4</th>
+                                            <th className="px-3 py-2 border-b border-neutral-300 dark:border-neutral-600">Correct Answer</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -592,7 +592,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                         value={q.stem}
                                                         onChange={(e) => updateQuestion(index, { stem: e.target.value })}
                                                     />
-                                                    <label className="flex items-center justify-center p-2 rounded-lg border border-border-custom hover:bg-surface cursor-pointer transition-colors relative" title="Add Image">
+                                                    <label className="flex items-center justify-center p-2 rounded-lg border border-neutral-300 dark:border-neutral-600 hover:bg-surface cursor-pointer transition-colors relative" title="Add Image">
                                                         {uploading[`q-${index}`] ? (
                                                             <Loader2 className="h-5 w-5 text-primary animate-spin" />
                                                         ) : (
@@ -611,7 +611,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                 </div>
                                                 {q.imageUrl && (
                                                     <div className="relative mt-2 w-fit group/image">
-                                                        <img src={q.imageUrl} alt="Question" className="h-32 w-auto rounded-lg border border-border-custom object-cover" />
+                                                        <img src={q.imageUrl} alt="Question" className="h-32 w-auto rounded-lg border border-neutral-300 dark:border-neutral-600 object-cover" />
                                                         <button
                                                             onClick={() => updateQuestion(index, { imageUrl: undefined })}
                                                             className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full text-white opacity-0 group-hover/image:opacity-100 transition-opacity"
@@ -623,7 +623,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                             </div>
                                             <div className="w-48">
                                                 <select
-                                                    className="h-10 w-full rounded-lg border border-border-custom bg-background text-text text-sm px-2"
+                                                    className="h-10 w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-2"
                                                     value={q.type}
                                                     onChange={(e) => {
                                                         const newType = e.target.value as Question['type'];
@@ -650,7 +650,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                         </div>
 
                                         {(q.type === 'mcq' || q.type === 'msq') && q.options && (
-                                            <div className="space-y-2 pl-4 border-l-2 border-border-custom">
+                                            <div className="space-y-2 pl-4 border-l-2 border-neutral-300 dark:border-neutral-600">
                                                 {q.options.map((opt, optIndex) => (
                                                     <div key={optIndex} className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-3">
@@ -688,7 +688,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                                     }}
                                                                     className="h-8 text-sm"
                                                                 />
-                                                                <label className="flex items-center justify-center p-1.5 rounded-lg border border-border-custom hover:bg-surface cursor-pointer transition-colors relative" title="Add Option Image">
+                                                                <label className="flex items-center justify-center p-1.5 rounded-lg border border-neutral-300 dark:border-neutral-600 hover:bg-surface cursor-pointer transition-colors relative" title="Add Option Image">
                                                                     {uploading[`o-${index}-${optIndex}`] ? (
                                                                         <Loader2 className="h-4 w-4 text-primary animate-spin" />
                                                                     ) : (
@@ -708,7 +708,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                         </div>
                                                         {q.optionImages?.[optIndex] && (
                                                             <div className="ml-7 relative w-fit group/optImage">
-                                                                <img src={q.optionImages[optIndex]} alt={`Option ${optIndex + 1}`} className="h-20 w-auto rounded-lg border border-border-custom object-cover" />
+                                                                <img src={q.optionImages[optIndex]} alt={`Option ${optIndex + 1}`} className="h-20 w-auto rounded-lg border border-neutral-300 dark:border-neutral-600 object-cover" />
                                                                 <button
                                                                     onClick={() => {
                                                                         const newImages = [...(q.optionImages || [])];
@@ -726,7 +726,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                             </div>
                                         )}
 
-                                        <div className="flex gap-4 p-4 border rounded-lg bg-surface/50 border-border-custom">
+                                        <div className="flex gap-4 p-4 border rounded-lg bg-surface/50 border-neutral-300 dark:border-neutral-600">
                                             <div className="flex-1 space-y-1">
                                                 <label className="text-xs font-medium text-text-secondary">Min Value</label>
                                                 <Input
@@ -786,7 +786,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                         ))}
 
                         {questions.length === 0 && (
-                            <div className="text-center py-12 border-2 border-dashed border-border-custom rounded-xl text-muted">
+                            <div className="text-center py-12 border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-xl text-muted">
                                 No questions added yet. Click "Add Question" to start or use Import.
                             </div>
                         )}

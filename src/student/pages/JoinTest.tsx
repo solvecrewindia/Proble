@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
 import { Key, Clock, FileText, AlertCircle, Play } from 'lucide-react';
@@ -69,7 +69,7 @@ const JoinTest = () => {
     if (quiz) {
         return (
             <div className="max-w-2xl mx-auto mt-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <Card className="p-8 border-border-custom bg-surface">
+                <Card className="p-8 border-neutral-300 dark:border-neutral-600 bg-surface">
                     <div className="text-center mb-8">
                         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary mb-4">
                             <FileText className="w-8 h-8" />
@@ -79,12 +79,12 @@ const JoinTest = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-8">
-                        <div className="p-4 rounded-xl bg-background border border-border-custom flex items-center justify-center flex-col gap-2">
+                        <div className="p-4 rounded-xl bg-background border border-neutral-300 dark:border-neutral-600 flex items-center justify-center flex-col gap-2">
                             <Clock className="w-6 h-6 text-primary" />
                             <span className="font-medium text-text">{quiz.settings?.duration || 60} mins</span>
                             <span className="text-xs text-muted">Duration</span>
                         </div>
-                        <div className="p-4 rounded-xl bg-background border border-border-custom flex items-center justify-center flex-col gap-2">
+                        <div className="p-4 rounded-xl bg-background border border-neutral-300 dark:border-neutral-600 flex items-center justify-center flex-col gap-2">
                             <AlertCircle className="w-6 h-6 text-primary" />
                             <span className="font-medium text-text">{quiz.questions ? quiz.questions.length : 'N/A'}</span>
                             <span className="text-xs text-muted">Questions</span>
@@ -117,7 +117,7 @@ const JoinTest = () => {
 
     return (
         <div className="max-w-md mx-auto mt-20">
-            <div className="bg-surface p-8 rounded-2xl border border-border-custom shadow-sm text-center space-y-6">
+            <div className="bg-surface p-8 rounded-2xl border border-neutral-300 dark:border-neutral-600 shadow-sm text-center space-y-6">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
                     <Key className="w-8 h-8" />
                 </div>
@@ -133,7 +133,7 @@ const JoinTest = () => {
                         placeholder="ENTER CODE"
                         value={code}
                         onChange={(e) => setCode(e.target.value.toUpperCase())}
-                        className="w-full h-12 text-center text-xl font-mono tracking-widest uppercase rounded-xl border border-border-custom bg-background text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                        className="w-full h-12 text-center text-xl font-mono tracking-widest uppercase rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                         maxLength={8}
                     />
                     {error && (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Calendar, Clock, Key, Shield, Link, Copy, Check } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -52,7 +52,7 @@ export function StepSchedule({ data, update }: any) {
                     </div>
                 </div>
 
-                <div className="pt-6 border-t border-border-custom space-y-4">
+                <div className="pt-6 border-t border-neutral-300 dark:border-neutral-600 space-y-4">
                     <label className="text-sm font-medium text-text flex items-center">
                         <Key className="mr-2 h-4 w-4" /> Access Code
                     </label>
@@ -68,7 +68,7 @@ export function StepSchedule({ data, update }: any) {
                     <p className="text-xs text-muted">Students will need this code to start the quiz.</p>
                 </div>
 
-                <div className="pt-6 border-t border-border-custom space-y-4">
+                <div className="pt-6 border-t border-neutral-300 dark:border-neutral-600 space-y-4">
                     <label className="text-sm font-medium text-text flex items-center">
                         <Link className="mr-2 h-4 w-4" /> Shareable Link
                     </label>
@@ -76,7 +76,7 @@ export function StepSchedule({ data, update }: any) {
                         <input
                             readOnly
                             value={`${window.location.origin}/quiz/${data.accessCode || '...'}`}
-                            className="flex-1 h-10 px-3 rounded-md border border-border-custom bg-background text-sm text-muted font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="flex-1 h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-600 bg-background text-sm text-muted font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
                         />
                         <Button variant="outline" onClick={copyLink} disabled={!data.accessCode}>
                             {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
@@ -85,7 +85,7 @@ export function StepSchedule({ data, update }: any) {
                     <p className="text-xs text-muted">Direct link for students to join the quiz.</p>
                 </div>
 
-                <div className="pt-6 border-t border-border-custom">
+                <div className="pt-6 border-t border-neutral-300 dark:border-neutral-600">
                     <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-700 dark:text-blue-300">
                         <Shield className="h-5 w-5 mt-0.5" />
                         <div>

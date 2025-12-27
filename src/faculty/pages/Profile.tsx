@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -60,7 +60,7 @@ export default function Profile() {
                         <CardContent>
                             {isEditing ? (
                                 <textarea
-                                    className="w-full h-32 p-3 rounded-xl border border-border-custom focus:ring-primary focus:border-primary"
+                                    className="w-full h-32 p-3 rounded-xl border border-neutral-300 dark:border-neutral-600 focus:ring-primary focus:border-primary"
                                     defaultValue="Passionate educator with over 15 years of experience in Computer Science and Artificial Intelligence. Dedicated to making complex concepts accessible to everyone."
                                 />
                             ) : (
@@ -82,7 +82,7 @@ export default function Profile() {
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-neutral-900">Ph.D. in Computer Science</h4>
-                                    <p className="text-sm text-neutral-500">Stanford University • 2015</p>
+                                    <p className="text-sm text-neutral-500">Stanford University â€¢ 2015</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4 p-3 bg-neutral-50 rounded-lg">
@@ -91,7 +91,7 @@ export default function Profile() {
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-neutral-900">M.S. in Artificial Intelligence</h4>
-                                    <p className="text-sm text-neutral-500">MIT • 2012</p>
+                                    <p className="text-sm text-neutral-500">MIT â€¢ 2012</p>
                                 </div>
                             </div>
                         </CardContent>

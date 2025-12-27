@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
@@ -6,6 +6,7 @@ import { Moon, Sun, Loader2, Maximize2, X, ZoomIn, ChevronLeft, ChevronRight, Ch
 import { supabase } from '../../lib/supabase';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 import { QuizTimer } from '../components/QuizTimer';
+
 const MCQTest = () => {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -27,23 +28,21 @@ const MCQTest = () => {
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     const [quizSettings, setQuizSettings] = useState<any>(null);
 
-    // Anti-Cheat Integration
-    const {
-        violations,
-        isFullScreen,
-        warning,
-        enterFullScreen,
-        remainingStrikes
-    } = useAntiCheat({
-        enabled: testActive && !showResults,
-        level: quizSettings?.antiCheatLevel || 'standard',
-        maxViolations: 3,
-        onAutoSubmit: () => {
-            console.warn("Anti-cheat auto-submit trigger suppressed.");
-        }
-    });
+    // Helper: finish test (Defined before useAntiCheat to be safe, though hoisting applies to functions not consts. 
+    // We define it as const inside render, so it must be defined before use)
+    // Actually, onAutoSubmit calls it. onAutoSubmit is a callback. 
+    // The safest way with const is to rely on closure capture or define it early.
+    // However, it depends on state like questions/answers.
+    // It's circular if onAutoSubmit calls it but it relies on state.
+    // The standard way is defining it here.
 
-    // Helper: finish test
+    // We need to define calculateAndShowResults BEFORE useAntiCheat if we pass it directly.
+    // But since useAntiCheat is a hook, we pass a closure `() => calculateAndShowResults()`.
+    // The closure captures the variable. The variable must be initialized by the time the callback executes.
+    // It will be.
+
+    // BUT! I will define it first to be clean.
+
     const calculateAndShowResults = useCallback(async () => {
         let calculatedScore = 0;
         questions.forEach((q) => {
@@ -95,6 +94,27 @@ const MCQTest = () => {
             console.error("Error saving results:", err);
         }
     }, [answers, questions, id]);
+
+    // Anti-Cheat Integration
+    const {
+        violations,
+        isFullScreen,
+        warning,
+        enterFullScreen,
+        remainingStrikes
+    } = useAntiCheat({
+        enabled: testActive && !showResults,
+        level: quizSettings?.antiCheatLevel || 'standard',
+        maxViolations: 3,
+        onAutoSubmit: () => {
+            alert("Maximum violations reached. Your test is being submitted.");
+            calculateAndShowResults();
+        },
+        onViolation: (count, type) => {
+            // Warning logic is handled by hook state, we just log here
+            console.log(`Violation: ${type} (${count}/3)`);
+        }
+    });
 
     // Data Fetching
     useEffect(() => {
@@ -216,10 +236,9 @@ const MCQTest = () => {
     if (loading) return <div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>;
 
     if (showResults) {
-        // ... (Keep existing results UI or improve similarly, implementing reuse here for brevity)
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 animate-in fade-in zoom-in duration-300">
-                <div className="bg-surface border border-border-custom p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+                <div className="bg-surface border border-neutral-300 dark:border-neutral-600 p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
                     <h1 className="text-3xl font-bold mb-4 text-text">Test Completed</h1>
                     <div className="mb-8">
                         <div className="text-6xl font-bold text-primary mb-2">
@@ -242,7 +261,25 @@ const MCQTest = () => {
     );
 
     return (
-        <div className="min-h-screen bg-background text-text font-sans selection:bg-primary/20">
+        <div
+            className="min-h-screen bg-background text-text font-sans selection:bg-transparent select-none relative"
+            onContextMenu={(e) => e.preventDefault()}
+        >
+            {/* --- WARNING OVERLAY --- */}
+            {warning && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top-4 fade-in duration-300 w-full max-w-lg px-4">
+                    <div className="bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 border-2 border-red-400">
+                        <div className="p-2 bg-white/20 rounded-full shrink-0 animate-pulse">
+                            <AlertTriangle className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg leading-tight">Violation Detected</h3>
+                            <p className="text-white/90 text-sm mt-1">{warning}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* --- HEADER --- */}
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between transition-all">
                 <div className="flex items-center gap-4">
@@ -373,10 +410,13 @@ const MCQTest = () => {
                                             <div className={cn(
                                                 "w-5 h-5 rounded-full border flex items-center justify-center transition-colors flex-shrink-0",
                                                 activeQuestion.type === 'msq' ? "rounded-md" : "rounded-full",
-                                                isSelected ? "bg-primary border-primary" : "border-neutral-300 dark:border-neutral-600 group-hover:border-primary/60"
+                                                isSelected ? "bg-primary border-primary" : "border-neutral-300 dark:border-neutral-300 dark:border-neutral-600 group-hover:border-primary/60"
                                             )}>
                                                 {isSelected && activeQuestion.type === 'msq' && (
                                                     <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                                                )}
+                                                {isSelected && activeQuestion.type !== 'msq' && (
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-white" />
                                                 )}
                                             </div>
 
@@ -481,5 +521,3 @@ const MCQTest = () => {
 };
 
 export default MCQTest;
-
-

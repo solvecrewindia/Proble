@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, AlertTriangle, Edit2, MessageSquare } from 'lucide-react';
@@ -143,7 +143,7 @@ export default function Gradebook() {
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Feedback / Notes</label>
                                 <textarea
-                                    className="w-full h-32 p-3 border border-border-custom rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    className="w-full h-32 p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     placeholder="Enter feedback for the student..."
                                     value={gradeData.feedback}
                                     onChange={(e) => setGradeData({ ...gradeData, feedback: e.target.value })}

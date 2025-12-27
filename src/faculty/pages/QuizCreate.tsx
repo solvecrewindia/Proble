@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -137,7 +137,7 @@ export default function QuizCreate() {
                     <div className="flex items-center text-sm text-muted mt-1">
                         {isSaving ? (
                             <span className="flex items-center text-primary">
-                                <span className="animate-spin mr-2">⟳</span> Saving...
+                                <span className="animate-spin mr-2">âŸ³</span> Saving...
                             </span>
                         ) : lastSaved ? (
                             <span className="flex items-center text-primary">
@@ -179,7 +179,7 @@ export default function QuizCreate() {
                                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors",
                                 index <= currentStep
                                     ? "border-primary bg-primary text-white"
-                                    : "border-border-custom bg-background text-muted"
+                                    : "border-neutral-300 dark:border-neutral-600 bg-background text-muted"
                             )}>
                                 {index + 1}
                             </div>

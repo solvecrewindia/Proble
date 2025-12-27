@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Clock, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -37,7 +37,7 @@ export function StepPreview({ data, questions }: any) {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {q.imageUrl && (
-                                <div className="mb-4 rounded-lg overflow-hidden border border-border-custom bg-black/20">
+                                <div className="mb-4 rounded-lg overflow-hidden border border-neutral-300 dark:border-neutral-600 bg-black/20">
                                     <img
                                         src={q.imageUrl}
                                         alt="Question"
@@ -52,15 +52,15 @@ export function StepPreview({ data, questions }: any) {
                                     {q.options.map((opt: any, i) => (
                                         <div
                                             key={i}
-                                            className="flex items-center p-3 border border-border-custom rounded-lg hover:bg-surface transition-colors"
+                                            className="flex items-center p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-surface transition-colors"
                                         >
-                                            <div className="h-4 w-4 rounded-full border border-border-custom mr-3" />
+                                            <div className="h-4 w-4 rounded-full border border-neutral-300 dark:border-neutral-600 mr-3" />
                                             <div className="flex-1">
                                                 {q.optionImages?.[i] && (
                                                     <img
                                                         src={q.optionImages[i]}
                                                         alt={`Option ${i + 1}`}
-                                                        className="h-24 w-auto object-contain rounded-md border border-border-custom mb-2"
+                                                        className="h-24 w-auto object-contain rounded-md border border-neutral-300 dark:border-neutral-600 mb-2"
                                                     />
                                                 )}
                                                 <span className="text-text">{typeof opt === 'object' ? opt.text : opt}</span>
@@ -72,7 +72,7 @@ export function StepPreview({ data, questions }: any) {
 
                             {q.type === 'text' && (
                                 <textarea
-                                    className="w-full h-32 p-3 border border-border-custom rounded-lg bg-background resize-none text-text"
+                                    className="w-full h-32 p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-background resize-none text-text"
                                     placeholder="Student answer will go here..."
                                     disabled
                                 />
@@ -81,7 +81,7 @@ export function StepPreview({ data, questions }: any) {
                             {q.type === 'numeric' && (
                                 <input
                                     type="number"
-                                    className="w-full p-3 border border-border-custom rounded-lg bg-background text-text"
+                                    className="w-full p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-background text-text"
                                     placeholder="Enter number..."
                                     disabled
                                 />

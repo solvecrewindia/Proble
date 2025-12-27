@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, User as UserIcon, ArrowRight, Eye, EyeOff, Home, GraduationCap, School } from 'lucide-react';
@@ -261,7 +261,7 @@ export default function Login() {
                                                 checked={rememberMe}
                                                 onChange={(e) => setRememberMe(e.target.checked)}
                                             />
-                                            <div className="w-5 h-5 border-2 border-neutral-300 dark:border-neutral-600 rounded bg-background peer-checked:bg-primary peer-checked:border-primary transition-all"></div>
+                                            <div className="w-5 h-5 border-2 border-neutral-300 dark:border-neutral-300 dark:border-neutral-600 rounded bg-background peer-checked:bg-primary peer-checked:border-primary transition-all"></div>
                                             <svg className="w-3.5 h-3.5 absolute top-1 left-1 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
                                         </div>
                                         <span className="text-sm text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors">Remember Me</span>

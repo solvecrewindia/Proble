@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+﻿import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -64,7 +64,7 @@ export function StepImport({ questions, setQuestions }: any) {
 
             <div {...getRootProps()} className={cn(
                 "border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors",
-                isDragActive ? "border-primary bg-primary/5" : "border-border-custom hover:border-primary",
+                isDragActive ? "border-primary bg-primary/5" : "border-neutral-300 dark:border-neutral-600 hover:border-primary",
                 error ? "border-red-300 bg-red-50" : ""
             )}>
                 <input {...getInputProps()} />

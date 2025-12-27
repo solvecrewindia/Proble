@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
 import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2 } from 'lucide-react';
@@ -205,7 +205,7 @@ const QuizDetails = () => {
                 </div>
 
                 {/* Metadata Row */}
-                <div className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm text-muted mb-16 border-b border-border-custom pb-16">
+                <div className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm text-muted mb-16 border-b border-neutral-300 dark:border-neutral-600 pb-16">
                     <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
                         <span>{quiz.duration}</span>
@@ -272,7 +272,7 @@ const QuizDetails = () => {
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <button
                         onClick={() => navigate(`/student/practice/setup/${id}`)}
-                        className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-surface text-text border border-border-custom font-semibold hover:bg-background transition-all active:scale-95 text-sm"
+                        className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-surface text-text border border-neutral-300 dark:border-neutral-600 font-semibold hover:bg-background transition-all active:scale-95 text-sm"
                     >
                         Practice Test
                     </button>

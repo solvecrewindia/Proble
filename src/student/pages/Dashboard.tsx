@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Card } from '../../shared/components/Card';
 import { Trophy, CheckCircle, Clock, Flame, Activity as ActivityIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -141,7 +141,7 @@ const StudentDashboard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {statCards.map((stat, index) => (
-                    <div key={index} className="bg-surface p-6 rounded-xl border border-border-custom shadow-sm flex items-center gap-4 hover:border-primary/20 transition-colors">
+                    <div key={index} className="bg-surface p-6 rounded-xl border border-neutral-300 dark:border-neutral-600 shadow-sm flex items-center gap-4 hover:border-primary/20 transition-colors">
                         <div className={`p-3 rounded-full ${stat.bg} ${stat.color}`}>
                             <stat.icon className="w-6 h-6" />
                         </div>
@@ -155,7 +155,7 @@ const StudentDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Activity Chart */}
-                <div className="bg-surface p-6 rounded-xl border border-border-custom shadow-sm flex flex-col">
+                <div className="bg-surface p-6 rounded-xl border border-neutral-300 dark:border-neutral-600 shadow-sm flex flex-col">
                     <h3 className="text-lg font-semibold text-text mb-6">Average Performance (Last 7 Days)</h3>
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -198,12 +198,12 @@ const StudentDashboard = () => {
                 </div>
 
                 {/* Recent Activity List */}
-                <div className="bg-surface p-6 rounded-xl border border-border-custom shadow-sm flex flex-col">
+                <div className="bg-surface p-6 rounded-xl border border-neutral-300 dark:border-neutral-600 shadow-sm flex flex-col">
                     <h3 className="text-lg font-semibold text-text mb-6">Recent Activity</h3>
                     <div className="space-y-4 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
                         {recentActivity.length > 0 ? (
                             recentActivity.map((activity) => (
-                                <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border-custom/50 hover:bg-background transition-colors">
+                                <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-neutral-300 dark:border-neutral-600/50 hover:bg-background transition-colors">
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-full ${activity.percentage >= 80 ? 'bg-green-500/10 text-green-500' : activity.percentage >= 50 ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'}`}>
                                             <ActivityIcon className="w-4 h-4" />
