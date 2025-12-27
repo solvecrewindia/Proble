@@ -11,6 +11,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
+import mobileLogo from '../../assets/mobile_logo.png';
+
 const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
     const { theme, setTheme } = useTheme();
     const { user } = useAuth();
@@ -30,10 +32,17 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
     return (
         <header className="bg-surface shadow-[0_1px_4px_rgba(16,24,40,0.06)] px-7 py-3 flex items-center justify-between sticky top-0 z-50 transition-colors duration-200 border-b border-neutral-300 dark:border-neutral-600">
             <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
+                {/* Desktop Logo */}
                 <img
                     src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
                     alt="Proble Logo"
-                    className="h-[38px] w-auto rounded-md"
+                    className="hidden md:block h-[38px] w-auto rounded-md"
+                />
+                {/* Mobile Logo */}
+                <img
+                    src={mobileLogo}
+                    alt="Proble Logo"
+                    className="block md:hidden h-[38px] w-auto rounded-md"
                 />
             </div>
 

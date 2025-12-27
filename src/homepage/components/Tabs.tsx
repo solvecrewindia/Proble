@@ -18,12 +18,12 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab }) => {
     return (
         <div className="max-w-[1200px] mx-auto my-5 px-5">
             <div className="bg-surface rounded-xl shadow-[0_1px_4px_rgba(16,24,40,0.06)] transition-colors duration-200 border border-neutral-300 dark:border-neutral-600 dark:shadow-none">
-                <div className="flex justify-center items-center w-[97%] gap-10 py-5 mx-auto">
+                <div className="flex overflow-x-auto no-scrollbar md:justify-center items-center w-full md:w-[97%] gap-6 md:gap-10 py-5 px-4 md:px-0 mx-auto whitespace-nowrap">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`bg-none border-none text-base cursor-pointer font-medium transition-colors ${activeTab === tab.id ? 'text-primary' : 'text-muted'
+                            className={`bg-none border-none text-sm md:text-base cursor-pointer font-medium transition-colors flex-shrink-0 ${activeTab === tab.id ? 'text-primary' : 'text-muted'
                                 }`}
                         >
                             {tab.label}
