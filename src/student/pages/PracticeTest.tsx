@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn } from 'lucide-react';
+import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn, BookOpen, BrainCircuit, Target, ListChecks } from 'lucide-react';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 
@@ -16,6 +16,11 @@ const PracticeTest = () => {
     const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(true);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+    // AI Explanation State
+    const [aiExplanation, setAiExplanation] = useState<any | null>(null);
+    const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchQuestions = async () => {
@@ -72,10 +77,178 @@ const PracticeTest = () => {
         fetchQuestions();
     }, [id]);
 
+    // Reset AI explanation when changing questions
+    useEffect(() => {
+        setAiExplanation(null);
+        setAiError(null);
+    }, [currentQIndex]);
+
     const handleOptionClick = (idx: number) => {
         if (userAnswers.hasOwnProperty(currentQIndex)) return;
         setUserAnswers(prev => ({ ...prev, [currentQIndex]: idx }));
     };
+
+    const generateAiExplanation = async () => {
+        if (!questions[currentQIndex]) return;
+
+        setIsGeneratingAi(true);
+        setAiError(null);
+
+        const q = questions[currentQIndex];
+
+        // Check for images
+        const hasQuestionImage = !!q.imageUrl;
+        const hasOptionImages = q.options.some((o: any) => typeof o === 'object' && o.image);
+        const hasImages = hasQuestionImage || hasOptionImages;
+
+        const model = hasImages ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
+
+        let promptText = `
+You are an AI explanation engine for a student exam platform.
+
+TASK:
+Convert the given MCQ into a short, clear, exam-focused explanation for students.
+${hasImages ? "If the question or options are images, READ the content from the images directly to determine the answer and explanation." : ""}
+
+OUTPUT FORMAT:
+Return ONLY valid JSON. No extra text before or after.
+
+{
+  "title": "",
+  "answer": "Option [Letter]: [Exact option text]",
+  "justification": "",
+  "summary": "",
+  "key_points": ["", ""],
+  "takeaway": ""
+}
+
+STRICT RULES:
+- Use very simple language suitable for exams
+- Do NOT add new facts or assumptions
+- Do NOT change the meaning of the question or options
+- Keep everything short and practical
+- No emojis
+- No markdown
+- No quotes inside values unless required
+- Do NOT mention the question explicitly in the output
+
+FIELD RULES:
+- title: Short topic name (5–7 words)
+- answer: Clearly state the correct option
+- justification: Why this option is correct (min 50 words)
+- summary: What this concept is about (min 150 words)
+- key_points:
+  - Include formulas, steps, or rules if present
+  - Otherwise include 2 key exam points
+- takeaway: One-line exam tip or memory aid
+- Briefly imply why other options are wrong (no listing)
+
+INPUT:
+Question: ${q.question}
+Options: ${q.options.map((o: any) => typeof o === 'object' ? o.text : o).join(', ')}
+Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct].text : q.options[q.correct]}
+`;
+
+        // Construct Content Payload
+        let messagesContent: any[] = [{ type: "text", text: promptText }];
+
+        if (hasQuestionImage && q.imageUrl) {
+            messagesContent.push({
+                type: "image_url",
+                image_url: {
+                    url: q.imageUrl
+                }
+            });
+        }
+
+        if (hasOptionImages) {
+            q.options.forEach((o: any, idx: number) => {
+                if (typeof o === 'object' && o.image) {
+                    messagesContent.push({
+                        type: "text",
+                        text: `Option ${idx}:`
+                    });
+                    messagesContent.push({
+                        type: "image_url",
+                        image_url: {
+                            url: o.image
+                        }
+                    });
+                }
+            });
+        }
+
+        const messages = hasImages
+            ? [{ role: "user", content: messagesContent }]
+            : [{ role: "user", content: promptText }];
+
+        try {
+            // Try different env var patterns just in case
+            const rawApiKey = import.meta.env.VITE_GROQ_API_KEYS || import.meta.env.VITE_GROQ_API_KEY || import.meta.env.GROQ_API_KEYS;
+
+            if (!rawApiKey) {
+                console.error("No API key found in environment variables");
+                throw new Error("API Key missing. Please set VITE_GROQ_API_KEYS in .env");
+            }
+
+            // Sanitize key: remove whitespace, trailing commas, and quotes
+            const apiKey = rawApiKey.trim().replace(/,$/, '').replace(/^["']|["']$/g, '');
+            console.log("Using API Key:", apiKey.substring(0, 4) + "..." + apiKey.substring(apiKey.length - 4));
+
+            if (apiKey.length < 10) {
+                throw new Error("API Key seems too short. Please check your .env file.");
+            }
+
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: messages,
+                    temperature: 0.3
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error?.message || 'Failed to fetch AI explanation');
+            }
+
+            const data = await response.json();
+            const content = data.choices[0]?.message?.content;
+
+            if (content) {
+                try {
+                    // Cleanup json markdown if present
+                    const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const json = JSON.parse(cleanContent);
+                    setAiExplanation(json);
+                } catch (e) {
+                    console.error("JSON Parse Error:", e);
+                    throw new Error("Failed to parse AI response");
+                }
+            } else {
+                throw new Error("Empty response from AI");
+            }
+
+        } catch (err: any) {
+            console.error("AI Error:", err);
+            setAiError(err.message);
+        } finally {
+            setIsGeneratingAi(false);
+        }
+    };
+
+    // Auto-generate AI explanation when question is answered
+    useEffect(() => {
+        const isAnswered = userAnswers.hasOwnProperty(currentQIndex);
+        if (isAnswered && !aiExplanation && !isGeneratingAi && !aiError) {
+            generateAiExplanation();
+        }
+    }, [userAnswers, currentQIndex]);
 
     if (loading) {
         return (
@@ -295,9 +468,95 @@ const PracticeTest = () => {
 
                         <div className="flex-1 relative z-10">
                             {isAnswered ? (
-                                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 prose dark:prose-invert prose-sm max-w-none text-muted leading-relaxed">
-                                    <div dangerouslySetInnerHTML={{ __html: q.explanation }} />
-                                </div>
+                                <>
+                                    {aiExplanation ? (
+                                        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
+                                            {/* Key Info Cards */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="bg-green-500/5 border border-green-500/20 p-3 rounded-lg">
+                                                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
+                                                        <CheckCircle2 className="w-3 h-3" />
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider">Answer</span>
+                                                    </div>
+                                                    <p className="text-xs font-medium leading-normal">{aiExplanation.answer}</p>
+                                                </div>
+                                                <div className="bg-blue-500/5 border border-blue-500/20 p-3 rounded-lg">
+                                                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
+                                                        <Target className="w-3 h-3" />
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider">Topic</span>
+                                                    </div>
+                                                    <p className="text-xs font-medium leading-normal line-clamp-2">{aiExplanation.title}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Summary */}
+                                            <div className="prose dark:prose-invert prose-sm max-w-none">
+                                                <h4 className="flex items-center gap-2 text-xs font-bold text-muted uppercase tracking-wider mb-2">
+                                                    <BookOpen className="w-3 h-3" /> Concept Summary
+                                                </h4>
+                                                <p className="text-sm text-text/80 leading-relaxed bg-neutral-50 dark:bg-white/5 p-3 rounded-lg border border-neutral-100 dark:border-white/5">
+                                                    {aiExplanation.summary}
+                                                </p>
+                                            </div>
+
+                                            {/* Key Points */}
+                                            {aiExplanation.key_points && aiExplanation.key_points.length > 0 && (
+                                                <div>
+                                                    <h4 className="flex items-center gap-2 text-xs font-bold text-muted uppercase tracking-wider mb-2">
+                                                        <ListChecks className="w-3 h-3" /> Key Exam Points
+                                                    </h4>
+                                                    <ul className="space-y-2">
+                                                        {aiExplanation.key_points.map((pt: string, i: number) => (
+                                                            <li key={i} className="flex gap-2 text-xs text-text/80 p-2 bg-neutral-50 dark:bg-white/5 rounded-md">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+                                                                {pt}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {/* Takeaway */}
+                                            <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg flex gap-3">
+                                                <Lightbulb className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <div className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider mb-0.5">Exam Takeaway</div>
+                                                    <p className="text-xs text-text/90 italic">{aiExplanation.takeaway}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 prose dark:prose-invert prose-sm max-w-none text-muted leading-relaxed">
+                                                <div dangerouslySetInnerHTML={{ __html: q.explanation }} />
+                                            </div>
+
+                                            {/* Generate Button */}
+                                            <div className="pt-4 border-t border-dashed border-neutral-200 dark:border-neutral-700">
+                                                <button
+                                                    onClick={generateAiExplanation}
+                                                    disabled={isGeneratingAi}
+                                                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white p-3 rounded-xl font-bold shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
+                                                >
+                                                    {isGeneratingAi ? (
+                                                        <>
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                            Generating Explanation...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <BrainCircuit className="w-4 h-4" />
+                                                            Generate Deep Explanation
+                                                        </>
+                                                    )}
+                                                </button>
+                                                {aiError && (
+                                                    <p className="text-xs text-red-500 mt-2 text-center bg-red-500/10 p-2 rounded-lg">{aiError}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-40 text-center text-muted gap-3 opacity-60">
                                     <Lightbulb className="w-12 h-12" />

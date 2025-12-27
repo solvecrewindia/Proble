@@ -1,23 +1,7 @@
 /// <reference types="vite/client" />
 
-declare module '*.png' {
-    const value: string;
-    export default value;
-}
-
-declare module '*.jpg' {
-    const value: string;
-    export default value;
-}
-
-declare module '*.jpeg' {
-    const value: string;
-    export default value;
-}
-
-declare module '*.svg' {
-    import React = require('react');
-    export const ReactComponent: React.FC<React.SVGProps<SVGSVGElement>>;
-    const src: string;
-    export default src;
+interface ImportMetaEnv {
+    readonly VITE_GROQ_API_KEYS: string;
+    readonly VITE_GROQ_API_KEY: string;
+    readonly GROQ_API_KEYS: string;
 }
