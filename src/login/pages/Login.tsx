@@ -353,7 +353,7 @@ export default function Login() {
                                             <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Email</label>
                                             <Input
                                                 type="email"
-                                                {...registerSignUp('email', { required: 'Email is required', pattern: { value: /^[a-zA-Z0-9._%+-]+@gmail\.com$/, message: "Please enter a valid Gmail address" } })}
+                                                {...registerSignUp('email', { required: 'Email is required', pattern: { value: /^[a-zA-Z0-9._%+-]+@(gmail\.com|srmist\.edu\.in)$/, message: "Please enter a valid Gmail or SRMIST email address" } })}
                                                 placeholder="yourname@gmail.com"
                                                 className="h-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                                                 error={errorsSignUp.email?.message as string}
