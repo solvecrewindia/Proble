@@ -31,8 +31,13 @@ export function AdminStepSchedule({ data, update }: any) {
                         <Input
                             type="number"
                             placeholder="e.g. 60"
-                            value={data.durationMinutes || ''}
-                            onChange={(e) => update({ durationMinutes: Number(e.target.value) })}
+                            value={data.settings?.duration || ''}
+                            onChange={(e) => update({
+                                settings: {
+                                    ...data.settings,
+                                    duration: Number(e.target.value)
+                                }
+                            })}
                         />
                     </div>
                 </div>

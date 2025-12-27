@@ -272,7 +272,10 @@ const QuizList = () => {
                         {quizzes.map((quiz) => (
                             <div
                                 key={quiz.id}
-                                onClick={() => navigate(`/admin/quizzes/${category}/edit/${quiz.id}`)}
+                                onClick={() => {
+                                    const targetCat = category || currentModule?.category || quiz.settings?.category || 'global';
+                                    navigate(`/admin/quizzes/${targetCat.toLowerCase()}/edit/${quiz.id}`);
+                                }}
                                 className="glass-card group p-6 relative flex flex-col h-full cursor-pointer"
                             >
                                 <div className="flex justify-between items-start mb-4">
