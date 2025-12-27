@@ -179,16 +179,16 @@ const QuizDetails = () => {
         }
     };
 
-    if (loading) return <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">Loading...</div>;
-    if (!quiz) return <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">Quiz not found.</div>;
+    if (loading) return <div className="min-h-screen bg-background text-text flex items-center justify-center">Loading...</div>;
+    if (!quiz) return <div className="min-h-screen bg-background text-text flex items-center justify-center">Quiz not found.</div>;
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-white font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-background text-text font-sans selection:bg-blue-500/30">
             <div className="max-w-6xl mx-auto px-6 pt-8 pb-20">
                 {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-12 group"
+                    className="flex items-center gap-2 text-muted hover:text-text transition-colors mb-12 group"
                 >
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                     <span className="text-sm font-medium">Back</span>
@@ -196,16 +196,16 @@ const QuizDetails = () => {
 
                 {/* Header Content */}
                 <div className="space-y-4 mb-8">
-                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white leading-tight">
+                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-text leading-tight">
                         {quiz.title}
                     </h1>
-                    <p className="text-gray-400 text-lg leading-relaxed max-w-3xl">
+                    <p className="text-muted text-lg leading-relaxed max-w-3xl">
                         {quiz.description || "No description available for this assessment."}
                     </p>
                 </div>
 
                 {/* Metadata Row */}
-                <div className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm text-gray-400 mb-16 border-b border-white/10 pb-16">
+                <div className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm text-muted mb-16 border-b border-border-custom pb-16">
                     <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
                         <span>{quiz.duration}</span>
@@ -216,8 +216,6 @@ const QuizDetails = () => {
                         <span>{quiz.questions} Questions</span>
                     </div>
 
-
-
                     {quiz.type === 'global' && (
                         <div className="flex items-center gap-6 ml-2 animate-in fade-in duration-500">
                             <div className="flex items-center gap-1.5 bg-yellow-500/10 px-2.5 py-0.5 rounded text-yellow-500 border border-yellow-500/20">
@@ -227,7 +225,7 @@ const QuizDetails = () => {
                             </div>
 
                             <div className="flex items-center gap-1 group">
-                                <span className="text-gray-600 mr-2 text-xs uppercase font-bold tracking-wider group-hover:text-gray-400 transition-colors">Rate:</span>
+                                <span className="text-muted mr-2 text-xs uppercase font-bold tracking-wider group-hover:text-text transition-colors">Rate:</span>
                                 {[1, 2, 3, 4, 5].map((star) => (
                                     <button
                                         key={star}
@@ -235,7 +233,7 @@ const QuizDetails = () => {
                                         className="focus:outline-none transition-all hover:scale-110 active:scale-95"
                                     >
                                         <Star
-                                            className={`w-4 h-4 ${star <= userRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-800 hover:text-gray-600'}`}
+                                            className={`w-4 h-4 ${star <= userRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-800 hover:text-gray-400'}`}
                                         />
                                     </button>
                                 ))}
@@ -250,7 +248,7 @@ const QuizDetails = () => {
                             className={`ml-auto px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-xl
                                 ${isAddedToPractice
                                     ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20'
-                                    : 'bg-[#6366f1] hover:bg-[#5558e6] text-white shadow-indigo-500/25 hover:shadow-indigo-500/40'
+                                    : 'bg-primary hover:bg-primary/90 text-white shadow-primary/25 hover:shadow-primary/40'
                                 }`}
                         >
                             {practiceLoading ? (
@@ -272,11 +270,9 @@ const QuizDetails = () => {
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-
-
                     <button
                         onClick={() => navigate(`/student/practice/setup/${id}`)}
-                        className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-white text-black font-semibold hover:bg-gray-100 transition-all active:scale-95 text-sm"
+                        className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-surface text-text border border-border-custom font-semibold hover:bg-background transition-all active:scale-95 text-sm"
                     >
                         Practice Test
                     </button>

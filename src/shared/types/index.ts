@@ -5,6 +5,7 @@ export interface User {
     email: string;
     role: 'student' | 'faculty' | 'admin' | 'teacher';
     created_at?: string;
+    avatar_url?: string;
 }
 
 export interface Quiz {

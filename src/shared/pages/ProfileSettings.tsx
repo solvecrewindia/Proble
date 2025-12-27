@@ -1,42 +1,135 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Globe, Lock, Trash2, Edit, ChevronDown, Camera } from 'lucide-react';
+import { User as UserIcon, Globe, Lock, Trash2, Edit, ChevronDown, Camera } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const ProfileSettings = () => {
     const { user } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [formData, setFormData] = useState({
-        email: 's.tharunsofficial@gmail.com',
-        phone: '000 000 0000',
-        username: 's.tharunsofficial_22792',
-        photo: `https://ui-avatars.com/api/?name=${'Tharun'}&background=random`
+        email: '',
+        username: '',
+        photo: '',
+        language: 'English'
     });
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadProfile = async () => {
+            if (!user) return;
+
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') {
+                    console.error('Error fetching profile:', error);
+                }
+
+                if (mounted) {
+                    setFormData({
+                        email: data?.email || user.email || '',
+                        username: data?.username || '',
+                        photo: data?.avatar_url || `https://ui-avatars.com/api/?name=${data?.username || 'User'}&background=random`,
+                        language: data?.preferred_language || 'English'
+                    });
+                    setIsLoading(false);
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                if (mounted) setIsLoading(false);
+            }
+        };
+
+        loadProfile();
+
+        return () => {
+            mounted = false;
+        };
+    }, [user]);
 
     const handleCancel = () => {
         setIsEditing(false);
-        // Reset logic could go here
     };
 
-    const handleSave = () => {
-        setIsEditing(false);
-        alert("Changes saved!");
+    const handleSave = async () => {
+        if (!user) return;
+
+        try {
+            const updates = {
+                id: user.id,
+                email: formData.email,
+                username: formData.username,
+                preferred_language: formData.language,
+                updated_at: new Date().toISOString(),
+                avatar_url: formData.photo
+            };
+
+            const { error } = await supabase
+                .from('profiles')
+                .upsert(updates);
+
+            if (error) throw error;
+
+            setIsEditing(false);
+            alert("Changes saved!");
+        } catch (error: any) {
+            console.error('Error saving profile:', error);
+            alert("Error saving changes: " + error.message);
+        }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!user) return;
+
         if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+
+            // Immediate preview
             const reader = new FileReader();
             reader.onload = (event) => {
                 if (event.target?.result) {
                     setFormData(prev => ({ ...prev, photo: event.target!.result as string }));
                 }
             };
-            reader.readAsDataURL(e.target.files[0]);
+            reader.readAsDataURL(file);
+
+            // Upload to Supabase Storage
+            try {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+                const filePath = `${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('avatars')
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+                if (data) {
+                    setFormData(prev => ({ ...prev, photo: data.publicUrl }));
+                }
+            } catch (error) {
+                console.error('Error uploading avatar:', error);
+                alert('Error uploading image');
+            }
         }
     };
+
+    if (isLoading) {
+        return <div className="p-6 text-center">Loading settings...</div>;
+    }
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-8">
@@ -46,7 +139,7 @@ const ProfileSettings = () => {
             <div className="bg-surface rounded-xl border border-border-custom p-6 shadow-sm">
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-2">
-                        <User className="w-5 h-5 text-text" />
+                        <UserIcon className="w-5 h-5 text-text" />
                         <h2 className="text-lg font-bold text-text">Account</h2>
                     </div>
 
@@ -101,34 +194,6 @@ const ProfileSettings = () => {
 
                     <div className="grid grid-cols-1 gap-6 flex-1">
                         <div>
-                            <label className="block text-sm text-muted mb-1">Email address</label>
-                            {isEditing ? (
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    className="w-full bg-background border border-border-custom rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                />
-                            ) : (
-                                <div className="font-medium text-text px-3 py-2">{formData.email}</div>
-                            )}
-                        </div>
-                        <div>
-                            <label className="block text-sm text-muted mb-1">Phone Number</label>
-                            {isEditing ? (
-                                <input
-                                    type="text"
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    className="w-full bg-background border border-border-custom rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                />
-                            ) : (
-                                <div className="font-medium text-text px-3 py-2">{formData.phone}</div>
-                            )}
-                        </div>
-                        <div>
                             <label className="block text-sm text-muted mb-1">Username</label>
                             {isEditing ? (
                                 <input
@@ -140,6 +205,20 @@ const ProfileSettings = () => {
                                 />
                             ) : (
                                 <div className="font-medium text-text px-3 py-2">{formData.username}</div>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-sm text-muted mb-1">Email address</label>
+                            {isEditing ? (
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    className="w-full bg-background border border-border-custom rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                            ) : (
+                                <div className="font-medium text-text px-3 py-2">{formData.email}</div>
                             )}
                         </div>
                     </div>
@@ -156,7 +235,13 @@ const ProfileSettings = () => {
                 <div className="max-w-md">
                     <label className="block text-sm text-muted mb-2">Select preferred language</label>
                     <div className="relative">
-                        <select className="w-full appearance-none bg-background border border-border-custom rounded-lg px-4 py-3 text-text focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer">
+                        <select
+                            name="language"
+                            value={formData.language}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            className={`w-full appearance-none bg-background border border-border-custom rounded-lg px-4 py-3 text-text focus:outline-none focus:ring-2 focus:ring-primary/50 ${isEditing ? 'cursor-pointer' : 'cursor-default opacity-80'}`}
+                        >
                             <option>English</option>
                             <option>Spanish</option>
                             <option>French</option>

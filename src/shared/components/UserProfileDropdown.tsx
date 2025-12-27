@@ -12,6 +12,10 @@ const UserProfileDropdown: React.FC = () => {
     const isDarkMode = theme === 'dark';
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    // Derived state for display
+    const displayName = user?.username || user?.email?.split('@')[0] || 'User';
+    const avatarSrc = user?.avatar_url || `https://ui-avatars.com/api/?name=${displayName}&background=random`;
+
     const toggleDropdown = () => setIsOpen(!isOpen);
     const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
@@ -46,7 +50,7 @@ const UserProfileDropdown: React.FC = () => {
             >
                 <div className="w-8 h-8 rounded-full overflow-hidden border border-border-custom">
                     <img
-                        src={`https://ui-avatars.com/api/?name=${user.name}&background=random`}
+                        src={avatarSrc}
                         alt="User Avatar"
                         className="w-full h-full object-cover"
                     />
@@ -66,13 +70,13 @@ const UserProfileDropdown: React.FC = () => {
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full overflow-hidden border border-border-custom shrink-0">
                                 <img
-                                    src={`https://ui-avatars.com/api/?name=${user.name}&background=random`}
+                                    src={avatarSrc}
                                     alt="User Avatar"
                                     className="w-full h-full object-cover"
                                 />
                             </div>
                             <div className="flex flex-col overflow-hidden">
-                                <span className="text-sm font-bold text-text truncate">{user.name}</span>
+                                <span className="text-sm font-bold text-text truncate">{displayName}</span>
                                 <span className="text-xs text-muted truncate">{user.email}</span>
                                 <span className="text-[10px] uppercase tracking-wider text-muted font-semibold">{user.role}</span>
                             </div>

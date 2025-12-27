@@ -276,8 +276,12 @@ const MCQTest = () => {
         <div className="min-h-screen bg-[#F7F9FC] dark:bg-background font-sans text-black dark:text-text">
             {/* Header */}
             <header className="bg-white dark:bg-gray-900 px-7 py-3 shadow-[0_1px_4px_rgba(16,24,40,0.06)] flex items-center justify-between sticky top-0 z-50">
-                <div className="flex items-center gap-2.5">
-                    <span className="text-2xl font-bold">Proble</span>
+                <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
+                    <img
+                        src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
+                        alt="Proble Logo"
+                        className="h-[32px] w-auto rounded-md"
+                    />
                 </div>
 
                 <div className="flex items-center gap-3 w-[260px]">
