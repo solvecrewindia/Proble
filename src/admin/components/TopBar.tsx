@@ -65,7 +65,7 @@ const TopBar = ({ onMenuClick }: TopBarProps) => {
                         className="flex items-center gap-2 rounded-full bg-surface p-1 pr-3 hover:bg-surface/80 transition-colors"
                     >
                         <img
-                            src="https://i.pravatar.cc/150?u=admin"
+                            src="https://ui-avatars.com/api/?name=Admin+User&background=random"
                             alt="Admin"
                             className="h-8 w-8 rounded-full border border-surface"
                         />
@@ -85,18 +85,6 @@ const TopBar = ({ onMenuClick }: TopBarProps) => {
                                     <span className="text-xs text-muted">admin@proble.com</span>
                                 </div>
                             </div>
-
-                            {/* Row 1.5: Profile Settings */}
-                            <button
-                                onClick={() => {
-                                    window.location.href = '/admin/profile-settings';
-                                    setIsDropdownOpen(false);
-                                }}
-                                className="flex w-full items-center gap-3 p-3 text-sm text-text rounded-lg hover:bg-surface transition-colors"
-                            >
-                                <Settings className="h-4 w-4 text-muted" />
-                                <span>Profile Settings</span>
-                            </button>
 
                             {/* Row 2: Theme Toggle */}
                             <button

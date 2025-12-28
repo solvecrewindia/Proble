@@ -252,18 +252,20 @@ const ProfileSettings = () => {
             </div>
 
             {/* Password Section */}
-            <div className="bg-surface rounded-xl border border-neutral-300 dark:border-neutral-600 p-6 shadow-sm">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <Lock className="w-5 h-5 text-text" />
-                        <h2 className="text-lg font-bold text-text">Password</h2>
+            {user?.role !== 'student' && (
+                <div className="bg-surface rounded-xl border border-neutral-300 dark:border-neutral-600 p-6 shadow-sm">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <Lock className="w-5 h-5 text-text" />
+                            <h2 className="text-lg font-bold text-text">Password</h2>
+                        </div>
+                        <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                            <Edit className="w-4 h-4" />
+                            Edit
+                        </button>
                     </div>
-                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                        <Edit className="w-4 h-4" />
-                        Edit
-                    </button>
                 </div>
-            </div>
+            )}
 
             {/* Delete Account Section */}
             <div className="bg-surface rounded-xl border border-neutral-300 dark:border-neutral-600 p-6 shadow-sm">
