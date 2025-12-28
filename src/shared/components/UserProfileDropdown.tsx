@@ -1,11 +1,13 @@
 ﻿import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Sun, Moon, LogOut, Home, Settings, LayoutDashboard, List, Link2 } from 'lucide-react';
+import { ChevronDown, Sun, Moon, LogOut, Home, Settings, LayoutDashboard, List, Link2, MessageCircle } from 'lucide-react';
+import ReportProblemModal from './ReportProblemModal';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
 const UserProfileDropdown: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const { theme, setTheme } = useTheme();
     const { user, logout } = useAuth();
     const navigate = useNavigate();
@@ -111,6 +113,19 @@ const UserProfileDropdown: React.FC = () => {
                                     <span className="text-sm font-medium">Join Master Test</span>
                                 </button>
                             </div>
+
+                            <div className="px-2 py-1">
+                                <button
+                                    onClick={() => {
+                                        setIsReportModalOpen(true);
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                >
+                                    <MessageCircle className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                                    <span className="text-sm font-medium">Problem Report</span>
+                                </button>
+                            </div>
                         </>
                     )}
 
@@ -186,6 +201,11 @@ const UserProfileDropdown: React.FC = () => {
 
                 </div>
             )}
+
+            <ReportProblemModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+            />
         </div>
     );
 };
