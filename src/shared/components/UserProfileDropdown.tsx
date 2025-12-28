@@ -175,18 +175,20 @@ const UserProfileDropdown: React.FC = () => {
                     </div>
 
                     {/* Homepage Link */}
-                    <div className="px-2 py-1">
-                        <button
-                            onClick={() => {
-                                navigate('/');
-                                setIsOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
-                        >
-                            <Home className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
-                            <span className="text-sm font-medium">Homepage</span>
-                        </button>
-                    </div>
+                    {user.role?.toLowerCase() !== 'teacher' && (
+                        <div className="px-2 py-1">
+                            <button
+                                onClick={() => {
+                                    navigate('/');
+                                    setIsOpen(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                            >
+                                <Home className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                                <span className="text-sm font-medium">Homepage</span>
+                            </button>
+                        </div>
+                    )}
 
                     {/* Logout Section */}
                     <div className="p-2 border-t border-neutral-300 dark:border-neutral-600">
