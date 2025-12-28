@@ -2,7 +2,7 @@
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Eye, Copy, Plus } from 'lucide-react';
+import { Eye, Copy, Plus, Edit, Download, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Quiz } from '../types';
@@ -82,6 +82,48 @@ export default function Master() {
 
         if (data) setResults(data);
         if (error) console.error("Error fetching results:", error);
+    };
+
+    const downloadResultsAsCSV = () => {
+        if (results.length === 0) return;
+
+        const csvContent = [
+            ['Student Name', 'Email', 'Score', 'Total Questions', 'Percentage', 'Date'],
+            ...results.map(res => [
+                res.profiles?.username || 'Unknown',
+                res.profiles?.email || 'N/A',
+                res.score,
+                res.total_questions,
+                `${res.percentage.toFixed(2)}%`,
+                new Date(res.created_at).toLocaleDateString()
+            ])
+        ].map(e => e.join(",")).join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "quiz_results.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleRetest = async (resultId: string, studentName: string) => {
+        if (confirm(`Are you sure you want to allow ${studentName} to retake this test? This will delete their current attempt.`)) {
+            const { error } = await supabase
+                .from('quiz_results')
+                .delete()
+                .eq('id', resultId);
+
+            if (error) {
+                alert("Failed to reset attempt: " + error.message);
+            } else {
+                alert("Attempt reset successfully.");
+                if (selectedQuizId) fetchResults(selectedQuizId);
+            }
+        }
     };
 
     const updateStatus = async (quizId: string, newStatus: Quiz['status']) => {
@@ -166,7 +208,12 @@ export default function Master() {
                     <div className="bg-surface border border-neutral-300 dark:border-neutral-600 rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
                         <div className="p-6 border-b border-neutral-300 dark:border-neutral-600 flex justify-between items-center">
                             <h2 className="text-xl font-bold text-text">Student Results</h2>
-                            <Button variant="ghost" onClick={() => setViewingResults(false)}>Close</Button>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={downloadResultsAsCSV}>
+                                    <Download className="mr-2 h-4 w-4" /> Download Excel
+                                </Button>
+                                <Button variant="ghost" onClick={() => setViewingResults(false)}>Close</Button>
+                            </div>
                         </div>
                         <div className="flex-1 overflow-auto p-6">
                             {results.length === 0 ? (
@@ -178,7 +225,7 @@ export default function Master() {
                                             <th className="pb-3">Student</th>
                                             <th className="pb-3">Score</th>
                                             <th className="pb-3">Percentage</th>
-                                            <th className="pb-3 text-right">Date</th>
+                                            <th className="pb-3 text-right">Date & Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-text">
@@ -194,8 +241,19 @@ export default function Master() {
                                                         {res.percentage.toFixed(1)}%
                                                     </Badge>
                                                 </td>
-                                                <td className="py-4 text-right text-sm text-muted">
-                                                    {new Date(res.created_at).toLocaleDateString()}
+                                                <td className="py-4 text-right flex items-center justify-end gap-3">
+                                                    <span className="text-sm text-muted">
+                                                        {new Date(res.created_at).toLocaleDateString()}
+                                                    </span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                        onClick={() => handleRetest(res.id, res.profiles?.username)}
+                                                        title="Allow Retest (Delete Result)"
+                                                    >
+                                                        <RotateCw className="h-4 w-4" />
+                                                    </Button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -266,6 +324,9 @@ export default function Master() {
                                     <div className="flex gap-2">
                                         <Button variant="outline" onClick={() => fetchResults(quiz.id)}>
                                             View Results
+                                        </Button>
+                                        <Button variant="outline" onClick={() => navigate(`/faculty/quizzes/${quiz.id}/edit`)}>
+                                            <Edit className="h-4 w-4" />
                                         </Button>
 
                                         {quiz.status !== 'completed' && (

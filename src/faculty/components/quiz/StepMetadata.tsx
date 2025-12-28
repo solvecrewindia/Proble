@@ -28,29 +28,22 @@ export function StepMetadata({ data, update }: any) {
                     />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-text">Anti-Cheat Level</label>
-                        <select
-                            className="w-full h-10 rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background px-3 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text"
-                            value={data.settings?.antiCheatLevel || 'standard'}
-                            onChange={(e) => update({ settings: { ...data.settings, antiCheatLevel: e.target.value } })}
-                        >
-                            <option value="standard">Standard (Tab Switching & Fullscreen)</option>
-                            <option value="strict">Strict (1 Strike Tolerance)</option>
-                        </select>
-                    </div>
-
-                    <div className="flex items-center space-x-2 pt-8">
-                        <input
-                            type="checkbox"
-                            id="allowRetake"
-                            className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary"
-                            checked={data.settings?.allowRetake || false}
-                            onChange={(e) => update({ settings: { ...data.settings, allowRetake: e.target.checked } })}
-                        />
-                        <label htmlFor="allowRetake" className="text-sm font-medium text-text">Allow Retakes</label>
-                    </div>
+                {/* Anti-Cheat & Retakes configuration */}
+                <div className="flex items-center space-x-4">
+                    {/* Allow Retakes - Only for Global Tests */}
+                    {data.type !== 'master' && (
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={data.settings?.allowRetake || false}
+                                onChange={(e) => update({
+                                    settings: { ...data.settings, allowRetake: e.target.checked }
+                                })}
+                                className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 bg-background text-primary focus:ring-primary"
+                            />
+                            <span className="text-sm font-medium text-text">Allow Retakes</span>
+                        </label>
+                    )}
                 </div>
             </div>
         </div>

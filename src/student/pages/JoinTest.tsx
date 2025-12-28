@@ -27,19 +27,43 @@ const JoinTest = () => {
         setError('');
 
         try {
-            const { data, error } = await supabase
+            // 1. Get User
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Please login to continue");
+
+            // 2. Fetch Quiz
+            const { data: quizData, error: quizError } = await supabase
                 .from('quizzes')
                 .select('*')
                 .eq('code', codeToVerify)
                 .single();
 
-            if (error) throw error;
-            if (!data) throw new Error('Quiz not found');
+            if (quizError) throw quizError;
+            if (!quizData) throw new Error('Quiz not found');
 
-            setQuiz(data);
-        } catch (err) {
+            // 3. Check for existing attempts
+            if (quizData.type === 'master' || !quizData.settings?.allowRetake) {
+                const { data: existingAttempts, error: attemptError } = await supabase
+                    .from('quiz_results')
+                    .select('id')
+                    .eq('quiz_id', quizData.id)
+                    .eq('student_id', user.id)
+                    .limit(1);
+
+                if (attemptError) {
+                    console.error("Error checking attempts:", attemptError);
+                    throw new Error("Failed to verify attempt status");
+                }
+
+                if (existingAttempts && existingAttempts.length > 0) {
+                    throw new Error("You have already attempted this assessment. Retakes are not allowed.");
+                }
+            }
+
+            setQuiz(quizData);
+        } catch (err: any) {
             console.error('Error fetching quiz:', err);
-            setError('Invalid access code. Please check and try again.');
+            setError(err.message || 'Invalid access code. Please check and try again.');
             setQuiz(null);
         } finally {
             setVerifying(false);

@@ -72,7 +72,7 @@ export interface Module {
     created_at: string;
 }
 
-export type QuizMeta = Pick<Quiz, 'id' | 'title' | 'description' | 'image_url' | 'status' | 'settings' | 'type' | 'module_id'>;
+export type QuizMeta = Pick<Quiz, 'id' | 'title' | 'description' | 'image_url' | 'status' | 'settings' | 'type' | 'module_id' | 'accessCode' | 'scheduledAt'> & { durationMinutes?: number };
 
 export interface Attempt {
     id: string;

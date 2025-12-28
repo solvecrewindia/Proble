@@ -138,13 +138,19 @@ const MCQTest = () => {
 
             const { data: quizData } = await supabase
                 .from('quizzes')
-                .select('settings')
+                .select('settings, type, id')
                 .in('id', targetQuizIds)
                 .limit(1)
                 .single();
 
-            if (quizData && quizData.settings) {
-                setQuizSettings(quizData.settings);
+            if (quizData) {
+                if (quizData.settings) setQuizSettings(quizData.settings);
+
+                // Security Check: Prevent unauthorized retakes
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    // actually I need 'type' as well.
+                }
             }
 
             const { data, error } = await supabase

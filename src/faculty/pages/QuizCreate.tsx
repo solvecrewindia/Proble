@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Save, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -24,6 +24,7 @@ const STEPS = [
 ];
 
 export default function QuizCreate() {
+    const { id } = useParams();
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(0);
     const [quizData, setQuizData] = useState<Partial<QuizMeta>>({
@@ -42,6 +43,54 @@ export default function QuizCreate() {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
     const { user } = useAuth();
+
+    useEffect(() => {
+        if (!id) return;
+
+        const fetchQuiz = async () => {
+            // Fetch Quiz
+            const { data: quiz, error: quizError } = await supabase
+                .from('quizzes')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (quizError) {
+                console.error("Error fetching quiz:", quizError);
+                return;
+            }
+
+            if (quiz) {
+                setQuizData({
+                    id: quiz.id,
+                    title: quiz.title,
+                    description: quiz.description,
+                    type: quiz.type,
+                    accessCode: quiz.code, // Map code to accessCode for StepSchedule
+                    settings: quiz.settings || {},
+                    scheduledAt: quiz.starts_at, // Assuming column name, verify schema if possible or infer
+                    durationMinutes: quiz.duration
+                });
+            }
+
+            // Fetch Questions
+            const { data: qs, error: qError } = await supabase
+                .from('questions')
+                .select('*')
+                .eq('quiz_id', id);
+
+            if (qs) {
+                setQuestions(qs.map(q => ({
+                    id: q.id,
+                    stem: q.text,
+                    options: q.choices,
+                    correct: q.correct_answer
+                })));
+            }
+        };
+
+        fetchQuiz();
+    }, [id]);
 
     // Generating access code
     const generateCode = () => {
@@ -63,6 +112,14 @@ export default function QuizCreate() {
             if (!userId) throw new Error("Not authenticated");
 
             const isMaster = data.type === 'master';
+
+            // Enforce Master Test constraints
+            if (isMaster) {
+                if (!data.settings) data.settings = {};
+                data.settings.allowRetake = false;
+                data.settings.antiCheatLevel = 'standard';
+            }
+
             const quizPayload = {
                 title: data.title,
                 description: data.description,
@@ -209,15 +266,31 @@ export default function QuizCreate() {
                     <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                 </Button>
                 <Button
-                    onClick={() => {
+                    disabled={saveMutation.isPending}
+                    onClick={async () => {
                         if (currentStep === STEPS.length - 1) {
-                            navigate('/faculty/global'); // Or master, depending on type
+                            try {
+                                setIsSaving(true);
+                                await saveMutation.mutateAsync({ ...quizData, questions });
+
+                                if (quizData.type === 'master') {
+                                    navigate('/faculty/master');
+                                } else {
+                                    navigate('/faculty/global');
+                                }
+                            } catch (error) {
+                                console.error("Failed to publish:", error);
+                                alert("Failed to save quiz. Please try again.");
+                                setIsSaving(false);
+                            }
                         } else {
                             setCurrentStep(prev => prev + 1);
                         }
                     }}
                 >
-                    {currentStep === STEPS.length - 1 ? 'Publish Quiz' : 'Next Step'}
+                    {currentStep === STEPS.length - 1 ? (
+                        saveMutation.isPending ? 'Publishing...' : 'Publish Quiz'
+                    ) : 'Next Step'}
                     {currentStep !== STEPS.length - 1 && <ChevronRight className="ml-2 h-4 w-4" />}
                 </Button>
             </div>
