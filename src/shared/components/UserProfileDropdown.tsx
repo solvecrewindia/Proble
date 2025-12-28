@@ -83,6 +83,37 @@ const UserProfileDropdown: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* Student Specific Links */}
+                    {user.role === 'student' && (
+                        <>
+                            <div className="px-2 py-1">
+                                <button
+                                    onClick={() => {
+                                        navigate('/student/dashboard');
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                >
+                                    <LayoutDashboard className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                                    <span className="text-sm font-medium">Analysis</span>
+                                </button>
+                            </div>
+
+                            <div className="px-2 py-1">
+                                <button
+                                    onClick={() => {
+                                        navigate('/student/join');
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                >
+                                    <Link2 className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                                    <span className="text-sm font-medium">Join Master Test</span>
+                                </button>
+                            </div>
+                        </>
+                    )}
+
                     {/* Theme Toggle Section */}
                     <div className="px-2 py-1">
                         <button
@@ -114,7 +145,7 @@ const UserProfileDropdown: React.FC = () => {
                     </div>
 
                     {/* Profile Settings Link */}
-                    <div className="px-2 py-1">
+                    <div className="px-2 py-1 border-b border-neutral-300 dark:border-neutral-600">
                         <button
                             onClick={() => {
                                 const role = user.role.toLowerCase();
@@ -127,37 +158,6 @@ const UserProfileDropdown: React.FC = () => {
                             <span className="text-sm font-medium">Profile Settings</span>
                         </button>
                     </div>
-
-                    {/* Student Specific Links */}
-                    {user.role === 'student' && (
-                        <>
-                            <div className="px-2 py-1">
-                                <button
-                                    onClick={() => {
-                                        navigate('/student/dashboard');
-                                        setIsOpen(false);
-                                    }}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
-                                >
-                                    <LayoutDashboard className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
-                                    <span className="text-sm font-medium">Analysis</span>
-                                </button>
-                            </div>
-
-                            <div className="px-2 py-1 border-b border-neutral-300 dark:border-neutral-600">
-                                <button
-                                    onClick={() => {
-                                        navigate('/student/join');
-                                        setIsOpen(false);
-                                    }}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
-                                >
-                                    <Link2 className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
-                                    <span className="text-sm font-medium">Join Master Test</span>
-                                </button>
-                            </div>
-                        </>
-                    )}
 
                     {/* Homepage Link */}
                     <div className="px-2 py-1">
