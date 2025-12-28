@@ -9,7 +9,12 @@ import {
 import { cn } from '../../../lib/utils';
 import { useAuth } from '../../../shared/context/AuthContext';
 
-export function Sidebar() {
+interface SidebarProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const { logout } = useAuth();
     const navigate = useNavigate();
 
@@ -20,13 +25,20 @@ export function Sidebar() {
     ];
 
     return (
-        <aside className="fixed left-0 top-[63px] z-40 h-[calc(100vh-63px)] w-64 bg-surface shadow-sm transition-transform border-r border-neutral-300 dark:border-neutral-600">
+        <aside
+            className={cn(
+                "fixed left-0 top-[63px] z-40 h-[calc(100vh-63px)] w-64 bg-surface shadow-sm transition-transform border-r border-neutral-300 dark:border-neutral-600 duration-300",
+                "md:translate-x-0", // Always visible on desktop
+                isOpen ? "translate-x-0" : "-translate-x-full" // Toggle on mobile
+            )}
+        >
             <div className="flex h-full flex-col">
                 <nav className="flex-1 space-y-1 px-3 py-4">
                     {navItems.map((item) => (
                         <NavLink
                             key={item.to}
                             to={item.to}
+                            onClick={() => onClose?.()}
                             className={({ isActive }) =>
                                 cn(
                                     'flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group',

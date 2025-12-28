@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Sun, Moon, LogOut, User, Settings, Plus } from 'lucide-react';
+import { ChevronDown, Sun, Moon, LogOut, User, Settings, Plus, Menu } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
-const TopBar = () => {
+interface TopBarProps {
+    onMenuClick?: () => void;
+}
+
+const TopBar = ({ onMenuClick }: TopBarProps) => {
     const { theme, setTheme } = useTheme();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -22,18 +26,28 @@ const TopBar = () => {
     }, []);
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-30 flex h-16 w-full items-center justify-between border-b bg-background/95 px-6 backdrop-blur-sm">
-            {/* Logo */}
-            <div className="flex items-center">
-                <img
-                    src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
-                    alt="Proble Logo"
-                    className="h-8 w-auto"
-                />
+        <header className="fixed top-0 left-0 right-0 z-30 flex h-16 w-full items-center justify-between border-b bg-background/95 px-4 md:px-6 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+                {/* Mobile Menu Button */}
+                <button
+                    onClick={onMenuClick}
+                    className="p-2 -ml-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden text-text"
+                >
+                    <Menu className="h-6 w-6" />
+                </button>
+
+                {/* Logo */}
+                <div className="flex items-center">
+                    <img
+                        src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+                        alt="Proble Logo"
+                        className="h-8 w-auto"
+                    />
+                </div>
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
                 <button
                     onClick={() => navigate('/admin/create')}
                     className={`inline-flex items-center justify-center h-8 px-3 text-sm gap-2 rounded-full transition-colors font-medium ${theme === 'dark'
@@ -41,7 +55,7 @@ const TopBar = () => {
                         : 'bg-black text-white hover:bg-neutral-800'
                         }`}
                 >
-                    <Plus className="h-4 w-4" /> Create
+                    <Plus className="h-4 w-4" /> <span className="hidden md:inline">Create</span>
                 </button>
 
                 {/* Profile Dropdown */}
