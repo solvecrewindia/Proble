@@ -149,7 +149,23 @@ const MCQTest = () => {
                 // Security Check: Prevent unauthorized retakes
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    // actually I need 'type' as well.
+                    const isMaster = quizData.type === 'master';
+                    const allowRetake = quizData.settings?.allowRetake;
+
+                    if (isMaster || allowRetake === false) {
+                        const { data: existingAttempts } = await supabase
+                            .from('quiz_results')
+                            .select('id')
+                            .eq('quiz_id', quizData.id)
+                            .eq('student_id', user.id)
+                            .limit(1);
+
+                        if (existingAttempts && existingAttempts.length > 0) {
+                            alert("You have already completed this assessment.");
+                            navigate('/student/dashboard');
+                            return;
+                        }
+                    }
                 }
             }
 
