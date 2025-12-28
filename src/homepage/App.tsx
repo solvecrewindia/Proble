@@ -165,24 +165,24 @@ function App({ searchQuery = '' }: AppProps) {
       {/* Join Code Section */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 py-8 px-5 text-white">
         <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
+          <div className="text-center md:text-left">
             <h2 className="text-2xl font-bold mb-2">Have a Quiz Code?</h2>
             <p className="text-blue-100">Enter the code shared by your faculty to access private assessments.</p>
           </div>
-          <form onSubmit={handleJoin} className="flex w-full md:w-auto bg-white p-1 rounded-lg shadow-lg">
+          <form onSubmit={handleJoin} className="flex w-full md:w-auto bg-white p-1 rounded-lg shadow-lg items-center overflow-hidden">
             <input
               type="text"
-              placeholder="Enter Code (e.g. AB12CD)"
-              className="flex-1 px-4 py-2 text-gray-900 outline-none rounded-l-md"
+              placeholder="Enter Code"
+              className="flex-1 min-w-0 px-3 py-2 text-gray-900 outline-none rounded-l-md text-left text-sm md:text-base"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             />
             <button
               type="submit"
               disabled={joining}
-              className="bg-primary text-white px-6 py-2 rounded-md font-bold hover:bg-blue-700 transition flex items-center gap-2"
+              className="bg-primary text-white px-4 md:px-6 py-2 rounded-md font-bold hover:bg-blue-700 transition flex items-center gap-2 whitespace-nowrap text-sm md:text-base"
             >
-              {joining ? 'Checking...' : 'Join'} <ArrowRight className="w-4 h-4" />
+              {joining ? '...' : 'Join'} <ArrowRight className="w-4 h-4" />
             </button>
           </form>
         </div>
