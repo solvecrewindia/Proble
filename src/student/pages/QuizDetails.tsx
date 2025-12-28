@@ -270,12 +270,14 @@ const QuizDetails = () => {
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button
-                        onClick={() => navigate(`/student/practice/setup/${id}`)}
-                        className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-surface text-text border border-neutral-300 dark:border-neutral-600 font-semibold hover:bg-background transition-all active:scale-95 text-sm"
-                    >
-                        Practice Test
-                    </button>
+                    {quiz.type !== 'master' && (
+                        <button
+                            onClick={() => navigate(`/student/practice/setup/${id}`)}
+                            className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-surface text-text border border-neutral-300 dark:border-neutral-600 font-semibold hover:bg-background transition-all active:scale-95 text-sm"
+                        >
+                            Practice Test
+                        </button>
+                    )}
                     <button
                         onClick={() => navigate(`/student/test/${id}`)}
                         className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] active:scale-95 text-sm"

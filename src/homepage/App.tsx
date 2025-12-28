@@ -1,18 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import Tabss from './components/Tabs'; // Rename import to match usage (Tabs was default export?)
 import Tabs from './components/Tabs';
 import CourseCard from './components/CourseCard';
+import SkeletonCard from './components/SkeletonCard';
 import type { Course, TabType } from './types';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Search, ArrowRight } from 'lucide-react';
-
-import pythonBanner from '../assets/python_banner.png';
-import dbmsBanner from '../assets/dbms_banner.png';
-import osBanner from '../assets/os_banner.png';
-import mlBanner from '../assets/ml_banner.png';
-
-// Sample courses removed in favor of Supabase fetching
+import { ArrowRight } from 'lucide-react';
 
 interface AppProps {
   searchQuery?: string;
@@ -26,8 +19,6 @@ function App({ searchQuery = '' }: AppProps) {
   const [joining, setJoining] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch Quizzes based on Active Tab
-  // Fetch Quizzes based on Active Tab
   useEffect(() => {
     const fetchQuizzes = async () => {
       setLoading(true);
@@ -52,9 +43,10 @@ function App({ searchQuery = '' }: AppProps) {
           moduleCategory = 'Global';
         }
 
+        // Optimized Select: Only fetch necessary fields
         const [modulesRes, quizzesRes] = await Promise.all([
-          supabase.from('modules').select('*').eq('category', moduleCategory),
-          supabase.from('quizzes').select('*').eq('type', dbType).is('module_id', null).order('created_at', { ascending: false })
+          supabase.from('modules').select('id, title, image_url, created_by, created_at').eq('category', moduleCategory),
+          supabase.from('quizzes').select('id, title, image_url, created_by, created_at').eq('type', dbType).is('module_id', null).order('created_at', { ascending: false })
         ]);
 
         const modules = modulesRes.data || [];
@@ -196,7 +188,11 @@ function App({ searchQuery = '' }: AppProps) {
           <span className="text-sm text-muted">Showing {filteredCourses.length} results</span>
         </div>
 
-        {activeTab === 'global' && filteredCourses.length === 0 ? (
+        {loading ? (
+          <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
+            {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : activeTab === 'global' && filteredCourses.length === 0 ? (
           <div className="text-center py-12 text-muted">No global challenges active properly at the moment. Check back later!</div>
         ) : (
           <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
