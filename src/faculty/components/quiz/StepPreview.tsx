@@ -47,14 +47,14 @@ export function StepPreview({ data, questions }: any) {
                             )}
                             <p className="text-lg font-medium text-text">{q.stem}</p>
 
-                            {q.type === 'mcq' && q.options && (
+                            {(q.type === 'mcq' || q.type === 'msq') && q.options && (
                                 <div className="space-y-2">
                                     {q.options.map((opt: any, i) => (
                                         <div
                                             key={i}
                                             className="flex items-center p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-surface transition-colors"
                                         >
-                                            <div className="h-4 w-4 rounded-full border border-neutral-300 dark:border-neutral-600 mr-3" />
+                                            <div className={`h-4 w-4 ${q.type === 'msq' ? 'rounded-sm' : 'rounded-full'} border border-neutral-300 dark:border-neutral-600 mr-3`} />
                                             <div className="flex-1">
                                                 {q.optionImages?.[i] && (
                                                     <img
@@ -78,7 +78,7 @@ export function StepPreview({ data, questions }: any) {
                                 />
                             )}
 
-                            {q.type === 'numeric' && (
+                            {(q.type === 'numeric' || q.type === 'range') && (
                                 <input
                                     type="number"
                                     className="w-full p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-background text-text"

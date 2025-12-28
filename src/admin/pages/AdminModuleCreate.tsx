@@ -6,7 +6,7 @@ import imageCompression from 'browser-image-compression';
 import { useAuth } from '../../shared/context/AuthContext';
 
 const AdminModuleCreate = () => {
-    const { category } = useParams();
+    const { category, moduleId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
 
@@ -15,7 +15,37 @@ const AdminModuleCreate = () => {
     const [description, setDescription] = useState('');
     const [imageUrl, setImageUrl] = useState('');
     const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Fetch existing module if editing
+    useState(() => {
+        const fetchModule = async () => {
+            if (!moduleId) return;
+            try {
+                setLoading(true);
+                const { data, error } = await supabase
+                    .from('modules')
+                    .select('*')
+                    .eq('id', moduleId)
+                    .single();
+
+                if (error) throw error;
+                if (data) {
+                    setTitle(data.title);
+                    setDescription(data.description || '');
+                    setImageUrl(data.image_url || '');
+                }
+            } catch (err: any) {
+                console.error('Error fetching module:', err);
+                setError('Failed to load module details');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchModule();
+    });
 
     // Image Upload
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -74,22 +104,40 @@ const AdminModuleCreate = () => {
             setSaving(true);
             setError(null);
 
-            const { data, error: saveError } = await supabase
-                .from('modules')
-                .insert({
-                    title,
-                    description,
-                    image_url: imageUrl,
-                    category: category?.toUpperCase(),
-                    created_by: user?.id
-                })
-                .select()
-                .single();
+            let result;
 
-            if (saveError) throw saveError;
+            if (moduleId) {
+                // UPDATE
+                result = await supabase
+                    .from('modules')
+                    .update({
+                        title,
+                        description,
+                        image_url: imageUrl,
+                        // category: don't update category usually, or allow? let's keep it same
+                    })
+                    .eq('id', moduleId)
+                    .select()
+                    .single();
+            } else {
+                // INSERT
+                result = await supabase
+                    .from('modules')
+                    .insert({
+                        title,
+                        description,
+                        image_url: imageUrl,
+                        category: category?.toUpperCase(),
+                        created_by: user?.id
+                    })
+                    .select()
+                    .single();
+            }
 
-            // Navigate to the module detail page to add quizzes
-            navigate(`/admin/modules/${data.id}`);
+            if (result.error) throw result.error;
+
+            // Navigate to the module detail page
+            navigate(`/admin/modules/${moduleId || result.data.id}`);
 
         } catch (err: any) {
             console.error('Error saving module:', err);
@@ -110,10 +158,13 @@ const AdminModuleCreate = () => {
                     <ArrowLeft className="w-5 h-5 text-text-secondary group-hover:text-white" />
                 </button>
                 <div>
+
                     <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
-                        Create New Module
+                        {moduleId ? 'Edit Module' : 'Create New Module'}
                     </h1>
-                    <p className="text-text-secondary mt-1">Group your quizzes into a single learning module</p>
+                    <p className="text-text-secondary mt-1">
+                        {moduleId ? 'Update module details' : 'Group your quizzes into a single learning module'}
+                    </p>
                 </div>
             </div>
 
@@ -224,7 +275,7 @@ const AdminModuleCreate = () => {
                         ) : (
                             <>
                                 <Save className="w-5 h-5" />
-                                <span>Create Module</span>
+                                <span>{moduleId ? 'Update Module' : 'Create Module'}</span>
                             </>
                         )}
                     </button>

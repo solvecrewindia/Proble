@@ -43,7 +43,7 @@ const Quizzes = () => {
             const { count: placementCount } = await supabase
                 .from('quizzes')
                 .select('*', { count: 'exact', head: true })
-                .contains('settings', { category: 'Placement' });
+                .or('type.eq.placement,settings->>category.eq.PLACEMENT,settings->>category.eq.Placement');
 
             // GLOBAL - Assuming global type or settings category
             // Checks for type='global' OR category='Global'

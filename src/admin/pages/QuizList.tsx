@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Plus, Clock, FileText, ChevronRight, ArrowLeft, Trash2, Search, Folder, Layers } from 'lucide-react';
+import { Plus, Clock, FileText, ChevronRight, ArrowLeft, Trash2, Search, Folder, Layers, Edit } from 'lucide-react';
 import { Module } from '../../faculty/types';
 
 const QuizList = () => {
@@ -154,6 +154,17 @@ const QuizList = () => {
                                 Single Module
                             </button>
                         </div>
+                    )}
+
+                    {/* Edit Module Button */}
+                    {moduleId && (
+                        <button
+                            onClick={() => navigate(`/admin/modules/edit/${moduleId}`)}
+                            className="p-3 hover:bg-white/5 rounded-xl transition-all duration-200 group border border-transparent hover:border-white/10 text-text-secondary hover:text-white"
+                            title="Edit Module Details"
+                        >
+                            <Edit className="h-5 w-5" />
+                        </button>
                     )}
 
                     <button

@@ -27,6 +27,7 @@ function AdminApp() {
           <Route path="quizzes/:category/create" element={<AdminQuizCreate />} />
           <Route path="quizzes/:category/edit/:quizId" element={<AdminQuizCreate />} />
           <Route path="modules/:category/create" element={<AdminModuleCreate />} />
+          <Route path="modules/edit/:moduleId" element={<AdminModuleCreate />} />
           <Route path="modules/:moduleId" element={<QuizList />} />
           <Route path="problem-requests" element={<ProblemRequests />} />
           <Route path="settings" element={<Settings />} />
