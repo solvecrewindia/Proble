@@ -35,7 +35,7 @@ const ProfileSettings = () => {
                     setFormData({
                         email: data?.email || user.email || '',
                         username: data?.username || '',
-                        photo: data?.avatar_url || `https://ui-avatars.com/api/?name=${data?.username || 'User'}&background=random`,
+                        photo: data?.avatar_url || `https://ui-avatars.com/api/?name=${data?.username || 'User'}&background=0D8ABC&color=fff`,
                         language: data?.preferred_language || 'English'
                     });
                     setIsLoading(false);
@@ -132,7 +132,7 @@ const ProfileSettings = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-6 space-y-8">
+        <div className="max-w-4xl mx-auto px-6 py-2 space-y-8">
             <h1 className="text-3xl font-bold text-text">Settings</h1>
 
             {/* Account Section */}
@@ -200,8 +200,8 @@ const ProfileSettings = () => {
                                     type="text"
                                     name="username"
                                     value={formData.username}
-                                    onChange={handleChange}
-                                    className="w-full bg-background border border-neutral-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    readOnly
+                                    className="w-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-muted cursor-not-allowed focus:outline-none"
                                 />
                             ) : (
                                 <div className="font-medium text-text px-3 py-2">{formData.username}</div>
@@ -251,21 +251,7 @@ const ProfileSettings = () => {
                 </div>
             </div>
 
-            {/* Password Section */}
-            {user?.role !== 'student' && (
-                <div className="bg-surface rounded-xl border border-neutral-300 dark:border-neutral-600 p-6 shadow-sm">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Lock className="w-5 h-5 text-text" />
-                            <h2 className="text-lg font-bold text-text">Password</h2>
-                        </div>
-                        <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                            <Edit className="w-4 h-4" />
-                            Edit
-                        </button>
-                    </div>
-                </div>
-            )}
+
 
             {/* Delete Account Section */}
             <div className="bg-surface rounded-xl border border-neutral-300 dark:border-neutral-600 p-6 shadow-sm">
