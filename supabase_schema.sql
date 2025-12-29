@@ -7,9 +7,25 @@ create table public.profiles (
   email text,
   username text unique,
   role text check (role in ('student', 'teacher', 'admin', 'faculty')),
+  avatar_url text,
+  preferred_language text default 'English',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Create Storage Bucket for Avatars
+insert into storage.buckets (id, name, public) 
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+-- Storage Policies
+create policy "Avatar images are publicly accessible."
+  on storage.objects for select
+  using ( bucket_id = 'avatars' );
+
+create policy "Anyone can upload an avatar."
+  on storage.objects for insert
+  with check ( bucket_id = 'avatars' and auth.role() = 'authenticated' );
 
 -- Enable Row Level Security (RLS)
 alter table public.profiles enable row level security;

@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Search, Sun, Moon } from 'lucide-react';
+import { Search, Sun, Moon, Gamepad2 } from 'lucide-react';
 import UserProfileDropdown from './UserProfileDropdown';
 
 interface HeaderProps {
@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 </div>
             ) : null}
 
-            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="flex-1 flex justify-start items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
                 {/* Desktop Logo */}
                 <img
                     src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
@@ -64,9 +64,9 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 />
             </div>
 
-            <div className="flex-1 flex justify-center px-2">
+            <div className="flex justify-center px-2 w-full max-w-[480px]">
                 {!location.pathname.startsWith('/student') && (
-                    <div className="hidden md:flex w-full max-w-[480px] bg-background rounded-[50px] px-3 py-1.5 items-center border border-neutral-300 dark:border-neutral-600">
+                    <div className="hidden md:flex w-full bg-background rounded-[50px] px-3 py-1.5 items-center border border-neutral-300 dark:border-neutral-600">
                         <input
                             type="text"
                             placeholder="What you want to learn?"
@@ -81,7 +81,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 )}
             </div>
 
-            <div className="flex items-center gap-2 md:gap-5">
+            <div className="flex-1 flex justify-end items-center gap-2 md:gap-5">
                 {/* Mobile Search Toggle */}
                 {!location.pathname.startsWith('/student') && (
                     <button
@@ -95,12 +95,21 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 {user ? (
                     <>
                         {user?.role === 'student' && (
-                            <button
-                                onClick={() => navigate('/student/practice')}
-                                className="bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors whitespace-nowrap"
-                            >
-                                My Practice
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => navigate('/student/game')}
+                                    className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-text transition-colors"
+                                    title="Game Mode"
+                                >
+                                    <Gamepad2 className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => navigate('/student/practice')}
+                                    className="bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors whitespace-nowrap"
+                                >
+                                    My Practice
+                                </button>
+                            </div>
                         )}
                         {!location.pathname.startsWith('/student') && user?.role !== 'student' && (
                             <button

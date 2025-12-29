@@ -4,7 +4,7 @@ import { User as UserIcon, Globe, Lock, Trash2, Edit, ChevronDown, Camera } from
 import { supabase } from '../../lib/supabase';
 
 const ProfileSettings = () => {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [formData, setFormData] = useState({
@@ -76,6 +76,7 @@ const ProfileSettings = () => {
 
             if (error) throw error;
 
+            await refreshUser(); // Update global context
             setIsEditing(false);
             alert("Changes saved!");
         } catch (error: any) {

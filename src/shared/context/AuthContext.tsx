@@ -8,6 +8,7 @@ interface AuthContextType {
     signup: (email: string, password: string, username: string, role: User['role']) => Promise<{ user: User | null; error: Error | null }>;
     logout: () => void;
     isLoading: boolean;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,12 +79,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         if (user) {
             localStorage.setItem('cached_user_profile', JSON.stringify(user));
-        } else {
-            // Optional: convert this to removeItem only on explicit logout,
-            // but for now, if user is null, we can keep it until correct logout or just leave it.
-            // Better behavior: clear it only on LOGOUT event.
         }
     }, [user]);
+
+    const refreshUser = async () => {
+        if (!user) return;
+        try {
+            const userData = await fetchProfile(user.id, user.email);
+            if (userData) setUser(userData);
+        } catch (error) {
+            console.error("Failed to refresh user:", error);
+        }
+    };
 
     useEffect(() => {
         let mounted = true;
@@ -312,7 +319,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );
