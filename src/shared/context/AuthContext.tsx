@@ -74,28 +74,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } as User;
     };
 
+    // 1. Persist user to localStorage whenever it changes
+    useEffect(() => {
+        if (user) {
+            localStorage.setItem('cached_user_profile', JSON.stringify(user));
+        } else {
+            // Optional: convert this to removeItem only on explicit logout,
+            // but for now, if user is null, we can keep it until correct logout or just leave it.
+            // Better behavior: clear it only on LOGOUT event.
+        }
+    }, [user]);
+
     useEffect(() => {
         let mounted = true;
 
         const initializeAuth = async () => {
+            // OPTIMIZATION: Check for cached profile immediately
             try {
-                // Check active session first
+                const cached = localStorage.getItem('cached_user_profile');
+                if (cached) {
+                    const parsedUser = JSON.parse(cached);
+                    if (parsedUser && mounted) {
+                        console.log("AuthContext: Loaded cached profile.");
+                        setUser(parsedUser);
+                        // If we have a cache, we can stop loading immediately for UI speed
+                        setIsLoading(false);
+                    }
+                }
+            } catch (e) {
+                console.error("AuthContext: Cache parse error", e);
+            }
+
+            try {
+                // Check active session
                 const { data: { session } } = await supabase.auth.getSession();
 
                 if (session?.user && mounted) {
                     console.log("Session found for:", session.user.email);
                     const userEmail = session.user.email || `user-${session.user.id}@example.com`;
+
+                    // Background refetch to update cache/state with fresh data
                     const userData = await fetchProfile(session.user.id, userEmail);
-                    if (mounted) setUser(userData);
+
+                    if (mounted) {
+                        // Only update if data is different prevents re-renders? 
+                        // Actually React handles identity check, but it's a new object every time.
+                        // Let's just update.
+                        setUser(userData);
+                        setIsLoading(false); // Ensure loading is false (redundant if cache hit, but safe)
+                    }
+                } else {
+                    // No session immediately found
+                    // If we had a cached user, we might want to clear it if session is definitively invalid?
+                    // But maybe offline mode?
+                    // Safe approach: If no session, wait for listener, but IF we loaded cache, we are "logged in" visually.
+                    // If listener says SIGNED_OUT, we will clear it.
+
+                    if (!mounted) return;
+
+                    // If we didn't have a cache hit, we are still loading.
+                    // If we DID have a cache hit, isLoading is false.
+
+                    if (isLoading) {
+                        console.log("No immediate session & no cache. Waiting for listener...");
+                        setTimeout(() => {
+                            if (mounted && isLoading) {
+                                console.log("Auth Timeout: No session restored. Setting loading false.");
+                                setIsLoading(false);
+                            }
+                        }, 500);
+                    }
                 }
             } catch (error) {
                 console.error('Auth initialization error:', error);
-            } finally {
-                // Only stop loading if we are sure
                 if (mounted) setIsLoading(false);
             }
         };
 
+        // Initialize immediately
         initializeAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -106,12 +162,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (event === 'SIGNED_OUT') {
                     setUser(null);
                     setIsLoading(false);
-                } else if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+                    localStorage.removeItem('cached_user_profile'); // Clear cache on logout
+                } else if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
                     const userEmail = session.user.email || `user-${session.user.id}@example.com`;
-                    const userData = await fetchProfile(session.user.id, userEmail);
-                    if (mounted) {
-                        setUser(userData);
-                        setIsLoading(false);
+
+                    // Prevent double-fetching if initializeAuth already got it.
+                    // But if user is null currently (or from cache vs fresh), lets just fetch to be consistent
+                    // unless we just fetched it in initializeAuth (hard to track)
+
+                    // Optimistic: If we already have a user (from cache or init), we are good visually.
+                    // But we should ensure freshness primarily on SIGNED_IN.
+                    // On INITIAL_SESSION, if we already processed it in initializeAuth, duplication is okay-ish.
+
+                    if (!user || user.id !== session.user.id) {
+                        const userData = await fetchProfile(session.user.id, userEmail);
+                        if (mounted) {
+                            setUser(userData);
+                            setIsLoading(false);
+                        }
+                    } else {
+                        // User already set, just ensure loading is false
+                        if (mounted) setIsLoading(false);
                     }
                 }
             } catch (err) {
