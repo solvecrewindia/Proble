@@ -2,7 +2,7 @@
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Eye, Copy, Plus, Edit, Download, RotateCw } from 'lucide-react';
+import { Copy, Plus, Edit, Download, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Quiz } from '../types';
@@ -13,12 +13,12 @@ export default function Master() {
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchQuizzes = async () => {
+    const fetchQuizzes = React.useCallback(async () => {
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('quizzes')
             .select('*')
             .eq('created_by', user.id)
@@ -27,11 +27,11 @@ export default function Master() {
 
         if (data) setQuizzes(data as any);
         setLoading(false);
-    };
+    }, []);
 
     useEffect(() => {
         fetchQuizzes();
-    }, []);
+    }, [fetchQuizzes]);
 
     // Live Monitoring State
     const [activeStudents, setActiveStudents] = useState<Record<string, number>>({});
