@@ -24,12 +24,19 @@ const PracticeList = () => {
                     .select(`
                         id,
                         module_id,
+                        quiz_id,
                         modules (
                             id,
                             title,
                             description,
                             image_url,
                             category
+                        ),
+                        quizzes (
+                            id,
+                            title,
+                            description,
+                            type
                         )
                     `)
                     .eq('user_id', user.id)
@@ -96,18 +103,40 @@ const PracticeList = () => {
                 <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
                     {practiceItems.map((item) => {
                         const module = item.modules;
-                        if (!module) return null;
+                        const quiz = item.quizzes;
+
+                        // We need either a module or a quiz to display something
+                        if (!module && !quiz) return null;
+
+                        // Determine display data based on what exists
+                        const displayData = module ? {
+                            id: module.id,
+                            title: module.title,
+                            imageUrl: module.image_url,
+                            category: module.category || 'Module',
+                            type: 'module',
+                            route: `/module/${module.id}`,
+                            fallbackName: module.title
+                        } : {
+                            id: quiz.id,
+                            title: quiz.title,
+                            imageUrl: null, // Quizzes might not have images, will use fallback
+                            category: 'Practice Test',
+                            type: 'quiz',
+                            route: `/student/practice/${quiz.id}`,
+                            fallbackName: quiz.title
+                        };
 
                         return (
                             <div
                                 key={item.id}
-                                onClick={() => navigate(`/module/${module.id}`)}
+                                onClick={() => navigate(displayData.route)}
                                 className="bg-surface rounded-xl shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none overflow-hidden transition-transform duration-200 hover:-translate-y-1 border border-neutral-300 dark:border-neutral-600 cursor-pointer group relative"
                             >
                                 <div className="relative">
                                     <img
-                                        src={module.image_url || `https://ui-avatars.com/api/?name=${module.title}&background=random&size=400`}
-                                        alt={module.title}
+                                        src={displayData.imageUrl || `https://ui-avatars.com/api/?name=${displayData.fallbackName}&background=random&size=400`}
+                                        alt={displayData.title}
                                         className="w-full h-[150px] object-cover"
                                     />
                                     {/* Delete Button Overlay */}
@@ -120,7 +149,7 @@ const PracticeList = () => {
                                     </button>
                                 </div>
                                 <div className="p-3">
-                                    <div className="text-sm font-bold mb-2 line-clamp-2 h-10 text-text">{module.title}</div>
+                                    <div className="text-sm font-bold mb-2 line-clamp-2 h-10 text-text">{displayData.title}</div>
                                     <div className="flex justify-between text-xs text-muted items-center">
                                         <div className="flex items-center gap-2">
                                             <img
@@ -131,7 +160,7 @@ const PracticeList = () => {
                                             <span>Faculty</span>
                                         </div>
                                         <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-[10px] uppercase">
-                                            {module.category || 'Module'}
+                                            {displayData.category}
                                         </span>
                                     </div>
                                 </div>

@@ -152,7 +152,7 @@ const MCQTest = () => {
                     const isMaster = quizData.type === 'master';
                     const allowRetake = quizData.settings?.allowRetake;
 
-                    if (isMaster || allowRetake === false) {
+                    if (isMaster) {
                         const { data: existingAttempts } = await supabase
                             .from('quiz_results')
                             .select('id')
