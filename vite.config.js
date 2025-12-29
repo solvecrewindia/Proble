@@ -17,7 +17,7 @@ export default defineConfig({
         short_name: 'Proble',
         description: 'Proble Learning Platform',
         theme_color: '#000000',
-        background_color: '#ffffff',
+        background_color: '#000000',
         display: 'standalone',
         icons: [
           {
