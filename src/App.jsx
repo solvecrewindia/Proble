@@ -49,7 +49,7 @@ function AppContent() {
 
     return (
         <div className="app-container">
-            {location.pathname !== '/login' && location.pathname !== '/forgot-password' && !location.pathname.startsWith('/faculty') && !location.pathname.startsWith('/admin') && !location.pathname.includes('/practice/setup') && !location.pathname.includes('/practice/test') && !location.pathname.includes('/practice/mcq') && !location.pathname.includes('/student/test') && (
+            {location.pathname !== '/login' && location.pathname !== '/forgot-password' && !location.pathname.startsWith('/faculty') && !location.pathname.startsWith('/admin') && !location.pathname.includes('/practice/test') && !location.pathname.includes('/practice/mcq') && !location.pathname.includes('/student/test') && (
                 <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
             )}
             <Routes>

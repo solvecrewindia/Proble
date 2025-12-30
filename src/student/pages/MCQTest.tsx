@@ -162,7 +162,7 @@ const MCQTest = () => {
 
                         if (existingAttempts && existingAttempts.length > 0) {
                             alert("You have already completed this assessment.");
-                            navigate('/student/dashboard');
+                            navigate(`/student/practice/${id}`);
                             return;
                         }
                     }
@@ -269,7 +269,7 @@ const MCQTest = () => {
                         <p className="text-muted">You scored {score} out of {questions.length}</p>
                     </div>
                     <p className="text-sm text-gray-400 mb-8">Violations Recorded: {violations}</p>
-                    <button onClick={() => navigate('/student/dashboard')} className="w-full btn-primary py-3 rounded-xl font-bold shadow-lg shadow-primary/20">Return to Dashboard</button>
+                    <button onClick={() => navigate(`/student/practice/${id}`)} className="w-full btn-primary py-3 rounded-xl font-bold shadow-lg shadow-primary/20">Return to Test Details</button>
                 </div>
             </div>
         );
@@ -305,7 +305,7 @@ const MCQTest = () => {
             {/* --- HEADER --- */}
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between transition-all">
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate('/')}>
+                    <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate(`/student/practice/${id}`)}>
                         <img src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg group-hover:scale-105 transition-transform" />
                     </div>
                 </div>

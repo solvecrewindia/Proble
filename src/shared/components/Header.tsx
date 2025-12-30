@@ -82,64 +82,68 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
             </div>
 
             <div className="flex justify-end items-center gap-2 md:gap-5">
-                {/* Mobile Search Toggle */}
-                {!location.pathname.includes('/game') && (
-                    <button
-                        onClick={() => setIsSearchOpen(true)}
-                        className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden text-text"
-                    >
-                        <Search className="h-5 w-5" />
-                    </button>
-                )}
-
-                {user ? (
+                {!location.pathname.includes('/practice/setup') && (
                     <>
-                        {user?.role === 'student' && (
-                            <div className="flex items-center gap-3">
+                        {/* Mobile Search Toggle */}
+                        {!location.pathname.includes('/game') && (
+                            <button
+                                onClick={() => setIsSearchOpen(true)}
+                                className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden text-text"
+                            >
+                                <Search className="h-5 w-5" />
+                            </button>
+                        )}
+
+                        {user ? (
+                            <>
+                                {user?.role === 'student' && (
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => navigate('/student/game')}
+                                            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-text transition-colors"
+                                            title="Game Mode"
+                                        >
+                                            <Gamepad2 className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                            onClick={() => navigate('/student/practice')}
+                                            className="hidden md:block bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors whitespace-nowrap"
+                                        >
+                                            My Practice
+                                        </button>
+                                    </div>
+                                )}
+                                {!location.pathname.startsWith('/student') && user?.role !== 'student' && (
+                                    <button
+                                        onClick={handlePracticeClick}
+                                        className="bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors"
+                                    >
+                                        Dashboard
+                                    </button>
+                                )}
+                                <UserProfileDropdown />
+                            </>
+                        ) : (
+                            <div className="flex items-center gap-2 md:gap-3">
                                 <button
-                                    onClick={() => navigate('/student/game')}
-                                    className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-text transition-colors"
-                                    title="Game Mode"
+                                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text"
+                                    title="Toggle Theme"
                                 >
-                                    <Gamepad2 className="w-5 h-5" />
+                                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                                 </button>
                                 <button
-                                    onClick={() => navigate('/student/practice')}
-                                    className="hidden md:block bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors whitespace-nowrap"
+                                    onClick={() => navigate('/login')}
+                                    className={`text-xs md:text-sm font-medium cursor-pointer px-4 md:px-6 py-2 rounded-full transition-colors ${theme === 'dark'
+                                        ? 'bg-white text-black hover:bg-neutral-200'
+                                        : 'bg-black text-white hover:bg-neutral-800'
+                                        }`}
                                 >
-                                    My Practice
+                                    Login
                                 </button>
                             </div>
                         )}
-                        {!location.pathname.startsWith('/student') && user?.role !== 'student' && (
-                            <button
-                                onClick={handlePracticeClick}
-                                className="bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors"
-                            >
-                                Dashboard
-                            </button>
-                        )}
-                        <UserProfileDropdown />
                     </>
-                ) : (
-                    <div className="flex items-center gap-2 md:gap-3">
-                        <button
-                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text"
-                            title="Toggle Theme"
-                        >
-                            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                        </button>
-                        <button
-                            onClick={() => navigate('/login')}
-                            className={`text-xs md:text-sm font-medium cursor-pointer px-4 md:px-6 py-2 rounded-full transition-colors ${theme === 'dark'
-                                ? 'bg-white text-black hover:bg-neutral-200'
-                                : 'bg-black text-white hover:bg-neutral-800'
-                                }`}
-                        >
-                            Login
-                        </button>
-                    </div>
                 )}
             </div>
         </header >

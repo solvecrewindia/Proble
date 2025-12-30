@@ -282,7 +282,7 @@ const QuizDetails = () => {
                         onClick={() => navigate(`/student/test/${id}`)}
                         className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] active:scale-95 text-sm"
                     >
-                        Start Assessment
+                        Mock Test
                     </button>
                 </div>
             </div>

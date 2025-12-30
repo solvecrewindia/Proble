@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn, BookOpen, BrainCircuit, Target, ListChecks } from 'lucide-react';
@@ -86,6 +86,16 @@ const PracticeTest = () => {
     const handleOptionClick = (idx: number) => {
         if (userAnswers.hasOwnProperty(currentQIndex)) return;
         setUserAnswers(prev => ({ ...prev, [currentQIndex]: idx }));
+
+        // Auto-advance if correct
+        const q = questions[currentQIndex];
+        if (q && idx === q.correct) {
+            setTimeout(() => {
+                if (currentQIndex < questions.length - 1) {
+                    setCurrentQIndex(prev => prev + 1);
+                }
+            }, 1000); // 1 second delay
+        }
     };
 
     const generateAiExplanation = async () => {
@@ -242,11 +252,16 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
         }
     };
 
-    // Auto-generate AI explanation when question is answered
+    // Auto-generate AI explanation when question is answered INCORRECTLY
     useEffect(() => {
         const isAnswered = userAnswers.hasOwnProperty(currentQIndex);
         if (isAnswered && !aiExplanation && !isGeneratingAi && !aiError) {
-            generateAiExplanation();
+            const q = questions[currentQIndex];
+            const selectedOpt = userAnswers[currentQIndex];
+            // Only generate if wrong answer
+            if (q && selectedOpt !== q.correct) {
+                generateAiExplanation();
+            }
         }
     }, [userAnswers, currentQIndex]);
 
@@ -265,7 +280,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                 <h2 className="text-2xl font-bold mb-4">No Questions Found</h2>
                 <p className="text-muted mb-6">Could not load questions for this practice session.</p>
                 <button
-                    onClick={() => navigate('/student/practice')}
+                    onClick={() => navigate(`/student/practice/${id}`)}
                     className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
                 >
                     Back to Practice List
@@ -302,7 +317,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                         {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5 text-neutral-600" />}
                     </button>
                     <button
-                        onClick={() => navigate('/student/practice')}
+                        onClick={() => navigate(`/student/practice/${id}`)}
                         className="px-4 py-1.5 rounded-full bg-primary text-white text-xs font-bold hover:bg-primary-dark transition-colors"
                     >
                         Exit
@@ -356,7 +371,6 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                                 const optImg = typeof opt === 'object' ? opt.image : null;
 
                                 let variantClasses = "";
-                                let icon = null;
 
                                 // Default State
                                 if (!isAnswered) {
@@ -366,11 +380,9 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                                     if (idx === q.correct) {
                                         // Correct Option (Always Green)
                                         variantClasses = "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400";
-                                        icon = <CheckCircle2 className="w-5 h-5 text-green-500" />;
                                     } else if (idx === selectedOpt) {
                                         // Wrong Selection (Red)
                                         variantClasses = "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400";
-                                        icon = <X className="w-5 h-5 text-red-500" />;
                                     } else {
                                         // Unselected Other Options (Dimmed)
                                         variantClasses = "border-neutral-200 dark:border-neutral-700 bg-surface opacity-50";
@@ -437,7 +449,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
 
                         <button
                             onClick={() => {
-                                if (currentQIndex === questions.length - 1) navigate('/student/practice');
+                                if (currentQIndex === questions.length - 1) navigate(`/student/practice/${id}`);
                                 else setCurrentQIndex(prev => Math.min(questions.length - 1, prev + 1));
                             }}
                             className={cn(
@@ -566,7 +578,6 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                         </div>
                     </div>
                 </div>
-
             </main>
 
             {/* Image Zoom Overlay */}
