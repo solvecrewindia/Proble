@@ -15,10 +15,6 @@ const Quizzes = () => {
         { id: 'global', title: 'Global', description: 'General Knowledge & Open Quizzes', icon: Globe, color: 'text-orange-500', bg: 'bg-orange-500/10', count: 0 },
     ]);
 
-    useEffect(() => {
-        fetchCounts();
-    }, []);
-
     const fetchCounts = async () => {
         try {
             // NPTEL
@@ -65,6 +61,10 @@ const Quizzes = () => {
             console.error("Error fetching quiz counts:", err);
         }
     };
+
+    useEffect(() => {
+        fetchCounts();
+    }, []);
 
     return (
         <div className="p-6 space-y-6 relative min-h-[calc(100vh-6rem)]">

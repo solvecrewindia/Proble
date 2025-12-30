@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { StepQuestions } from '../../../faculty/components/quiz/StepQuestions';
 import { cn } from '../../../faculty/lib/utils'; // Adjust import path
 
-export function AdminStepQuestions({ data, update, questions, setQuestions, quizId }: any) {
+export function AdminStepQuestions({ data, questions, setQuestions, quizId }: any) {
     // We need to manage two sets of questions if both modes are enabled
     const modes = data.settings?.modes || ['practice'];
     const isMultiMode = modes.includes('practice') && modes.includes('mock_test');
 
-    const [activeTab, setActiveTab] = useState<'practice' | 'mock'>('practice');
+    const [activeTab, setActiveTab] = useState<'practice' | 'mock'>(() => {
+        if (!isMultiMode && modes.includes('mock_test')) return 'mock';
+        return 'practice';
+    });
+
 
     // Filter questions by tag for display, but we need to sync back to the main list
     // This is tricky because StepQuestions expects a simple list.
@@ -51,13 +55,6 @@ export function AdminStepQuestions({ data, update, questions, setQuestions, quiz
     }, [practiceQuestions, mockQuestions, isInitialized, setQuestions]);
 
 
-    const handleQuestionsUpdate = (newQuestions: any[]) => {
-        if (activeTab === 'practice') {
-            setPracticeQuestions(newQuestions);
-        } else {
-            setMockQuestions(newQuestions);
-        }
-    };
 
     if (!isMultiMode) {
         // If single mode, just pass through but ensure tagging happens on save (handled by parent or here)
@@ -66,12 +63,7 @@ export function AdminStepQuestions({ data, update, questions, setQuestions, quiz
         // Let's keep using the tabs logic but force the active tab.
     }
 
-    useEffect(() => {
-        if (!isMultiMode) {
-            if (modes.includes('mock_test')) setActiveTab('mock');
-            else setActiveTab('practice');
-        }
-    }, [modes, isMultiMode]);
+    // Effect for activeTab removed as it is now initialized lazily.
 
     return (
         <div className="space-y-6">

@@ -41,8 +41,8 @@ const JoinTest = () => {
             if (quizError) throw quizError;
             if (!quizData) throw new Error('Quiz not found');
 
-            // 3. Check for existing attempts
-            if (quizData.type === 'master' || !quizData.settings?.allowRetake) {
+            // 3. Check for existing attempts - ONLY for Master Tests
+            if (quizData.type === 'master') {
                 const { data: existingAttempts, error: attemptError } = await supabase
                     .from('quiz_results')
                     .select('id')
