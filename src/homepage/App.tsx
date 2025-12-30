@@ -58,41 +58,57 @@ function App({ searchQuery = '' }: AppProps) {
         quizzes.forEach((q: any) => { if (q.created_by) userIds.add(q.created_by); });
 
         // Fetch profiles for these users
-        let userMap = new Map<string, string>(); // id -> role
+        let userMap = new Map<string, { role: string, username: string, avatar_url: string | null }>(); // id -> profile data
         if (userIds.size > 0) {
           const { data: profiles } = await supabase
             .from('profiles')
-            .select('id, role')
+            .select('id, role, username, avatar_url')
             .in('id', Array.from(userIds));
 
           if (profiles) {
-            profiles.forEach((p: any) => userMap.set(p.id, p.role));
+            profiles.forEach((p: any) => userMap.set(p.id, {
+              role: p.role,
+              username: p.username,
+              avatar_url: p.avatar_url
+            }));
           }
         }
 
-        const getAuthorName = (uid: string) => {
-          const role = userMap.get(uid);
-          if (role === 'admin') return 'Admin';
-          return 'Faculty'; // Default to Faculty for teachers/faculty/unknown
+        const getAuthorDetails = (uid: string) => {
+          const profile = userMap.get(uid);
+          if (!profile) return { name: 'Faculty', avatar: undefined };
+          if (profile.role === 'admin') return { name: 'Proble', avatar: undefined };
+          return {
+            name: profile.username || 'Faculty',
+            avatar: profile.avatar_url || undefined
+          };
         };
 
-        const mappedModules: Course[] = modules.map((m: any) => ({
-          id: m.id,
-          title: m.title,
-          author: m.created_by ? getAuthorName(m.created_by) : 'Faculty',
-          date: new Date(m.created_at).toLocaleDateString(),
-          image: m.image_url || `https://ui-avatars.com/api/?name=${m.title}&background=random&size=400`,
-          type: 'module'
-        }));
+        const mappedModules: Course[] = modules.map((m: any) => {
+          const authorDetails = m.created_by ? getAuthorDetails(m.created_by) : { name: 'Faculty', avatar: undefined };
+          return {
+            id: m.id,
+            title: m.title,
+            author: authorDetails.name,
+            author_avatar_url: authorDetails.avatar,
+            date: new Date(m.created_at).toLocaleDateString(),
+            image: m.image_url || `https://ui-avatars.com/api/?name=${m.title}&background=random&size=400`,
+            type: 'module'
+          };
+        });
 
-        const mappedQuizzes: Course[] = quizzes.map((q: any) => ({
-          id: q.id,
-          title: q.title,
-          author: q.created_by ? getAuthorName(q.created_by) : 'Faculty',
-          date: new Date(q.created_at).toLocaleDateString(),
-          image: q.image_url || `https://ui-avatars.com/api/?name=${q.title}&background=random&size=400`,
-          type: 'quiz'
-        }));
+        const mappedQuizzes: Course[] = quizzes.map((q: any) => {
+          const authorDetails = q.created_by ? getAuthorDetails(q.created_by) : { name: 'Faculty', avatar: undefined };
+          return {
+            id: q.id,
+            title: q.title,
+            author: authorDetails.name,
+            author_avatar_url: authorDetails.avatar,
+            date: new Date(q.created_at).toLocaleDateString(),
+            image: q.image_url || `https://ui-avatars.com/api/?name=${q.title}&background=random&size=400`,
+            type: 'quiz'
+          };
+        });
 
         setCourses([...mappedModules, ...mappedQuizzes]);
       } catch (err) {
@@ -111,7 +127,7 @@ function App({ searchQuery = '' }: AppProps) {
     setJoining(true);
 
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('quizzes')
         .select('id')
         .eq('code', joinCode)

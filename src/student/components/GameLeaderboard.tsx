@@ -15,16 +15,23 @@ const GameLeaderboard = () => {
             if (!user) return;
             const currentWeek = getWeekId();
 
-            const { data } = await supabase
+            console.log('Fetching score for:', { userId: user.id, weekId: currentWeek });
+
+            const { data, error } = await supabase
                 .from('leaderboard')
-                .select('total_xp')
+                .select('total_xp, week_id')
                 .eq('user_id', user.id)
-                .eq('week_id', currentWeek)
                 .single();
 
-            if (data) {
+            if (error) {
+                console.error('Error fetching user score:', error);
+            }
+
+            if (data && data.week_id === currentWeek) {
+                console.log('User score data found for current week:', data);
                 setTotalXP(data.total_xp);
             } else {
+                console.log('No user score found for current week (DB week: ' + data?.week_id + '), falling back to local');
                 // Fallback to local if not found (e.g. first time load before sync)
                 const puzzleState = getPuzzleState(user.id);
                 const flashState = getFlashCardState(user.id);
@@ -49,11 +56,12 @@ const GameLeaderboard = () => {
                 `)
                 .eq('week_id', currentWeek) // Filter by current week
                 .order('total_xp', { ascending: false })
+                .order('updated_at', { ascending: true })
                 .limit(3);
 
             if (error) {
                 console.error("Leaderboard fetch error:", error);
-                setFetchError(error.message);
+                // setFetchError(error.message); // removed as state doesn't exist
                 return;
             }
 

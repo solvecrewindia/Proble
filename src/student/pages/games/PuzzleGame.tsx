@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { dailyChallengeService } from '../../services/dailyChallengeService';
 import { getDailyContent } from '../../utils/gameUtils';
 import { puzzleData } from '../../data/gameData';
-import { ArrowLeft, Check, Clock, Trophy } from 'lucide-react';
+import { ArrowLeft, Clock, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../shared/context/AuthContext';
 import { savePuzzleScore } from '../../utils/gameState';
@@ -21,6 +21,48 @@ const PuzzleGame = () => {
     const [timerActive, setTimerActive] = useState(false);
     const [score, setScore] = useState(0);
     const [wrongAttempt, setWrongAttempt] = useState<string | null>(null);
+
+    // Animation Refs
+    const containerRef = useRef<HTMLDivElement>(null);
+    const termRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const matchRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const [lines, setLines] = useState<{ id: string; x1: number; y1: number; x2: number; y2: number }[]>([]);
+
+    const calculateLines = () => {
+        if (!containerRef.current) return;
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const newLines: any[] = [];
+
+        solvedPairs.forEach((pairId) => {
+            const termEl = termRefs.current.get(pairId);
+            const matchEl = matchRefs.current.get(pairId);
+
+            if (termEl && matchEl) {
+                const termRect = termEl.getBoundingClientRect();
+                const matchRect = matchEl.getBoundingClientRect();
+
+                newLines.push({
+                    id: pairId,
+                    x1: termRect.right - containerRect.left,
+                    y1: termRect.top + termRect.height / 2 - containerRect.top,
+                    x2: matchRect.left - containerRect.left,
+                    y2: matchRect.top + matchRect.height / 2 - containerRect.top,
+                });
+            }
+        });
+        setLines(newLines);
+    };
+
+    useEffect(() => {
+        // Recalculate anytime solvedPairs changes, or content loads
+        // Small delay to ensure DOM is updated
+        const timer = setTimeout(calculateLines, 50);
+        window.addEventListener('resize', calculateLines);
+        return () => {
+            window.removeEventListener('resize', calculateLines);
+            clearTimeout(timer);
+        };
+    }, [solvedPairs, terms, matches]);
 
     useEffect(() => {
         const loadGame = async () => {
@@ -180,13 +222,34 @@ const PuzzleGame = () => {
                 </div>
             </header>
 
-            <div className="grid grid-cols-2 gap-8 md:gap-16 flex-1">
+            <div ref={containerRef} className="grid grid-cols-2 gap-8 md:gap-16 flex-1 relative">
+                {/* SVG Overlay for Lines */}
+                <svg className="absolute inset-0 pointer-events-none w-full h-full z-10 overflow-visible">
+                    {lines.map((line) => (
+                        <line
+                            key={line.id}
+                            x1={line.x1}
+                            y1={line.y1}
+                            x2={line.x2}
+                            y2={line.y2}
+                            stroke="#22c55e"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            className="animate-draw-line"
+                            style={{ filter: 'drop-shadow(0px 0px 4px rgba(34, 197, 94, 0.5))' }}
+                        />
+                    ))}
+                </svg>
                 {/* Terms Column */}
                 <div className="space-y-4">
                     <h3 className="text-lg font-bold text-center mb-4 text-muted uppercase tracking-wider">Terms</h3>
                     {terms.map((item) => (
                         <div
                             key={`term-${item.id}`}
+                            ref={(el) => {
+                                if (el) termRefs.current.set(item.id, el);
+                                else termRefs.current.delete(item.id);
+                            }}
                             onClick={() => handleTermClick(item.id)}
                             className={`
                                 p-4 md:p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 font-bold text-center shadow-sm
@@ -211,6 +274,10 @@ const PuzzleGame = () => {
                         return (
                             <div
                                 key={`match-${item.id}`}
+                                ref={(el) => {
+                                    if (el) matchRefs.current.set(item.id, el);
+                                    else matchRefs.current.delete(item.id);
+                                }}
                                 onClick={() => handleMatchClick(item.id)}
                                 className={`
                                     p-4 md:p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 text-sm md:text-base text-center flex items-center justify-center min-h-[80px] shadow-sm
@@ -237,6 +304,13 @@ const PuzzleGame = () => {
                 }
                 .animate-shake {
                     animation: shake 0.3s ease-in-out;
+                }
+                @keyframes draw {
+                    from { stroke-dasharray: 0, 2000; }
+                    to { stroke-dasharray: 2000, 0; }
+                }
+                .animate-draw-line {
+                    animation: draw 0.8s ease-out forwards;
                 }
             `}</style>
         </div>
