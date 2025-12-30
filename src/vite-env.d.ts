@@ -7,4 +7,5 @@ interface ImportMetaEnv {
     readonly GROQ_API_KEYS: string;
     readonly VITE_SUPABASE_URL: string;
     readonly VITE_SUPABASE_ANON_KEY: string;
+    readonly VITE_GEMINI_API_KEY: string;
 }

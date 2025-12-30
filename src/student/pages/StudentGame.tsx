@@ -1,39 +1,74 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Puzzle, Bug, Search, Lock, Clock } from 'lucide-react';
+import { Puzzle, Lock, Clock } from 'lucide-react';
 import GameLeaderboard from '../components/GameLeaderboard';
-import { getFlashCardState, isFlashCardLocked, getNextUnlockTime, getPuzzleState } from '../utils/gameState';
+import { isPuzzleLocked, syncScoreToSupabase, getPuzzleState, getFlashCardState } from '../utils/gameState';
+import { useAuth } from '../../shared/context/AuthContext';
 
 const StudentGame = () => {
     const navigate = useNavigate();
-    const [flashCardLocked, setFlashCardLocked] = useState(false);
+    const { user } = useAuth();
+
+    const [puzzleLocked, setPuzzleLocked] = useState(false); // New lock state
     const [timeRemaining, setTimeRemaining] = useState('');
     const [flashCardScore, setFlashCardScore] = useState(0);
     const [puzzleScore, setPuzzleScore] = useState(0);
 
-    // Initial State Check
     useEffect(() => {
-        const flashState = getFlashCardState();
-        setFlashCardScore(flashState.totalScore);
+        // Initial Score Load
+        // We defer this slightly or re-run when user changes to ensure we get the right key
+        if (user) {
+            const flashState = getFlashCardState(user.id);
+            setFlashCardScore(flashState.totalScore);
+            const puzzleState = getPuzzleState(user.id);
+            setPuzzleScore(puzzleState.totalScore);
+        } else {
+            const flashState = getFlashCardState();
+            setFlashCardScore(flashState.totalScore);
+            const puzzleState = getPuzzleState();
+            setPuzzleScore(puzzleState.totalScore);
+        }
 
-        const puzzleState = getPuzzleState();
-        setPuzzleScore(puzzleState.totalScore);
-    }, []);
+        if (user) {
+            // Sync Score
+            syncScoreToSupabase(user.id);
+
+            // Check Daily Lock
+            const isPuzLocked = isPuzzleLocked(user.id);
+            setPuzzleLocked(isPuzLocked);
+
+            if (isPuzLocked) {
+                startTimer();
+            }
+        }
+    }, [user]);
+
+    const startTimer = () => {
+        const updateTimer = () => {
+            const now = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+
+            const diff = tomorrow.getTime() - now.getTime();
+            if (diff <= 0) {
+                setPuzzleLocked(false);
+                return;
+            }
+
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+            setTimeRemaining(`${h}h ${m}m ${s}s`);
+        };
+
+        updateTimer();
+        setInterval(updateTimer, 1000);
+    };
 
     const games = [
-        {
-            id: 'flashcards',
-            title: 'Flash Cards',
-            description: flashCardLocked
-                ? `Next challenge available in: ${timeRemaining}`
-                : 'Test your knowledge with quick-fire flash cards.',
-            icon: BookOpen,
-            color: 'text-blue-500',
-            bg: 'bg-blue-500/10',
-            path: '/student/game/flashcards',
-            locked: flashCardLocked,
-            score: flashCardScore
-        },
+
         {
             id: 'puzzle',
             title: 'Concept Matching Puzzle',
@@ -42,26 +77,11 @@ const StudentGame = () => {
             color: 'text-purple-500',
             bg: 'bg-purple-500/10',
             path: '/student/game/puzzle',
-            score: puzzleScore
+            score: puzzleScore,
+            locked: puzzleLocked // Use new lock state
         },
-        {
-            id: 'debugger',
-            title: 'Debugger',
-            description: 'Find and fix bugs in code snippets.',
-            icon: Bug,
-            color: 'text-red-500',
-            bg: 'bg-red-500/10',
-            path: '/student/game/debugger'
-        },
-        {
-            id: 'mistake-finder',
-            title: 'Mistake Finder',
-            description: 'Identify logical or syntax errors in logic.',
-            icon: Search,
-            color: 'text-amber-500',
-            bg: 'bg-amber-500/10',
-            path: '/student/game/mistake-finder'
-        }
+
+
     ];
 
     const handleGameClick = (game: any) => {
@@ -109,11 +129,6 @@ const StudentGame = () => {
                             <div className="flex-1">
                                 <div className="flex justify-between items-start">
                                     <h3 className="text-xl font-bold text-text mb-2">{game.title}</h3>
-                                    {game.score !== undefined && (
-                                        <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-1 rounded">
-                                            {game.score} XP
-                                        </span>
-                                    )}
                                 </div>
                                 <p className="text-muted text-sm">{game.description}</p>
                             </div>
@@ -122,7 +137,7 @@ const StudentGame = () => {
                 ))}
             </div>
 
-        </div>
+        </div >
     );
 };
 

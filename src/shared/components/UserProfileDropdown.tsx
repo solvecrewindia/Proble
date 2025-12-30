@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
+
 const UserProfileDropdown: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -211,6 +212,8 @@ const UserProfileDropdown: React.FC = () => {
                             </button>
                         </div>
                     )}
+
+
 
                     {/* Logout Section */}
                     <div className="p-2 border-t border-neutral-300 dark:border-neutral-600">

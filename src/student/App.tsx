@@ -1,4 +1,4 @@
-import React from 'react';
+import DailyGame from './pages/games/DailyGame';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import StudentLayout from './components/layout/Layout';
 import StudentDashboard from './pages/Dashboard';
@@ -41,6 +41,7 @@ const StudentApp = () => {
                 <Route path="practice" element={<PracticeList />} />
                 <Route path="join" element={<JoinTest />} />
                 <Route path="game" element={<StudentGame />} />
+                <Route path="game/daily" element={<DailyGame />} />
                 <Route path="game/flashcards" element={<FlashCardGame />} />
                 <Route path="game/puzzle" element={<PuzzleGame />} />
                 <Route path="game/debugger" element={<DebuggerGame />} />

@@ -316,6 +316,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logout = async () => {
         await supabase.auth.signOut();
         setUser(null);
+        localStorage.removeItem('cached_user_profile');
+
+        // Clear game state so next user starts fresh (or loads their own if we implement user-keyed storage later)
+        // For now, simple clear prevents "shared" scores.
+        localStorage.removeItem('proble_flashcard_state');
+        localStorage.removeItem('proble_puzzle_state');
     };
 
     return (
