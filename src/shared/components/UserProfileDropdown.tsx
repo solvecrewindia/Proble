@@ -89,6 +89,19 @@ const UserProfileDropdown: React.FC = () => {
                     {/* Student Specific Links */}
                     {user.role === 'student' && (
                         <>
+                            <div className="px-2 py-1 block md:hidden">
+                                <button
+                                    onClick={() => {
+                                        navigate('/student/practice');
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                >
+                                    <List className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                                    <span className="text-sm font-medium">My Practice</span>
+                                </button>
+                            </div>
+
                             <div className="px-2 py-1">
                                 <button
                                     onClick={() => {
