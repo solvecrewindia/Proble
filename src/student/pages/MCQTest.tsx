@@ -28,6 +28,11 @@ const MCQTest = () => {
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     const [quizSettings, setQuizSettings] = useState<any>(null);
 
+    // Security State
+    const [isWindowFocused, setIsWindowFocused] = useState(true);
+
+
+
     // Helper: finish test (Defined before useAntiCheat to be safe, though hoisting applies to functions not consts. 
     // We define it as const inside render, so it must be defined before use)
     // Actually, onAutoSubmit calls it. onAutoSubmit is a callback. 
@@ -94,6 +99,36 @@ const MCQTest = () => {
             console.error("Error saving results:", err);
         }
     }, [answers, questions, id]);
+
+    // Security State (Moved here to access calculateAndShowResults)
+    useEffect(() => {
+        const handleFocus = () => setIsWindowFocused(true);
+        const handleBlur = () => {
+            if (testActive && !showResults) {
+                setIsWindowFocused(false);
+                calculateAndShowResults(); // Strict Mode: Finish immediately
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.hidden && testActive && !showResults) {
+                setIsWindowFocused(false);
+                calculateAndShowResults();
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+        window.addEventListener('blur', handleBlur);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('pagehide', handleBlur);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('blur', handleBlur);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('pagehide', handleBlur);
+        };
+    }, [testActive, showResults, calculateAndShowResults]);
 
     // Anti-Cheat Integration
     const {
@@ -284,9 +319,30 @@ const MCQTest = () => {
 
     return (
         <div
-            className="min-h-screen bg-background text-text font-sans selection:bg-transparent select-none relative"
+            className="min-h-screen bg-background text-text font-sans selection:bg-transparent select-none relative on-copy-disable"
             onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+            style={{
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                MozUserSelect: 'none',
+                msUserSelect: 'none',
+                WebkitTouchCallout: 'none',
+            }}
         >
+            {/* Watermark removed by user request (Visual Noise) */}
+
+            {/* --- BLUR PROTECTION OVERLAY --- */}
+            {!isWindowFocused && testActive && !showResults && (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-75">
+                    <ShieldAlert className="w-24 h-24 text-red-500 mb-6 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
+                    <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight">Exam Terminated</h2>
+                    <p className="text-xl text-white/80 max-w-xl leading-relaxed">
+                        Security Violation Detected (Focus Lost).
+                        <br />Your exam is being submitted...
+                    </p>
+                </div>
+            )}
             {/* --- WARNING OVERLAY --- */}
             {warning && (
                 <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top-4 fade-in duration-300 w-full max-w-lg px-4">
@@ -373,7 +429,7 @@ const MCQTest = () => {
                         </div>
 
                         {/* Question Text */}
-                        <div className="prose dark:prose-invert max-w-none">
+                        <div className="prose dark:prose-invert max-w-none select-none pointer-events-none">
                             <h2 className="text-lg md:text-xl font-semibold leading-relaxed text-text">
                                 {activeQuestion.question}
                             </h2>
@@ -448,11 +504,9 @@ const MCQTest = () => {
                                                 {optImg && (
                                                     <img
                                                         src={optImg}
-                                                        className="mt-2 h-16 rounded-md border border-neutral-200 dark:border-neutral-700"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setZoomedImage(optImg);
-                                                        }}
+                                                        className="mt-2 h-16 rounded-md border border-neutral-200 dark:border-neutral-700 pointer-events-none"
+                                                        onContextMenu={(e) => e.preventDefault()}
+                                                        draggable="false"
                                                     />
                                                 )}
                                             </div>
