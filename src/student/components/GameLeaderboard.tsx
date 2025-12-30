@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Trophy, Crown, Star } from 'lucide-react';
 import { useAuth } from '../../shared/context/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -8,14 +8,32 @@ const GameLeaderboard = () => {
     const { user } = useAuth();
     const [leaders, setLeaders] = useState<any[]>([]);
     const [totalXP, setTotalXP] = useState(0);
-    const [fetchError, setFetchError] = useState<string | null>(null);
 
     useEffect(() => {
-        // 1. Get Local XP for the badge
-        const puzzleState = getPuzzleState(user?.id);
-        const flashState = getFlashCardState(user?.id);
-        const total = (puzzleState?.totalScore || 0) + (flashState?.totalScore || 0);
-        setTotalXP(total);
+        // 1. Get User's Total Score for the current week from DB
+        const fetchUserScore = async () => {
+            if (!user) return;
+            const currentWeek = getWeekId();
+
+            const { data } = await supabase
+                .from('leaderboard')
+                .select('total_xp')
+                .eq('user_id', user.id)
+                .eq('week_id', currentWeek)
+                .single();
+
+            if (data) {
+                setTotalXP(data.total_xp);
+            } else {
+                // Fallback to local if not found (e.g. first time load before sync)
+                const puzzleState = getPuzzleState(user.id);
+                const flashState = getFlashCardState(user.id);
+                const total = (puzzleState?.totalScore || 0) + (flashState?.totalScore || 0);
+                setTotalXP(total);
+            }
+        };
+
+        fetchUserScore();
 
         // 2. Fetch Global Leaderboard from DB
         const fetchLeaderboard = async () => {

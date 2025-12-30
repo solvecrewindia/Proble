@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 </div>
             ) : null}
 
-            <div className="flex-1 flex justify-start items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="flex justify-start items-center gap-2.5 cursor-pointer shrink-0" onClick={() => navigate('/')}>
                 {/* Desktop Logo */}
                 <img
                     src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
@@ -60,12 +60,12 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 <img
                     src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
                     alt="Proble Logo"
-                    className="block md:hidden h-[32px] w-auto rounded-md"
+                    className="block md:hidden h-[24px] w-auto rounded-md"
                 />
             </div>
 
             <div className="flex justify-center px-2 w-full max-w-[480px]">
-                {!location.pathname.startsWith('/student') && (
+                {!location.pathname.startsWith('/student') && !location.pathname.includes('/game') && (
                     <div className="hidden md:flex w-full bg-background rounded-[50px] px-3 py-1.5 items-center border border-neutral-300 dark:border-neutral-600">
                         <input
                             type="text"
@@ -81,9 +81,9 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 )}
             </div>
 
-            <div className="flex-1 flex justify-end items-center gap-2 md:gap-5">
+            <div className="flex justify-end items-center gap-2 md:gap-5">
                 {/* Mobile Search Toggle */}
-                {!location.pathname.startsWith('/student') && (
+                {!location.pathname.includes('/game') && (
                     <button
                         onClick={() => setIsSearchOpen(true)}
                         className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden text-text"
@@ -105,7 +105,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                                 </button>
                                 <button
                                     onClick={() => navigate('/student/practice')}
-                                    className="bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors whitespace-nowrap"
+                                    className="hidden md:block bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors whitespace-nowrap"
                                 >
                                     My Practice
                                 </button>
