@@ -33,7 +33,7 @@
         @apply bg-background text-text font-sans antialiased transition-colors duration-300;
         /* Subtle background pattern/gradient for visual interest */
         background-image:
-            radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 25%),
+            radial-gradient(circle at 15% 50%, rgba(0, 151, 178, 0.08) 0%, transparent 25%),
             radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.08) 0%, transparent 25%);
         background-attachment: fixed;
     }

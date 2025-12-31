@@ -4,6 +4,7 @@ import ReportProblemModal from './ReportProblemModal';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { getAvatarColor } from '../utils/color';
 
 
 const UserProfileDropdown: React.FC = () => {
@@ -17,7 +18,10 @@ const UserProfileDropdown: React.FC = () => {
 
     // Derived state for display
     const displayName = user?.username || user?.email?.split('@')[0] || 'User';
-    const avatarSrc = user?.avatar_url || `https://ui-avatars.com/api/?name=${displayName}&background=0D8ABC&color=fff`;
+    const initials = displayName.substring(0, 2).toUpperCase();
+    // Use user ID for consistent color generation
+    const avatarColor = getAvatarColor(user.id || displayName);
+    const hasAvatar = !!user?.avatar_url;
 
     const toggleDropdown = () => setIsOpen(!isOpen);
     const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -51,12 +55,16 @@ const UserProfileDropdown: React.FC = () => {
                 onClick={toggleDropdown}
                 className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full border border-neutral-300 dark:border-neutral-600 hover:bg-background transition-colors duration-200 cursor-pointer bg-surface"
             >
-                <div className="w-8 h-8 rounded-full overflow-hidden border border-neutral-300 dark:border-neutral-600">
-                    <img
-                        src={avatarSrc}
-                        alt="User Avatar"
-                        className="w-full h-full object-cover"
-                    />
+                <div className={`w-8 h-8 rounded-full overflow-hidden border border-neutral-300 dark:border-neutral-600 flex items-center justify-center ${!hasAvatar ? avatarColor : ''}`}>
+                    {hasAvatar ? (
+                        <img
+                            src={user.avatar_url}
+                            alt="User Avatar"
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <span className="text-xs font-bold text-white">{initials}</span>
+                    )}
                 </div>
                 <ChevronDown
                     className={`w-4 h-4 text-muted transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'
@@ -71,12 +79,16 @@ const UserProfileDropdown: React.FC = () => {
                     {/* Header Section */}
                     <div className="px-4 py-3 border-b border-neutral-300 dark:border-neutral-600">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-300 dark:border-neutral-600 shrink-0">
-                                <img
-                                    src={avatarSrc}
-                                    alt="User Avatar"
-                                    className="w-full h-full object-cover"
-                                />
+                            <div className={`w-10 h-10 rounded-full overflow-hidden border border-neutral-300 dark:border-neutral-600 shrink-0 flex items-center justify-center ${!hasAvatar ? avatarColor : ''}`}>
+                                {hasAvatar ? (
+                                    <img
+                                        src={user.avatar_url}
+                                        alt="User Avatar"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <span className="text-sm font-bold text-white">{initials}</span>
+                                )}
                             </div>
                             <div className="flex flex-col overflow-hidden">
                                 <span className="text-sm font-bold text-text truncate">{displayName}</span>
@@ -151,7 +163,7 @@ const UserProfileDropdown: React.FC = () => {
                         >
                             <div className="flex items-center gap-3">
                                 {isDarkMode ? (
-                                    <Moon className="w-4 h-4 text-muted group-hover:text-indigo-600 transition-colors" />
+                                    <Moon className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
                                 ) : (
                                     <Sun className="w-4 h-4 text-muted group-hover:text-amber-500 transition-colors" />
                                 )}
@@ -162,7 +174,7 @@ const UserProfileDropdown: React.FC = () => {
 
                             {/* Custom Toggle Switch */}
                             <div
-                                className={`w-9 h-5 rounded-full relative transition-colors duration-300 ${isDarkMode ? 'bg-indigo-600' : 'bg-gray-200'
+                                className={`w-9 h-5 rounded-full relative transition-colors duration-300 ${isDarkMode ? 'bg-primary' : 'bg-gray-200'
                                     }`}
                             >
                                 <div

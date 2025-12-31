@@ -3,6 +3,7 @@ import { Trophy, Crown, Star } from 'lucide-react';
 import { useAuth } from '../../shared/context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { getPuzzleState, getFlashCardState, getWeekId } from '../utils/gameState';
+import { getAvatarColor } from '../../shared/utils/color';
 
 const GameLeaderboard = () => {
     const { user } = useAuth();
@@ -50,6 +51,7 @@ const GameLeaderboard = () => {
                 .from('leaderboard')
                 .select(`
                     total_xp,
+                    user_id,
                     profiles:user_id (
                         username
                     )
@@ -75,12 +77,17 @@ const GameLeaderboard = () => {
                 const formatted = data.map((entry: any, index: number) => {
                     const profile = entry.profiles;
                     const username = profile?.username || 'Unknown';
+                    // Use user_id for consistent color, fallback to username
+                    const colorSeed = entry.user_id || username;
+
                     return {
                         id: `rank-${index}`,
                         name: username,
                         points: entry.total_xp,
-                        avatar: (username[0] || '?').toUpperCase(),
+                        // Show first 2 letters for avatar
+                        avatar: username.substring(0, 2).toUpperCase(),
                         rank: index + 1,
+                        colorSeed: colorSeed,
                         ...(colors[index] || colors[2])
                     };
                 });
@@ -115,7 +122,7 @@ const GameLeaderboard = () => {
             <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
                 <div className="flex items-center gap-3">
                     <Trophy className="w-6 h-6 text-primary" />
-                    <h2 className="text-xl font-bold text-text">Global Champions</h2>
+                    <h2 className="text-xl font-bold text-text">Weekly Champions</h2>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -140,7 +147,7 @@ const GameLeaderboard = () => {
                                 {leader.rank === 1 && (
                                     <Crown className="absolute -top-8 left-1/2 -translate-x-1/2 w-8 h-8 text-yellow-500 fill-yellow-500 animate-bounce" />
                                 )}
-                                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br ${leader.color} ${leader.shadow} shadow-lg flex items-center justify-center transform rotate-3 border-4 border-white dark:border-neutral-800`}>
+                                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl ${getAvatarColor(leader.colorSeed)} ${leader.shadow} shadow-lg flex items-center justify-center transform rotate-3 border-4 border-white dark:border-neutral-800`}>
                                     <span className="text-white font-bold text-xl md:text-2xl">{leader.avatar}</span>
                                 </div>
                                 <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 bg-surface border border-neutral-200 dark:border-neutral-600 px-2 py-0.5 rounded-full text-xs font-bold shadow-sm whitespace-nowrap z-10`}>

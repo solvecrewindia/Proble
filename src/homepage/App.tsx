@@ -171,7 +171,7 @@ function App({ searchQuery = '' }: AppProps) {
     <div className="min-h-screen bg-background font-sans text-text transition-colors duration-200">
 
       {/* Join Code Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 py-8 px-5 text-white">
+      <div className="bg-gradient-to-r from-primary to-primary-600 py-8 px-5 text-white">
         <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="text-center md:text-left">
             <h2 className="text-2xl font-bold mb-2">Have a Quiz Code?</h2>

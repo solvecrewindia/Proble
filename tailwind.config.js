@@ -13,10 +13,10 @@ export default {
             },
             colors: {
                 primary: {
-                    DEFAULT: '#6366f1', // Indigo-500
-                    600: '#4f46e5',     // Indigo-600 (Compatibility)
-                    foreground: '#e0e7ff',
-                    glow: '#818cf8',
+                    DEFAULT: '#0097b2', // User specific blue
+                    600: '#007aa6',     // Darker shade
+                    foreground: '#e0f7fa',
+                    glow: '#4dd2ff',
                 },
                 secondary: {
                     DEFAULT: '#a855f7', // Purple-500

@@ -8,7 +8,7 @@ const Quizzes = () => {
 
     // Static definition of modules
     const [modules, setModules] = useState([
-        { id: 'nptel', title: 'NPTEL', description: 'National Programme on Technology Enhanced Learning', icon: BookOpen, color: 'text-blue-500', bg: 'bg-blue-500/10', count: 0 },
+        { id: 'nptel', title: 'NPTEL', description: 'National Programme on Technology Enhanced Learning', icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10', count: 0 },
         { id: 'gate', title: 'GATE', description: 'Graduate Aptitude Test in Engineering', icon: GraduationCap, color: 'text-green-500', bg: 'bg-green-500/10', count: 0 },
         { id: 'srmist', title: 'SRMIST', description: 'SRM Institute of Science and Technology', icon: Server, color: 'text-purple-500', bg: 'bg-purple-500/10', count: 0 },
         { id: 'placement', title: 'Placement', description: 'Campus Placement Preparation & Tests', icon: Briefcase, color: 'text-pink-500', bg: 'bg-pink-500/10', count: 0 },
