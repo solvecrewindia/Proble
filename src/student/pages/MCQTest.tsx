@@ -156,85 +156,91 @@ const MCQTest = () => {
         const fetchQuestions = async () => {
             if (!id) return;
 
-            let targetQuizIds: string[] = [];
+            try {
+                let targetQuizIds: string[] = [];
 
-            if (id === 'combined') {
-                const params = new URLSearchParams(window.location.search);
-                const idsParam = params.get('ids');
-                if (idsParam) {
-                    targetQuizIds = idsParam.split(',');
+                if (id === 'combined') {
+                    const params = new URLSearchParams(window.location.search);
+                    const idsParam = params.get('ids');
+                    if (idsParam) {
+                        targetQuizIds = idsParam.split(',');
+                    } else {
+                        navigate(-1);
+                        return;
+                    }
                 } else {
-                    navigate(-1);
-                    return;
+                    targetQuizIds = [id];
                 }
-            } else {
-                targetQuizIds = [id];
-            }
 
-            const { data: quizData } = await supabase
-                .from('quizzes')
-                .select('settings, type, id')
-                .in('id', targetQuizIds)
-                .limit(1)
-                .single();
+                const { data: quizData } = await supabase
+                    .from('quizzes')
+                    .select('settings, type, id')
+                    .in('id', targetQuizIds)
+                    .limit(1)
+                    .single();
 
-            if (quizData) {
-                if (quizData.settings) setQuizSettings(quizData.settings);
+                if (quizData) {
+                    if (quizData.settings) setQuizSettings(quizData.settings);
 
-                // Security Check: Prevent unauthorized retakes
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    const isMaster = quizData.type === 'master';
-                    const allowRetake = quizData.settings?.allowRetake;
+                    // Security Check: Prevent unauthorized retakes
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                        const isMaster = quizData.type === 'master';
+                        if (isMaster) {
+                            const { data: existingAttempts } = await supabase
+                                .from('quiz_results')
+                                .select('id')
+                                .eq('quiz_id', quizData.id)
+                                .eq('student_id', user.id)
+                                .limit(1);
 
-                    if (isMaster) {
-                        const { data: existingAttempts } = await supabase
-                            .from('quiz_results')
-                            .select('id')
-                            .eq('quiz_id', quizData.id)
-                            .eq('student_id', user.id)
-                            .limit(1);
-
-                        if (existingAttempts && existingAttempts.length > 0) {
-                            alert("You have already completed this assessment.");
-                            navigate(`/student/practice/${id}`);
-                            return;
+                            if (existingAttempts && existingAttempts.length > 0) {
+                                alert("You have already completed this assessment.");
+                                navigate(`/student/practice/${id}`);
+                                return;
+                            }
                         }
                     }
                 }
-            }
 
-            const { data, error } = await supabase
-                .from('questions')
-                .select('*')
-                .in('quiz_id', targetQuizIds)
-                .order('id');
+                const { data, error } = await supabase
+                    .from('questions')
+                    .select('*')
+                    .in('quiz_id', targetQuizIds)
+                    .order('id');
 
-            if (data && data.length > 0) {
-                const mapped = data.map((q: any, index: number) => ({
-                    id: index + 1,
-                    dbId: q.id,
-                    type: q.type || 'mcq',
-                    question: q.text,
-                    imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null,
-                    options: q.choices,
-                    correct: (() => {
-                        if (q.type === 'msq') return JSON.parse(q.correct_answer || '[]');
-                        if (q.type === 'range') {
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const mapped = data.map((q: any, index: number) => ({
+                        id: index + 1,
+                        dbId: q.id,
+                        type: q.type || 'mcq',
+                        question: q.text,
+                        imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null,
+                        options: q.choices,
+                        correct: (() => {
                             try {
-                                const parsed = JSON.parse(q.correct_answer || '{}');
-                                if (typeof parsed === 'object' && parsed !== null && 'min' in parsed) {
-                                    return parsed;
+                                if (q.type === 'msq') return JSON.parse(q.correct_answer || '[]');
+                                if (q.type === 'range') {
+                                    const parsed = JSON.parse(q.correct_answer || '{}');
+                                    if (typeof parsed === 'object' && parsed !== null && 'min' in parsed) {
+                                        return parsed;
+                                    }
+                                    return { min: 0, max: 0 };
                                 }
-                                return { min: 0, max: 0 };
-                            } catch { return { min: 0, max: 0 }; }
-                        }
-                        return (Number(q.correct_answer) || 0);
-                    })()
-                }));
-                setQuestions(mapped);
-                setLoading(false);
-            } else {
+                                return (Number(q.correct_answer) || 0);
+                            } catch (e) {
+                                console.error("Error parsing answer for Q:", q.id, e);
+                                return q.type === 'msq' ? [] : { min: 0, max: 0 };
+                            }
+                        })()
+                    }));
+                    setQuestions(mapped);
+                }
+            } catch (err) {
+                console.error("Error loading test:", err);
+            } finally {
                 setLoading(false);
             }
         };

@@ -32,13 +32,14 @@ const JoinTest = () => {
             if (!user) throw new Error("Please login to continue");
 
             // 2. Fetch Quiz
-            const { data: quizData, error: quizError } = await supabase
+            const { data: quizDataList, error: quizError } = await supabase
                 .from('quizzes')
                 .select('*')
                 .eq('code', codeToVerify)
-                .single();
+                .limit(1);
 
             if (quizError) throw quizError;
+            const quizData = quizDataList?.[0];
             if (!quizData) throw new Error('Quiz not found');
 
             // 3. Check for existing attempts - ONLY for Master Tests
