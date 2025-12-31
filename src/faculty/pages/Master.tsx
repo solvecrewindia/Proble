@@ -2,7 +2,7 @@
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Copy, Plus, Edit, Download, RotateCw } from 'lucide-react';
+import { Copy, Plus, Edit, Download, RotateCw, Link as LinkIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Quiz } from '../types';
@@ -190,6 +190,12 @@ export default function Master() {
         alert(`Code copied: ${code}`);
     };
 
+    const copyLink = (quizId: string) => {
+        const link = `${window.location.origin}/course/${quizId}`;
+        navigator.clipboard.writeText(link);
+        alert(`Link copied: ${link}`);
+    };
+
     // Filter quizzes based on active tab
     const filteredQuizzes = quizzes.filter(quiz => {
         if (activeTab === 'ongoing') return quiz.status === 'active' || quiz.status === 'paused' || !quiz.status; // Default to active if null
@@ -318,6 +324,9 @@ export default function Master() {
                                             Code: <span className="font-mono font-bold text-text bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{quiz.accessCode || (quiz as any).code}</span>
                                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => copyCode(quiz.accessCode || (quiz as any).code || '')}>
                                                 <Copy className="h-3 w-3" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1" onClick={() => copyLink(quiz.id)} title="Copy Direct Link">
+                                                <LinkIcon className="h-3 w-3" />
                                             </Button>
                                         </p>
                                     </div>

@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
 import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -12,6 +12,7 @@ const QuizDetails = () => {
 
     const [quiz, setQuiz] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const location = useLocation();
 
     // Rating State
     const [userRating, setUserRating] = useState(0);
@@ -58,6 +59,12 @@ const QuizDetails = () => {
 
                 if (quizData.type === 'global') {
                     fetchRatings(quizData.id);
+                }
+
+                // Auth Check for Master Quizzes
+                if (quizData.type === 'master' && !user) {
+                    navigate('/login', { state: { from: location }, replace: true });
+                    return;
                 }
             }
             setLoading(false);
