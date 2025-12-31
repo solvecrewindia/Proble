@@ -4,8 +4,10 @@ export interface User {
     username?: string;
     email: string;
     role: 'student' | 'faculty' | 'admin' | 'teacher';
+    full_name?: string;
     created_at?: string;
     avatar_url?: string;
+    isFallback?: boolean;
 }
 
 export interface Quiz {

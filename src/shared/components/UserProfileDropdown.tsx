@@ -16,7 +16,7 @@ const UserProfileDropdown: React.FC = () => {
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Derived state for display
-    const displayName = user?.username || user?.email?.split('@')[0] || 'User';
+    const displayName = user?.full_name || user?.username || user?.email?.split('@')[0] || 'User';
     const avatarSrc = user?.avatar_url || `https://ui-avatars.com/api/?name=${displayName}&background=0D8ABC&color=fff`;
 
     const toggleDropdown = () => setIsOpen(!isOpen);
