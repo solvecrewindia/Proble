@@ -42,6 +42,33 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 
 
+// Root Redirect Component
+const RootRedirect = ({ searchQuery }) => {
+    const { user, isLoading } = useAuth();
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    // Role Guard: Redirect based on role
+    if (user) {
+        const role = user.role?.toLowerCase();
+        if (role === 'faculty' || role === 'teacher') {
+            return <Navigate to="/faculty/dashboard" replace />;
+        }
+        if (role === 'admin') {
+            return <Navigate to="/admin" replace />;
+        }
+    }
+
+    // Default for Guests and Students
+    return <HomepageApp searchQuery={searchQuery} />;
+};
+
 function AppContent() {
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -53,9 +80,8 @@ function AppContent() {
                 <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
             )}
             <Routes>
-                {/* Public Routes */}
-                {/* Public Routes */}
-                <Route path="/" element={<HomepageApp searchQuery={searchQuery} />} />
+                {/* Public Routes / Root Redirect */}
+                <Route path="/" element={<RootRedirect searchQuery={searchQuery} />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/course/:id" element={<QuizDetails />} />
