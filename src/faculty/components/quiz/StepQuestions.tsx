@@ -182,17 +182,26 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                     }
 
                     // Map Correct Answer
-                    let correct: number | number[] = -1;
-                    let type: 'mcq' | 'msq' = 'mcq';
+                    let correct: number | number[] | { min: number; max: number } = -1;
+                    let type: 'mcq' | 'msq' | 'range' = 'mcq';
 
                     if (correctChar) {
-                        const rawStr = String(correctChar).trim().toUpperCase();
+                        const rawStr = String(correctChar).trim();
+                        const upperStr = rawStr.toUpperCase();
 
-                        // Check for separators (comma or semicolon)
-                        if (rawStr.includes(';') || rawStr.includes(',')) {
+                        // Check for Range Question (e.g., "100 to 200")
+                        const rangeMatch = upperStr.match(/^(\d+(?:\.\d+)?)\s+TO\s+(\d+(?:\.\d+)?)$/);
+
+                        if (rangeMatch) {
+                            type = 'range';
+                            correct = {
+                                min: Number(rangeMatch[1]),
+                                max: Number(rangeMatch[2])
+                            };
+                        } else if (upperStr.includes(';') || upperStr.includes(',')) {
                             // MSQ
                             type = 'msq';
-                            const parts = rawStr.split(/[;,]+/).map(s => s.trim()).filter(s => s);
+                            const parts = upperStr.split(/[;,]+/).map(s => s.trim()).filter(s => s);
                             const indices: number[] = [];
 
                             parts.forEach(p => {
@@ -206,10 +215,10 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                         } else {
                             // MCQ
                             type = 'mcq';
-                            if (['A', '1'].includes(rawStr)) correct = 0;
-                            else if (['B', '2'].includes(rawStr)) correct = 1;
-                            else if (['C', '3'].includes(rawStr)) correct = 2;
-                            else if (['D', '4'].includes(rawStr)) correct = 3;
+                            if (['A', '1'].includes(upperStr)) correct = 0;
+                            else if (['B', '2'].includes(upperStr)) correct = 1;
+                            else if (['C', '3'].includes(upperStr)) correct = 2;
+                            else if (['D', '4'].includes(upperStr)) correct = 3;
                             else correct = 0; // Default fallback
                         }
                     }
