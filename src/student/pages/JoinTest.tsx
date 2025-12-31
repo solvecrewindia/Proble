@@ -42,7 +42,15 @@ const JoinTest = () => {
             const quizData = quizDataList?.[0];
             if (!quizData) throw new Error('Quiz not found');
 
-            // 3. Check for existing attempts - ONLY for Master Tests
+            // 3. Fetch Question Count
+            const { count } = await supabase
+                .from('questions')
+                .select('*', { count: 'exact', head: true })
+                .eq('quiz_id', quizData.id);
+
+            quizData.question_count = count || 0;
+
+            // 4. Check for existing attempts - ONLY for Master Tests
             if (quizData.type === 'master') {
                 const { data: existingAttempts, error: attemptError } = await supabase
                     .from('quiz_results')
@@ -111,7 +119,7 @@ const JoinTest = () => {
                         </div>
                         <div className="p-4 rounded-xl bg-background border border-neutral-300 dark:border-neutral-600 flex items-center justify-center flex-col gap-2">
                             <AlertCircle className="w-6 h-6 text-primary" />
-                            <span className="font-medium text-text">{quiz.questions ? quiz.questions.length : 'N/A'}</span>
+                            <span className="font-medium text-text">{quiz.question_count !== undefined ? quiz.question_count : 'N/A'}</span>
                             <span className="text-xs text-muted">Questions</span>
                         </div>
                     </div>

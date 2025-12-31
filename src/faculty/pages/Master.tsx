@@ -75,7 +75,7 @@ export default function Master() {
             .from('quiz_results')
             .select(`
                 *,
-                profiles:student_id (username, email)
+                profiles:student_id (username, email, registration_number)
             `)
             .eq('quiz_id', quizId)
             .order('percentage', { ascending: false });
@@ -88,9 +88,10 @@ export default function Master() {
         if (results.length === 0) return;
 
         const csvContent = [
-            ['Student Name', 'Email', 'Score', 'Total Questions', 'Percentage', 'Date'],
+            ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Date'],
             ...results.map(res => [
                 res.profiles?.username || 'Unknown',
+                res.profiles?.registration_number || 'N/A',
                 res.profiles?.email || 'N/A',
                 res.score,
                 res.total_questions,
@@ -240,6 +241,9 @@ export default function Master() {
                                                 <td className="py-4">
                                                     <div className="font-bold">{res.profiles?.username || 'Unknown'}</div>
                                                     <div className="text-xs text-muted">{res.profiles?.email}</div>
+                                                    {res.profiles?.registration_number && (
+                                                        <div className="text-xs text-primary font-mono mt-0.5">{res.profiles.registration_number}</div>
+                                                    )}
                                                 </td>
                                                 <td className="py-4 font-mono">{res.score} / {res.total_questions}</td>
                                                 <td className="py-4">

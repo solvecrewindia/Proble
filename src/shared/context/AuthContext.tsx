@@ -51,7 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     username: profile.username,
                     full_name: profile.full_name,
                     avatar_url: profile.avatar_url,
-                    created_at: profile.created_at
+                    created_at: profile.created_at,
+                    registration_number: profile.registration_number
                 } as User;
             }
         } catch (err: any) {

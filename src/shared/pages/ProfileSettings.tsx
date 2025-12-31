@@ -12,7 +12,8 @@ const ProfileSettings = () => {
         username: '',
         full_name: '',
         photo: '',
-        language: 'English'
+        language: 'English',
+        registration_number: ''
     });
 
     useEffect(() => {
@@ -38,7 +39,8 @@ const ProfileSettings = () => {
                         username: data?.username || '',
                         full_name: data?.full_name || '',
                         photo: data?.avatar_url || `https://ui-avatars.com/api/?name=${data?.username || 'User'}&background=0D8ABC&color=fff`,
-                        language: data?.preferred_language || 'English'
+                        language: data?.preferred_language || 'English',
+                        registration_number: data?.registration_number || ''
                     });
                     setIsLoading(false);
                 }
@@ -70,7 +72,8 @@ const ProfileSettings = () => {
                 full_name: formData.full_name,
                 preferred_language: formData.language,
                 updated_at: new Date().toISOString(),
-                avatar_url: formData.photo
+                avatar_url: formData.photo,
+                registration_number: formData.email.endsWith('@srmist.edu.in') ? formData.registration_number : null
             };
 
             const { error } = await supabase

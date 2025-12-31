@@ -7,6 +7,7 @@ export interface User {
     full_name?: string;
     created_at?: string;
     avatar_url?: string;
+    registration_number?: string;
     isFallback?: boolean;
 }
 
