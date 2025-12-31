@@ -190,8 +190,8 @@ export default function Master() {
         alert(`Code copied: ${code}`);
     };
 
-    const copyLink = (quizId: string) => {
-        const link = `${window.location.origin}/course/${quizId}`;
+    const copyLink = (code: string) => {
+        const link = `${window.location.origin}/quiz/${code}`;
         navigator.clipboard.writeText(link);
         alert(`Link copied: ${link}`);
     };
@@ -325,7 +325,7 @@ export default function Master() {
                                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => copyCode(quiz.accessCode || (quiz as any).code || '')}>
                                                 <Copy className="h-3 w-3" />
                                             </Button>
-                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1" onClick={() => copyLink(quiz.id)} title="Copy Direct Link">
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1" onClick={() => copyLink(quiz.accessCode || (quiz as any).code || '')} title="Copy Direct Link">
                                                 <LinkIcon className="h-3 w-3" />
                                             </Button>
                                         </p>
