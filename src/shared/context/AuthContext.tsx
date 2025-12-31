@@ -49,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     email: email,
                     role: profile.role,
                     username: profile.username,
+                    full_name: profile.full_name,
                     avatar_url: profile.avatar_url,
                     created_at: profile.created_at
                 } as User;
@@ -139,10 +140,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const userData = await fetchProfile(session.user.id, userEmail);
 
                     if (mounted) {
-                        // Only update if data is different prevents re-renders? 
+                        // Only update if data is different prevents re-renders?
                         // Actually React handles identity check, but it's a new object every time.
-                        // Let's just update.
-                        setUser(userData);
+                        // PROTECTION: If userData is a fallback (fetch failed), but we have a valid cached user (with same email/id),
+                        // DO NOT OVERWRITE with the fallback. Keep the cached version as it's likely better.
+                        const currentIsGood = user && !user.isFallback;
+                        const newIsFallback = (userData as any).isFallback;
+
+                        if (currentIsGood && newIsFallback) {
+                            console.warn("AuthContext: Preserving existing valid user over fallback.");
+                        } else {
+                            setUser(userData);
+                        }
                         setIsLoading(false); // Ensure loading is false (redundant if cache hit, but safe)
                     }
                 } else {
@@ -199,7 +208,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     if (!user || user.id !== session.user.id) {
                         const userData = await fetchProfile(session.user.id, userEmail);
                         if (mounted) {
-                            setUser(userData);
+                            const currentIsGood = user && !user.isFallback;
+                            const newIsFallback = (userData as any).isFallback;
+
+                            if (currentIsGood && newIsFallback) {
+                                console.warn("AuthContext (Listener): Preserving existing valid user over fallback.");
+                            } else {
+                                setUser(userData);
+                            }
                             setIsLoading(false);
                         }
                     } else {
@@ -246,6 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     email: email,
                     role: 'admin' as User['role'],
                     username: 'Admin',
+                    full_name: 'Administrator',
                     isFallback: true
                 };
 
@@ -266,21 +283,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userEmail = data.user.email || `user-${data.user.id}@example.com`;
         let userData = await fetchProfile(data.user.id, userEmail);
 
-        // Repair DB attempt (Fail-safe)
-        if ((userData as any).isFallback && userData.role === 'student') {
-            // Only auto-create if it returned student (meaning it didn't find anything and wasnt the special teacher)
-            // Actually, we can attempt to repair for teacher too if we wanted, but let's stick to safe logic.
-            console.log("Attempting background DB repair...");
-            const newProfile = {
-                id: data.user.id,
-                email: data.user.email!,
-                role: userData.role,
-                username: data.user.email!.split('@')[0]
-            };
-            supabase.from('profiles').insert([newProfile]).then(({ error }) => {
-                if (error) console.error("Auto-repair failed:", error);
-                else console.log("Auto-repair success.");
-            });
+        // Repair DB attempt (Fail-safe) - REMOVED to prevent "Zombie Accounts" after deletion.
+        // If a profile is missing, it implies the account was deleted or not fully created.
+        // We should NOT auto-create it here.
+
+        if ((userData as any).isFallback) {
+            console.warn("AuthContext: Login successful but profile missing (isFallback). Assuming account deleted/invalid.");
+            // Force logout because the user "doesn't exist" in our functional system (profiles table)
+            await supabase.auth.signOut();
+            throw new Error("Account data not found. Access denied.");
         }
 
         setUser(userData);

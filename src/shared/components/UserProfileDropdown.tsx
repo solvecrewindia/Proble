@@ -17,10 +17,10 @@ const UserProfileDropdown: React.FC = () => {
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Derived state for display
-    const displayName = user?.username || user?.email?.split('@')[0] || 'User';
+    const displayName = user?.full_name || user?.username || user?.email?.split('@')[0] || 'User';
     const initials = displayName.substring(0, 2).toUpperCase();
     // Use user ID for consistent color generation
-    const avatarColor = getAvatarColor(user.id || displayName);
+    const avatarColor = getAvatarColor(user?.id || displayName);
     const hasAvatar = !!user?.avatar_url;
 
     const toggleDropdown = () => setIsOpen(!isOpen);

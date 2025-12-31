@@ -34,7 +34,7 @@ const JoinTest = () => {
             // 2. Fetch Quiz
             const { data: quizData, error: quizError } = await supabase
                 .from('quizzes')
-                .select('*, questions(id)')
+                .select('*')
                 .eq('code', codeToVerify)
                 .single();
 
