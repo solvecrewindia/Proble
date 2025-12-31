@@ -203,3 +203,6 @@ export const isDailyChallengeLocked = (userId?: string): boolean => {
     return state.lastPlayedDate === today && state.completed;
 };
 
+
+// --- Mistake Finder State ---
+

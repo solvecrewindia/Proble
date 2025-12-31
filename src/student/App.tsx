@@ -13,7 +13,6 @@ import StudentGame from './pages/StudentGame';
 import FlashCardGame from './pages/games/FlashCardGame';
 import PuzzleGame from './pages/games/PuzzleGame';
 import DebuggerGame from './pages/games/DebuggerGame';
-import MistakeFinderGame from './pages/games/MistakeFinderGame';
 const NoSidebarLayout = () => (
     <div className="min-h-screen bg-background">
         <main className="transition-all duration-300 ease-in-out">
@@ -45,7 +44,7 @@ const StudentApp = () => {
                 <Route path="game/flashcards" element={<FlashCardGame />} />
                 <Route path="game/puzzle" element={<PuzzleGame />} />
                 <Route path="game/debugger" element={<DebuggerGame />} />
-                <Route path="game/mistake-finder" element={<MistakeFinderGame />} />
+                <Route path="game/debugger" element={<DebuggerGame />} />
                 <Route path="profile-settings" element={<ProfileSettings />} />
             </Route>
 
