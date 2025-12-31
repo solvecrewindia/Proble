@@ -263,8 +263,8 @@ const ProfileSettings = () => {
                                     type="text"
                                     name="username"
                                     value={formData.username}
-                                    readOnly
-                                    className="w-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-muted cursor-not-allowed focus:outline-none"
+                                    onChange={handleChange}
+                                    className="w-full bg-background border border-neutral-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             ) : (
                                 <div className="font-medium text-text px-3 py-2">{formData.username}</div>

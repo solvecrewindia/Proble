@@ -1,21 +1,47 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Trophy, Crown, Star } from 'lucide-react';
 import { useAuth } from '../../shared/context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { getPuzzleState, getFlashCardState, getWeekId } from '../utils/gameState';
+import { getAvatarColor } from '../../shared/utils/color';
 
 const GameLeaderboard = () => {
     const { user } = useAuth();
     const [leaders, setLeaders] = useState<any[]>([]);
     const [totalXP, setTotalXP] = useState(0);
-    const [fetchError, setFetchError] = useState<string | null>(null);
 
     useEffect(() => {
-        // 1. Get Local XP for the badge
-        const puzzleState = getPuzzleState(user?.id);
-        const flashState = getFlashCardState(user?.id);
-        const total = (puzzleState?.totalScore || 0) + (flashState?.totalScore || 0);
-        setTotalXP(total);
+        // 1. Get User's Total Score for the current week from DB
+        const fetchUserScore = async () => {
+            if (!user) return;
+            const currentWeek = getWeekId();
+
+            console.log('Fetching score for:', { userId: user.id, weekId: currentWeek });
+
+            const { data, error } = await supabase
+                .from('leaderboard')
+                .select('total_xp, week_id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (error) {
+                console.error('Error fetching user score:', error);
+            }
+
+            if (data && data.week_id === currentWeek) {
+                console.log('User score data found for current week:', data);
+                setTotalXP(data.total_xp);
+            } else {
+                console.log('No user score found for current week (DB week: ' + data?.week_id + '), falling back to local');
+                // Fallback to local if not found (e.g. first time load before sync)
+                const puzzleState = getPuzzleState(user.id);
+                const flashState = getFlashCardState(user.id);
+                const total = (puzzleState?.totalScore || 0) + (flashState?.totalScore || 0);
+                setTotalXP(total);
+            }
+        };
+
+        fetchUserScore();
 
         // 2. Fetch Global Leaderboard from DB
         const fetchLeaderboard = async () => {
@@ -25,17 +51,19 @@ const GameLeaderboard = () => {
                 .from('leaderboard')
                 .select(`
                     total_xp,
+                    user_id,
                     profiles:user_id (
                         username
                     )
                 `)
                 .eq('week_id', currentWeek) // Filter by current week
                 .order('total_xp', { ascending: false })
+                .order('updated_at', { ascending: true })
                 .limit(3);
 
             if (error) {
                 console.error("Leaderboard fetch error:", error);
-                setFetchError(error.message);
+                // setFetchError(error.message); // removed as state doesn't exist
                 return;
             }
 
@@ -49,12 +77,17 @@ const GameLeaderboard = () => {
                 const formatted = data.map((entry: any, index: number) => {
                     const profile = entry.profiles;
                     const username = profile?.username || 'Unknown';
+                    // Use user_id for consistent color, fallback to username
+                    const colorSeed = entry.user_id || username;
+
                     return {
                         id: `rank-${index}`,
                         name: username,
                         points: entry.total_xp,
-                        avatar: (username[0] || '?').toUpperCase(),
+                        // Show first 2 letters for avatar
+                        avatar: username.substring(0, 2).toUpperCase(),
                         rank: index + 1,
+                        colorSeed: colorSeed,
                         ...(colors[index] || colors[2])
                     };
                 });
@@ -89,7 +122,7 @@ const GameLeaderboard = () => {
             <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
                 <div className="flex items-center gap-3">
                     <Trophy className="w-6 h-6 text-primary" />
-                    <h2 className="text-xl font-bold text-text">Global Champions</h2>
+                    <h2 className="text-xl font-bold text-text">Weekly Champions</h2>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -114,7 +147,7 @@ const GameLeaderboard = () => {
                                 {leader.rank === 1 && (
                                     <Crown className="absolute -top-8 left-1/2 -translate-x-1/2 w-8 h-8 text-yellow-500 fill-yellow-500 animate-bounce" />
                                 )}
-                                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br ${leader.color} ${leader.shadow} shadow-lg flex items-center justify-center transform rotate-3 border-4 border-white dark:border-neutral-800`}>
+                                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl ${getAvatarColor(leader.colorSeed)} ${leader.shadow} shadow-lg flex items-center justify-center transform rotate-3 border-4 border-white dark:border-neutral-800`}>
                                     <span className="text-white font-bold text-xl md:text-2xl">{leader.avatar}</span>
                                 </div>
                                 <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 bg-surface border border-neutral-200 dark:border-neutral-600 px-2 py-0.5 rounded-full text-xs font-bold shadow-sm whitespace-nowrap z-10`}>

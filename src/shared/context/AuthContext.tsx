@@ -59,7 +59,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // --- FALLBACK LOGIC ---
-        console.warn("AuthContext: Using fallback profile.");
+        // CRITICAL FIX: Do not downgrade to 'student' if we have a valid cached profile for this user.
+        // This prevents Faculty from being kicked to Student Home on network/database blips.
+        try {
+            const cached = localStorage.getItem('cached_user_profile');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed && parsed.id === userId) {
+                    console.warn("AuthContext: Fetch failed, using CACHED profile to maintain session stability.");
+                    return parsed;
+                }
+            }
+        } catch (e) {
+            console.error("AuthContext: Cache recovery failed", e);
+        }
+
+        console.warn("AuthContext: Using fallback profile (Student default).");
 
         // HOTFIX: Hardcode 'teacher' role for specific user until DB/RLS is fixed
         let fallbackRole: User['role'] = 'student';

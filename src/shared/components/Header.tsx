@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 </div>
             ) : null}
 
-            <div className="flex-1 flex justify-start items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="flex justify-start items-center gap-2.5 cursor-pointer shrink-0" onClick={() => navigate('/')}>
                 {/* Desktop Logo */}
                 <img
                     src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
@@ -60,12 +60,12 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 <img
                     src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
                     alt="Proble Logo"
-                    className="block md:hidden h-[32px] w-auto rounded-md"
+                    className="block md:hidden h-[24px] w-auto rounded-md"
                 />
             </div>
 
             <div className="flex justify-center px-2 w-full max-w-[480px]">
-                {!location.pathname.startsWith('/student') && (
+                {!location.pathname.startsWith('/student') && !location.pathname.includes('/game') && (
                     <div className="hidden md:flex w-full bg-background rounded-[50px] px-3 py-1.5 items-center border border-neutral-300 dark:border-neutral-600">
                         <input
                             type="text"
@@ -81,65 +81,69 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 )}
             </div>
 
-            <div className="flex-1 flex justify-end items-center gap-2 md:gap-5">
-                {/* Mobile Search Toggle */}
-                {!location.pathname.startsWith('/student') && (
-                    <button
-                        onClick={() => setIsSearchOpen(true)}
-                        className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden text-text"
-                    >
-                        <Search className="h-5 w-5" />
-                    </button>
-                )}
-
-                {user ? (
+            <div className="flex justify-end items-center gap-2 md:gap-5">
+                {!location.pathname.includes('/practice/setup') && (
                     <>
-                        {user?.role === 'student' && (
-                            <div className="flex items-center gap-3">
+                        {/* Mobile Search Toggle */}
+                        {!location.pathname.includes('/game') && (
+                            <button
+                                onClick={() => setIsSearchOpen(true)}
+                                className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden text-text"
+                            >
+                                <Search className="h-5 w-5" />
+                            </button>
+                        )}
+
+                        {user ? (
+                            <>
+                                {user?.role === 'student' && (
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => navigate('/student/game')}
+                                            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-text transition-colors"
+                                            title="Game Mode"
+                                        >
+                                            <Gamepad2 className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                            onClick={() => navigate('/student/practice')}
+                                            className="hidden md:block bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors whitespace-nowrap"
+                                        >
+                                            My Practice
+                                        </button>
+                                    </div>
+                                )}
+                                {!location.pathname.startsWith('/student') && user?.role !== 'student' && (
+                                    <button
+                                        onClick={handlePracticeClick}
+                                        className="bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors"
+                                    >
+                                        Dashboard
+                                    </button>
+                                )}
+                                <UserProfileDropdown />
+                            </>
+                        ) : (
+                            <div className="flex items-center gap-2 md:gap-3">
                                 <button
-                                    onClick={() => navigate('/student/game')}
-                                    className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-text transition-colors"
-                                    title="Game Mode"
+                                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text"
+                                    title="Toggle Theme"
                                 >
-                                    <Gamepad2 className="w-5 h-5" />
+                                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                                 </button>
                                 <button
-                                    onClick={() => navigate('/student/practice')}
-                                    className="bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors whitespace-nowrap"
+                                    onClick={() => navigate('/login')}
+                                    className={`text-xs md:text-sm font-medium cursor-pointer px-4 md:px-6 py-2 rounded-full transition-colors ${theme === 'dark'
+                                        ? 'bg-white text-black hover:bg-neutral-200'
+                                        : 'bg-black text-white hover:bg-neutral-800'
+                                        }`}
                                 >
-                                    My Practice
+                                    Login
                                 </button>
                             </div>
                         )}
-                        {!location.pathname.startsWith('/student') && user?.role !== 'student' && (
-                            <button
-                                onClick={handlePracticeClick}
-                                className="bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors"
-                            >
-                                Dashboard
-                            </button>
-                        )}
-                        <UserProfileDropdown />
                     </>
-                ) : (
-                    <div className="flex items-center gap-2 md:gap-3">
-                        <button
-                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text"
-                            title="Toggle Theme"
-                        >
-                            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                        </button>
-                        <button
-                            onClick={() => navigate('/login')}
-                            className={`text-xs md:text-sm font-medium cursor-pointer px-4 md:px-6 py-2 rounded-full transition-colors ${theme === 'dark'
-                                ? 'bg-white text-black hover:bg-neutral-200'
-                                : 'bg-black text-white hover:bg-neutral-800'
-                                }`}
-                        >
-                            Login
-                        </button>
-                    </div>
                 )}
             </div>
         </header >

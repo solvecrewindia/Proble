@@ -1,10 +1,11 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Search, Star, Users, Clock, Filter, PlayCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+﻿import { useState, useEffect } from 'react';
+import { Search, Star, Clock, PlayCircle } from 'lucide-react';
+import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { supabase } from '../../lib/supabase';
+import { getAvatarColor } from '../../shared/utils/color';
 
 const CATEGORIES = ['All', 'Technology', 'Mathematics', 'Arts', 'Science', 'Business'];
 
@@ -22,6 +23,7 @@ interface GlobalQuiz {
     questions: number;
     duration: number;   // from settings.duration
     thumbnail: string;
+    type?: string; // 'Test' or 'Module'
 }
 
 export default function Dashboard() {
@@ -32,11 +34,11 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchGlobalQuizzes = async () => {
+        const fetchGlobalContent = async () => {
             setLoading(true);
             try {
-                // Fetch quizzes with type 'global' and join with profiles table
-                const { data, error } = await supabase
+                // 1. Fetch Quizzes (Global)
+                const { data: quizzes, error: quizError } = await supabase
                     .from('quizzes')
                     .select(`
                         *,
@@ -47,17 +49,32 @@ export default function Dashboard() {
                         )
                     `)
                     .eq('type', 'global')
-                    .eq('status', 'active'); // Assuming we only show active ones
+                    .eq('status', 'active');
 
-                if (error) throw error;
+                if (quizError) throw quizError;
 
-                if (data) {
-                    const mappedQuizzes: GlobalQuiz[] = (data as any[]).map(q => {
+                // 2. Fetch Modules (Global Courses) - Matching Student App "Global" tab logic
+                const { data: modules, error: moduleError } = await supabase
+                    .from('modules')
+                    .select(`
+                        *,
+                        profiles:created_by (
+                            username,
+                            email,
+                            role
+                        )
+                    `)
+                    .eq('category', 'Global'); // Filter for Global modules
+
+                if (moduleError) throw moduleError;
+
+                let mergedContent: GlobalQuiz[] = [];
+
+                // Map Quizzes
+                if (quizzes) {
+                    const mappedQuizzes = (quizzes as any[]).map(q => {
                         const settings = q.settings || {};
-                        // Fallback logic for category if not present
                         const category = settings.category || 'Technology';
-
-                        // Map random color for thumbnail if no image_url
                         const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-red-500', 'bg-indigo-500'];
                         const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
@@ -67,26 +84,53 @@ export default function Dashboard() {
                             instructor: {
                                 name: q.profiles?.username || 'Unknown Faculty',
                                 avatar: (q.profiles?.username?.[0] || 'U').toUpperCase(),
-                                department: 'Faculty' // profiles doesn't have department yet, so placeholder
+                                department: 'Faculty'
                             },
-                            rating: 4.5, // Mock rating as specified in plan
-                            participants: 0, // Mock participants
+                            rating: 4.5,
+                            participants: 0,
                             category: category,
-                            questions: 10, // Placeholder, would need to count questions relation
+                            questions: 10,
                             duration: settings.duration || 60,
-                            thumbnail: q.image_url ? `url(${q.image_url})` : randomColor // Handle real image logic if needed, simplify for now
+                            thumbnail: q.image_url ? `url(${q.image_url})` : randomColor,
+                            type: 'Test'
                         };
                     });
-                    setGlobalQuizzes(mappedQuizzes);
+                    mergedContent = [...mergedContent, ...mappedQuizzes];
                 }
+
+                // Map Modules
+                if (modules) {
+                    const mappedModules = (modules as any[]).map(m => {
+                        return {
+                            id: m.id,
+                            title: m.title,
+                            instructor: {
+                                name: m.profiles?.username || 'Unknown Faculty',
+                                avatar: (m.profiles?.username?.[0] || 'U').toUpperCase(),
+                                department: 'Faculty'
+                            },
+                            rating: 4.8,
+                            participants: 0,
+                            category: m.category || 'Global',
+                            questions: 0,
+                            duration: 0,
+                            thumbnail: m.image_url ? `url(${m.image_url})` : 'bg-pink-500',
+                            type: 'Module'
+                        };
+                    });
+                    mergedContent = [...mergedContent, ...mappedModules];
+                }
+
+                setGlobalQuizzes(mergedContent);
+
             } catch (err) {
-                console.error('Error fetching global quizzes:', err);
+                console.error('Error fetching global content:', err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchGlobalQuizzes();
+        fetchGlobalContent();
     }, []);
 
     const filteredQuizzes = globalQuizzes.filter(quiz => {
@@ -145,9 +189,16 @@ export default function Dashboard() {
                             {/* Thumbnail */}
                             <div className={`h-40 w-full ${quiz.thumbnail.startsWith('url') ? 'bg-cover bg-center' : quiz.thumbnail} relative`} style={quiz.thumbnail.startsWith('url') ? { backgroundImage: quiz.thumbnail } : {}}>
                                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
-                                <Badge className="absolute top-3 right-3 bg-surface/90 text-text backdrop-blur-sm">
-                                    {quiz.category}
-                                </Badge>
+                                <div className="absolute top-3 right-3 flex gap-2">
+                                    <Badge className="bg-surface/90 text-text backdrop-blur-sm">
+                                        {quiz.category}
+                                    </Badge>
+                                    {(quiz.type === 'Module' || quiz.type === 'Test') && (
+                                        <Badge className={`${quiz.type === 'Module' ? 'bg-purple-500' : 'bg-primary'} text-white border-none shadow-sm`}>
+                                            {quiz.type}
+                                        </Badge>
+                                    )}
+                                </div>
                             </div>
 
                             <CardContent className="p-4 space-y-4">
@@ -156,7 +207,7 @@ export default function Dashboard() {
                                         {quiz.title}
                                     </h3>
                                     <div className="flex items-center gap-2 mt-2">
-                                        <div className="h-6 w-6 rounded-full bg-background flex items-center justify-center text-xs font-bold text-muted border border-neutral-300 dark:border-neutral-600">
+                                        <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white border border-transparent shadow-sm ${getAvatarColor(quiz.instructor.name)}`}>
                                             {quiz.instructor.avatar}
                                         </div>
                                         <span className="text-sm text-muted truncate">{quiz.instructor.name}</span>
@@ -169,10 +220,17 @@ export default function Dashboard() {
                                         <span className="font-medium text-text">{quiz.rating}</span>
                                         <span className="text-xs">({quiz.participants})</span>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        <span>{quiz.duration}m</span>
-                                    </div>
+                                    {quiz.type === 'Test' && (
+                                        <div className="flex items-center gap-1">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{quiz.duration}m</span>
+                                        </div>
+                                    )}
+                                    {quiz.type === 'Module' && (
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-xs uppercase tracking-wider font-bold text-purple-500">Course</span>
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -195,8 +253,13 @@ export default function Dashboard() {
 
                         <div className="p-8 space-y-6">
                             <div>
-                                <Badge variant="secondary" className="mb-2">{selectedQuiz.category}</Badge>
-                                <h2 className="text-3xl font-bold text-text">{selectedQuiz.title}</h2>
+                                <Badge variant="secondary" className="mb-2 mr-2">{selectedQuiz.category}</Badge>
+                                {selectedQuiz.type && (
+                                    <Badge className={`${selectedQuiz.type === 'Module' ? 'bg-purple-500' : 'bg-primary'} text-white border-none`}>
+                                        {selectedQuiz.type}
+                                    </Badge>
+                                )}
+                                <h2 className="text-3xl font-bold text-text mt-2">{selectedQuiz.title}</h2>
                                 <div className="flex items-center gap-2 mt-3 text-muted">
                                     <span className="font-medium">{selectedQuiz.instructor.name}</span>
                                     <span>â€¢</span>
@@ -205,14 +268,29 @@ export default function Dashboard() {
                             </div>
 
                             <div className="grid grid-cols-3 gap-4 py-4 border-y border-neutral-300 dark:border-neutral-600">
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-text">{selectedQuiz.questions}</div>
-                                    <div className="text-xs text-muted uppercase tracking-wide">Questions</div>
-                                </div>
-                                <div className="text-center border-l border-neutral-300 dark:border-neutral-600">
-                                    <div className="text-2xl font-bold text-text">{selectedQuiz.duration}</div>
-                                    <div className="text-xs text-muted uppercase tracking-wide">Minutes</div>
-                                </div>
+                                {selectedQuiz.type === 'Test' ? (
+                                    <>
+                                        <div className="text-center">
+                                            <div className="text-2xl font-bold text-text">{selectedQuiz.questions}</div>
+                                            <div className="text-xs text-muted uppercase tracking-wide">Questions</div>
+                                        </div>
+                                        <div className="text-center border-l border-neutral-300 dark:border-neutral-600">
+                                            <div className="text-2xl font-bold text-text">{selectedQuiz.duration}</div>
+                                            <div className="text-xs text-muted uppercase tracking-wide">Minutes</div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-center">
+                                            <div className="text-2xl font-bold text-text">Course</div>
+                                            <div className="text-xs text-muted uppercase tracking-wide">Type</div>
+                                        </div>
+                                        <div className="text-center border-l border-neutral-300 dark:border-neutral-600">
+                                            <div className="text-2xl font-bold text-text">Self-Paced</div>
+                                            <div className="text-xs text-muted uppercase tracking-wide">Duration</div>
+                                        </div>
+                                    </>
+                                )}
                                 <div className="text-center border-l border-neutral-300 dark:border-neutral-600">
                                     <div className="text-2xl font-bold text-text">{selectedQuiz.rating}</div>
                                     <div className="text-xs text-muted uppercase tracking-wide">Rating</div>
@@ -220,30 +298,17 @@ export default function Dashboard() {
                             </div>
 
                             <div className="space-y-4">
-                                <h3 className="font-semibold text-lg text-text">Instructions & Rules</h3>
-                                <ul className="space-y-2 text-sm text-muted">
-                                    <li className="flex items-start gap-2">
-                                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-neutral-400 shrink-0" />
-                                        You cannot exit full-screen mode once the exam starts.
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-neutral-400 shrink-0" />
-                                        Tab switching is monitored and will be flagged as malpractice.
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-neutral-400 shrink-0" />
-                                        Ensure you have a stable internet connection.
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-neutral-400 shrink-0" />
-                                        Malpractice will lead to immediate disqualification.
-                                    </li>
-                                </ul>
+                                <h3 className="font-semibold text-lg text-text">Description</h3>
+                                <p className="text-muted leading-relaxed">
+                                    {selectedQuiz.type === 'Test'
+                                        ? "This assessment covers key concepts and evaluates your understanding of the subject matter. Ensure you are prepared before starting."
+                                        : "This module provides a comprehensive learning path including lessons, resources, and assessments to master the topic."}
+                                </p>
                             </div>
 
                             <div className="pt-4 flex gap-3">
-                                <Button className="flex-1 h-12 text-lg gap-2" onClick={() => alert('Starting quiz...')}>
-                                    <PlayCircle className="h-5 w-5" /> Start Assessment
+                                <Button className="flex-1 h-12 text-lg gap-2" onClick={() => alert(`Starting ${selectedQuiz.type || 'Assessment'}...`)}>
+                                    <PlayCircle className="h-5 w-5" /> Start {selectedQuiz.type || 'Assessment'}
                                 </Button>
                                 <Button variant="outline" className="h-12 px-6" onClick={() => setSelectedQuiz(null)}>
                                     Cancel

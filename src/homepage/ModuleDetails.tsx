@@ -337,7 +337,7 @@ const ModuleDetails = () => {
 
                                         <div className="relative z-10 flex flex-col h-full">
                                             <div className="flex justify-between items-start mb-6">
-                                                <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                                                <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm">
                                                     <BookOpen className="w-6 h-6" />
                                                 </div>
                                                 {quiz.settings?.duration && (

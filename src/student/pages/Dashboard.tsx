@@ -162,8 +162,8 @@ const StudentDashboard = () => {
                             <AreaChart data={activityData}>
                                 <defs>
                                     <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#0097b2" stopOpacity={0.3} />
+                                        <stop offset="100%" stopColor="#0097b2" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.2} />
@@ -187,7 +187,7 @@ const StudentDashboard = () => {
                                 <Area
                                     type="monotone"
                                     dataKey="score"
-                                    stroke="#6366f1"
+                                    stroke="#0097b2"
                                     strokeWidth={3}
                                     fillOpacity={1}
                                     fill="url(#colorScore)"
@@ -203,7 +203,7 @@ const StudentDashboard = () => {
                     <div className="space-y-4 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
                         {recentActivity.length > 0 ? (
                             recentActivity.map((activity) => (
-                                <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-neutral-300 dark:border-neutral-600/50 hover:bg-background transition-colors">
+                                <div key={activity.id} className="flex items-center justify-between p-4 rounded-xl bg-neutral-900/50 border border-neutral-800 hover:bg-neutral-900 transition-colors">
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-full ${activity.percentage >= 80 ? 'bg-green-500/10 text-green-500' : activity.percentage >= 50 ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'}`}>
                                             <ActivityIcon className="w-4 h-4" />

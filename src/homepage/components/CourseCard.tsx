@@ -31,16 +31,16 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, showDate }) => {
                 <div className="text-sm font-bold mb-2 line-clamp-2 h-10 text-text">{course.title}</div>
                 <div className="flex justify-between text-xs text-muted items-center">
                     <div className="flex items-center gap-2">
-                        {course.author === 'Admin' ? (
+                        {course.author === 'Proble' || course.author === 'Admin' ? (
                             <span>Proble</span>
                         ) : (
                             <>
                                 <img
-                                    src={`https://ui-avatars.com/api/?name=${course.author}&background=random`}
+                                    src={course.author_avatar_url || `https://ui-avatars.com/api/?name=${course.author}&background=random`}
                                     alt={course.author}
-                                    className="w-[26px] h-[26px] rounded-full"
+                                    className="w-[26px] h-[26px] rounded-full object-cover"
                                 />
-                                <span>{course.author}</span>
+                                <span className="truncate max-w-[150px]">{course.author}</span>
                             </>
                         )}
                     </div>
