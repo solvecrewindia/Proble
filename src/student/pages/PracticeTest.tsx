@@ -4,6 +4,8 @@ import { cn } from '../../lib/utils';
 import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn, BookOpen, BrainCircuit, Target, ListChecks } from 'lucide-react';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { searchVideos, VideoResult } from '../services/videoSearchService';
+import { Youtube, PlayCircle } from 'lucide-react';
 
 const PracticeTest = () => {
     const navigate = useNavigate();
@@ -22,6 +24,31 @@ const PracticeTest = () => {
     const [isGeneratingAi, setIsGeneratingAi] = useState(false);
     const [aiError, setAiError] = useState<string | null>(null);
 
+    // Video Search State
+    const [relatedVideos, setRelatedVideos] = useState<VideoResult[]>([]);
+    const [loadingVideos, setLoadingVideos] = useState(false);
+    const [videoError, setVideoError] = useState<string | null>(null);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setRelatedVideos([]);
+    }, [currentQIndex]);
+
+    // Fetch videos when AI explanation provides a topic
+    useEffect(() => {
+        if (aiExplanation && (aiExplanation.search_query || aiExplanation.title) && relatedVideos.length === 0) {
+            setLoadingVideos(true);
+            const query = aiExplanation.search_query || aiExplanation.title;
+            searchVideos(query)
+                .then(({ videos, error }) => {
+                    setRelatedVideos(videos);
+                    setVideoError(error);
+                })
+                .catch(err => console.error(err))
+                .finally(() => setLoadingVideos(false));
+        }
+    }, [aiExplanation, relatedVideos.length]);
+
     useEffect(() => {
         const fetchQuestions = async () => {
             if (!id) return;
@@ -35,6 +62,7 @@ const PracticeTest = () => {
 
             if (error) {
                 console.error('Error fetching practice questions:', error);
+                setFetchError(error.message);
                 setLoading(false);
                 return;
             }
@@ -125,6 +153,7 @@ Return ONLY valid JSON. No extra text before or after.
 
 {
   "title": "",
+  "search_query": "",
   "answer": "Option [Letter]: [Exact option text]",
   "justification": "",
   "summary": "",
@@ -144,6 +173,7 @@ STRICT RULES:
 
 FIELD RULES:
 - title: Short topic name (5–7 words)
+- search_query: A precise specific phrase to search on YouTube for a tutorial (e.g., 'Integration by Parts Calculus', 'Binary Search Tree logic'). Avoid generic terms.
 - answer: Clearly state the correct option
 - justification: Why this option is correct (min 50 words)
 - summary: What this concept is about (min 150 words)
@@ -278,7 +308,14 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-background text-text p-4">
                 <h2 className="text-2xl font-bold mb-4">No Questions Found</h2>
-                <p className="text-muted mb-6">Could not load questions for this practice session.</p>
+                {fetchError ? (
+                    <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-4 rounded-lg mb-6 max-w-md text-center border border-red-200 dark:border-red-800">
+                        <p className="font-bold text-sm mb-1">Error Loading Questions</p>
+                        <p className="text-xs break-all opacity-90">{fetchError}</p>
+                    </div>
+                ) : (
+                    <p className="text-muted mb-6">Could not load questions for this practice session.</p>
+                )}
                 <button
                     onClick={() => navigate(`/student/practice/${id}`)}
                     className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
@@ -463,9 +500,98 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                             {currentQIndex !== questions.length - 1 && <ChevronRight className="w-4 h-4" />}
                         </button>
                     </div>
+
+                    {/* Related Videos Section (Moved to Left Column) */}
+                    {isAnswered && (aiExplanation || selectedOpt !== q.correct) && (
+                        <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                                <Youtube className="w-5 h-5 text-red-600" />
+                                <h3 className="font-bold text-sm text-text">Recommended Study Videos</h3>
+                            </div>
+
+                            {videoError && (
+                                <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-400 flex flex-col gap-2">
+                                    <div className="flex gap-2 items-start">
+                                        <span className="font-bold shrink-0">Note:</span>
+                                        <span>Video search issue: {videoError}. Showing examples.</span>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setVideoError(null);
+                                            setLoadingVideos(true);
+                                            const query = aiExplanation?.search_query || aiExplanation?.title || "";
+                                            if (query) {
+                                                searchVideos(query)
+                                                    .then(({ videos, error }) => {
+                                                        setRelatedVideos(videos);
+                                                        setVideoError(error);
+                                                    })
+                                                    .catch(err => console.error(err))
+                                                    .finally(() => setLoadingVideos(false));
+                                            }
+                                        }}
+                                        disabled={loadingVideos}
+                                        className="self-start px-3 py-1 bg-amber-100 dark:bg-amber-800/30 hover:bg-amber-200 dark:hover:bg-amber-800/50 rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
+                                    >
+                                        {loadingVideos ? 'Retrying...' : 'Retry Connection'}
+                                    </button>
+                                </div>
+                            )}
+
+                            {loadingVideos ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className="h-20 bg-neutral-100 dark:bg-white/5 rounded-lg animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : relatedVideos.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {relatedVideos.map((video) => (
+                                        <a
+                                            key={video.id}
+                                            href={`https://www.youtube.com/watch?v=${video.id}${video.relevantTimestampSeconds ? `&t=${video.relevantTimestampSeconds}s` : ''}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group flex gap-3 p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
+                                        >
+                                            <div className="relative w-28 h-20 bg-black rounded-md overflow-hidden flex-shrink-0">
+                                                <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <PlayCircle className="w-8 h-8 text-white opacity-70 group-hover:opacity-100 dark:drop-shadow-lg" />
+                                                </div>
+                                                {/* Duration Badge */}
+                                                <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] px-1 py-0.5 rounded font-medium">
+                                                    {video.duration || '0:00'}
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                <h4 className="text-sm font-bold text-text line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+                                                    {video.title}
+                                                </h4>
+                                                <p className="text-[11px] text-muted mt-1 truncate">{video.channelTitle}</p>
+
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    {video.viewCount && <span className="text-[10px] text-muted truncate">{video.viewCount}</span>}
+                                                    {video.relevantTimestamp && (
+                                                        <span className="text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 whitespace-nowrap" title={`Starts at ${video.relevantTimestamp}`}>
+                                                            {video.relevantTimestamp} • {video.relevantSegment || 'Topic'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6 text-muted text-xs">
+                                    No videos found for this topic.
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* --- RIGHT: AI EXPLANATION --- */}
+                {/* --- RIGHT: AI EXPLANATION & VIDEOS --- */}
                 <div className="lg:col-span-4 space-y-4">
                     <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 shadow-sm sticky top-20 overflow-hidden relative min-h-[300px] flex flex-col">
                         {/* Ambient Glow */}
@@ -577,18 +703,25 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                             )}
                         </div>
                     </div>
+
+
                 </div>
             </main>
 
             {/* Image Zoom Overlay */}
-            {zoomedImage && (
-                <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-zoom-out" onClick={() => setZoomedImage(null)}>
-                    <X className="absolute top-6 right-6 w-10 h-10 text-white/70 hover:text-white transition-colors" />
-                    <img src={zoomedImage} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
-                </div>
-            )}
+            {
+                zoomedImage && (
+                    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-zoom-out" onClick={() => setZoomedImage(null)}>
+                        <X className="absolute top-6 right-6 w-10 h-10 text-white/70 hover:text-white transition-colors" />
+                        <img src={zoomedImage} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+                    </div>
+                )
+            }
         </div>
     );
 };
 
 export default PracticeTest;
+
+
+
