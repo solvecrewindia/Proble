@@ -124,8 +124,12 @@ export default function QuizCreate() {
                 title: data.title,
                 description: data.description,
                 type: data.type,
-                code: isMaster ? (data.code || generateCode()) : null,
-                settings: data.settings,
+                code: isMaster ? (data.accessCode || generateCode()) : null,
+                settings: {
+                    ...data.settings,
+                    duration: data.durationMinutes, // Sync duration to settings
+                },
+                starts_at: data.scheduledAt, // Save scheduled time
                 created_by: userId
             };
 
@@ -163,7 +167,7 @@ export default function QuizCreate() {
         onSuccess: (data) => {
             setLastSaved(new Date());
             setIsSaving(false);
-            setQuizData(prev => ({ ...prev, id: data.id, code: data.code }));
+            setQuizData(prev => ({ ...prev, id: data.id, accessCode: data.code }));
         },
         onError: (error) => {
             console.error("Save failed:", error);

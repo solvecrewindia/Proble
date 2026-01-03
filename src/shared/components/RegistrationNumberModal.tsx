@@ -13,7 +13,7 @@ const RegistrationNumberModal = () => {
     // 1. User must be logged in
     // 2. Email must end with @srmist.edu.in
     // 3. registration_number must be missing or empty
-    if (!user || !user.email.endsWith('@srmist.edu.in') || user.registration_number) {
+    if (!user || user.role !== 'student' || !user.email.endsWith('@srmist.edu.in') || user.registration_number) {
         return null;
     }
 

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Key, Shield, Link, Copy, Check } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -6,6 +6,12 @@ import { Card } from '../ui/Card';
 
 export function StepSchedule({ data, update }: any) {
     const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        if (!data.accessCode) {
+            generateCode();
+        }
+    }, []);
 
     const generateCode = () => {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -35,7 +41,14 @@ export function StepSchedule({ data, update }: any) {
                         <Input
                             type="datetime-local"
                             value={data.scheduledAt ? data.scheduledAt.slice(0, 16) : ''}
-                            onChange={(e) => update({ scheduledAt: new Date(e.target.value).toISOString() })}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (!val) {
+                                    update({ scheduledAt: null });
+                                } else {
+                                    update({ scheduledAt: new Date(val).toISOString() });
+                                }
+                            }}
                         />
                     </div>
 
@@ -57,13 +70,9 @@ export function StepSchedule({ data, update }: any) {
                         <Key className="mr-2 h-4 w-4" /> Access Code
                     </label>
                     <div className="flex gap-3">
-                        <Input
-                            placeholder="Generate or enter code"
-                            value={data.accessCode || ''}
-                            onChange={(e) => update({ accessCode: e.target.value.toUpperCase() })}
-                            className="font-mono tracking-widest uppercase"
-                        />
-                        <Button variant="outline" onClick={generateCode}>Generate</Button>
+                        <div className="w-full h-10 px-3 flex items-center bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-md font-mono tracking-widest uppercase text-text text-lg font-bold">
+                            {data.accessCode || 'GENERATING...'}
+                        </div>
                     </div>
                     <p className="text-xs text-muted">Students will need this code to start the quiz.</p>
                 </div>

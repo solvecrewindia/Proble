@@ -443,15 +443,23 @@ const MCQTest = () => {
 
                         {/* Optional Image */}
                         {activeQuestion.imageUrl && activeQuestion.imageUrl.length > 5 && (
-                            <div className="relative group w-fit rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-black/20">
+                            <div className="relative group w-fit rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-black/20 select-none">
+                                {/* pointer-events-none prevents Right Click and Long Press (Google Lens) */}
                                 <img
                                     src={activeQuestion.imageUrl}
                                     alt="Question Asset"
-                                    className="max-h-[300px] w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                                    className="max-h-[300px] w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02] pointer-events-none"
                                     onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                    draggable="false"
                                 />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-zoom-in" onClick={() => setZoomedImage(activeQuestion.imageUrl)}>
-                                    <ZoomIn className="text-white w-6 h-6" />
+                                {/* Overlay to still allow clicking for Zoom, but blocks direct image interaction */}
+                                <div
+                                    className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center cursor-zoom-in"
+                                    onClick={() => setZoomedImage(activeQuestion.imageUrl)}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                >
+                                    <ZoomIn className="text-white w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" />
                                 </div>
                             </div>
                         )}
