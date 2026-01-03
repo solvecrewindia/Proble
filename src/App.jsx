@@ -12,6 +12,7 @@ const HomepageApp = lazy(() => import('./homepage/App'));
 const QuizDetails = lazy(() => import('./student/pages/QuizDetails'));
 const ModuleDetails = lazy(() => import('./homepage/ModuleDetails'));
 const AdminApp = lazy(() => import('./admin/App'));
+const AboutUs = lazy(() => import('./homepage/AboutUs'));
 const StudentApp = lazy(() => import('./student/App'));
 const ForgotPassword = lazy(() => import('./login/pages/ForgotPassword'));
 const SharedQuizHandler = lazy(() => import('./shared/components/SharedQuizHandler'));
@@ -93,6 +94,7 @@ function AppContent() {
                 <Routes>
                     {/* Public Routes / Root Redirect */}
                     <Route path="/" element={<RootRedirect searchQuery={searchQuery} />} />
+                    <Route path="/about" element={<AboutUs />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/course/:id" element={<QuizDetails />} />

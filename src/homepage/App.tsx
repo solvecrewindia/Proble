@@ -223,8 +223,11 @@ function App({ searchQuery = '' }: AppProps) {
         )}
       </main>
 
-      <footer className="text-center p-5 text-muted mt-10">
-        © 2025 Proble
+      <footer className="p-5 text-muted mt-10 border-t border-gray-100 dark:border-white/5 flex flex-row items-center justify-center gap-6">
+        <p>© 2026 Proble</p>
+        <button onClick={() => navigate('/about')} className="text-sm hover:text-primary transition-colors">
+          About Us
+        </button>
       </footer>
     </div>
   );

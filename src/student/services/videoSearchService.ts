@@ -190,7 +190,7 @@ export const searchVideos = async (query: string): Promise<{ videos: VideoResult
             };
         });
 
-        return { videos, error: null };
+        return { videos: videos.slice(0, 4), error: null };
 
     } catch (error: any) {
         console.error("Video search failed, falling back to mock data:", error);
