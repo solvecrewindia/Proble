@@ -100,7 +100,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={() => navigate('/student/game')}
-                                            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-text transition-colors"
+                                            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-text transition-colors hover:animate-wiggle"
                                             title="Game Mode"
                                         >
                                             <Gamepad2 className="w-5 h-5" />

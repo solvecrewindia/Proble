@@ -51,6 +51,20 @@ export default {
                 'glass': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                 'neon': '0 0 5px theme("colors.primary.DEFAULT"), 0 0 20px theme("colors.primary.DEFAULT")',
             },
+            keyframes: {
+                fadeInScale: {
+                    '0%': { opacity: '0', transform: 'scale(0.95)' },
+                    '100%': { opacity: '1', transform: 'scale(1)' },
+                },
+                wiggle: {
+                    '0%, 100%': { transform: 'rotate(-3deg)' },
+                    '50%': { transform: 'rotate(3deg)' },
+                }
+            },
+            animation: {
+                fadeInScale: 'fadeInScale 0.2s ease-out forwards',
+                wiggle: 'wiggle 0.3s ease-in-out infinite',
+            },
         },
     },
     plugins: [],

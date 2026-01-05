@@ -9,6 +9,7 @@ import { getAvatarColor } from '../utils/color';
 
 const UserProfileDropdown: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isPracticeOpen, setIsPracticeOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const { theme, setTheme } = useTheme();
     const { user, logout } = useAuth();
@@ -102,16 +103,47 @@ const UserProfileDropdown: React.FC = () => {
                     {user.role === 'student' && (
                         <>
                             <div className="px-2 py-1 block md:hidden">
-                                <button
-                                    onClick={() => {
-                                        navigate('/student/practice');
-                                        setIsOpen(false);
-                                    }}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
-                                >
-                                    <List className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
-                                    <span className="text-sm font-medium">My Practice</span>
-                                </button>
+                                <div className="rounded-lg overflow-hidden transition-all duration-300 ease-in-out">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsPracticeOpen(!isPracticeOpen);
+                                        }}
+                                        className="w-full flex items-center justify-between px-3 py-2 hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <List className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                                            <span className="text-sm font-medium">My Practice</span>
+                                        </div>
+                                        <ChevronDown className={`w-4 h-4 text-muted transition-transform duration-300 ${isPracticeOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    <div
+                                        className={`transition-[max-height,opacity] duration-300 ease-in-out overflow-hidden ${isPracticeOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                                            }`}
+                                    >
+                                        <button
+                                            onClick={() => {
+                                                navigate('/student/practice');
+                                                setIsOpen(false);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-3 pl-10 py-2 hover:bg-background transition-all duration-200 hover:translate-x-1 text-text/80 hover:text-primary text-sm"
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
+                                            Practice Tests
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                navigate('/student/practice');
+                                                setIsOpen(false);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-3 pl-10 py-2 hover:bg-background transition-all duration-200 hover:translate-x-1 text-text/80 hover:text-primary text-sm"
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
+                                            Mock Tests
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="px-2 py-1">
@@ -120,7 +152,7 @@ const UserProfileDropdown: React.FC = () => {
                                         navigate('/student/dashboard');
                                         setIsOpen(false);
                                     }}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
                                 >
                                     <LayoutDashboard className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
                                     <span className="text-sm font-medium">Analysis</span>
@@ -133,7 +165,7 @@ const UserProfileDropdown: React.FC = () => {
                                         navigate('/student/join');
                                         setIsOpen(false);
                                     }}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
                                 >
                                     <Link2 className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
                                     <span className="text-sm font-medium">Join Master Test</span>
@@ -146,7 +178,7 @@ const UserProfileDropdown: React.FC = () => {
                                         setIsReportModalOpen(true);
                                         setIsOpen(false);
                                     }}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
                                 >
                                     <MessageCircle className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
                                     <span className="text-sm font-medium">Problem Report</span>
@@ -159,7 +191,7 @@ const UserProfileDropdown: React.FC = () => {
                     <div className="px-2 py-1">
                         <button
                             onClick={toggleTheme}
-                            className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-background transition-colors group"
+                            className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group"
                         >
                             <div className="flex items-center gap-3">
                                 {isDarkMode ? (
@@ -200,7 +232,7 @@ const UserProfileDropdown: React.FC = () => {
                                     navigate(`/${role}/dashboard`);
                                     setIsOpen(false);
                                 }}
-                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
                             >
                                 <LayoutDashboard className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
                                 <span className="text-sm font-medium">Dashboard</span>
@@ -217,7 +249,7 @@ const UserProfileDropdown: React.FC = () => {
                                 navigate(`/${role}/profile-settings`);
                                 setIsOpen(false);
                             }}
-                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
                         >
                             <Settings className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
                             <span className="text-sm font-medium">Profile Settings</span>
@@ -232,7 +264,7 @@ const UserProfileDropdown: React.FC = () => {
                                     navigate('/');
                                     setIsOpen(false);
                                 }}
-                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-colors group text-text"
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
                             >
                                 <Home className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
                                 <span className="text-sm font-medium">Homepage</span>
@@ -246,7 +278,7 @@ const UserProfileDropdown: React.FC = () => {
                     <div className="p-2 border-t border-neutral-300 dark:border-neutral-600">
                         <button
                             onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 hover:translate-x-1"
                         >
                             <LogOut className="w-4 h-4" />
                             <span className="text-sm font-medium">Logout</span>
