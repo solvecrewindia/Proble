@@ -140,7 +140,12 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                 setImportStatus(`Processing ${jsonData.length} questions...`);
 
                 // Fuzzy Header Helper
-                const headers = Object.keys(jsonData[0] as object);
+                // Collect all keys from all rows to ensure we don't miss columns if the first row is sparse
+                const headersSet = new Set<string>();
+                (jsonData as any[]).forEach(row => {
+                    Object.keys(row).forEach(k => headersSet.add(k));
+                });
+                const headers = Array.from(headersSet);
                 const findHeadeKey = (patterns: RegExp[]) => {
                     return headers.find(h => patterns.some(p => p.test(h))) || '';
                 };
@@ -183,7 +188,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
 
                     // Map Correct Answer
                     let correct: number | number[] | { min: number; max: number } = -1;
-                    let type: 'mcq' | 'msq' | 'range' = 'mcq';
+                    let type: 'mcq' | 'msq' | 'range' | 'true_false' = 'mcq';
 
                     if (correctChar) {
                         const rawStr = String(correctChar).trim();
@@ -213,13 +218,27 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
 
                             correct = indices; // Array of indices
                         } else {
-                            // MCQ
-                            type = 'mcq';
-                            if (['A', '1'].includes(upperStr)) correct = 0;
-                            else if (['B', '2'].includes(upperStr)) correct = 1;
-                            else if (['C', '3'].includes(upperStr)) correct = 2;
-                            else if (['D', '4'].includes(upperStr)) correct = 3;
-                            else correct = 0; // Default fallback
+                            // Check for True/False
+                            const isTrueFalseOptions =
+                                (String(opt1).toUpperCase() === 'TRUE' && String(opt2).toUpperCase() === 'FALSE') ||
+                                (String(opt1).toUpperCase() === 'YES' && String(opt2).toUpperCase() === 'NO');
+
+                            const isTrueFalseAnswer = ['TRUE', 'FALSE', 'T', 'F'].includes(upperStr);
+
+                            if (isTrueFalseOptions || isTrueFalseAnswer) {
+                                type = 'true_false';
+                                if (['TRUE', 'T', 'A', '1', 'YES'].includes(upperStr)) correct = 0;
+                                else if (['FALSE', 'F', 'B', '2', 'NO', '0'].includes(upperStr)) correct = 1;
+                                else correct = 0; // Default
+                            } else {
+                                // MCQ
+                                type = 'mcq';
+                                if (['A', '1'].includes(upperStr)) correct = 0;
+                                else if (['B', '2'].includes(upperStr)) correct = 1;
+                                else if (['C', '3'].includes(upperStr)) correct = 2;
+                                else if (['D', '4'].includes(upperStr)) correct = 3;
+                                else correct = 0; // Default fallback
+                            }
                         }
                     }
 
@@ -283,7 +302,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                         quizId: quizId || '',
                         type: type,
                         stem: questionText || '',
-                        options: [opt1, opt2, opt3, opt4].map(o => String(o || '')),
+                        options: type === 'true_false' ? ['True', 'False'] : [opt1, opt2, opt3, opt4].map(o => String(o || '')),
 
                         correct: correct,
                         weight: 1,
@@ -378,8 +397,8 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
             type: activeType,
             stem: '',
             weight: 1,
-            options: activeType === 'mcq' ? ['', '', '', ''] : undefined,
-            correct: activeType === 'mcq' ? 0 : activeType === 'msq' ? [] : '',
+            options: activeType === 'mcq' ? ['', '', '', ''] : activeType === 'true_false' ? ['True', 'False'] : undefined,
+            correct: activeType === 'mcq' || activeType === 'true_false' ? 0 : activeType === 'msq' ? [] : '',
         };
         setQuestions([...questions, newQuestion]);
     };
@@ -450,6 +469,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                 onChange={(e) => setActiveType(e.target.value as any)}
                             >
                                 <option value="mcq">Multiple Choice</option>
+                                <option value="true_false">True / False</option>
                                 <option value="text">Descriptive Text</option>
                                 <option value="numeric">Numeric Answer</option>
                                 <option value="range">Range Answer</option>
@@ -639,12 +659,18 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                         // Reset correct answer when switching types
                                                         updateQuestion(index, {
                                                             type: newType,
-                                                            correct: newType === 'msq' ? [] : 0
+                                                            correct: newType === 'msq' ? [] : 0,
+                                                            options: newType === 'mcq'
+                                                                ? ['', '', '', '']
+                                                                : newType === 'true_false'
+                                                                    ? ['True', 'False']
+                                                                    : undefined
                                                         });
                                                     }}
                                                 >
                                                     <option value="mcq">Single Correct (MCQ)</option>
                                                     <option value="msq">Multi Correct (MSQ)</option>
+                                                    <option value="true_false">True / False</option>
                                                     <option value="range">Range Answer</option>
                                                 </select>
                                             </div>
@@ -658,7 +684,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                             </div>
                                         </div>
 
-                                        {(q.type === 'mcq' || q.type === 'msq') && q.options && (
+                                        {(q.type === 'mcq' || q.type === 'msq' || q.type === 'true_false') && q.options && (
                                             <div className="space-y-2 pl-4 border-l-2 border-neutral-300 dark:border-neutral-600">
                                                 {q.options.map((opt, optIndex) => (
                                                     <div key={optIndex} className="flex flex-col gap-1">
@@ -687,32 +713,40 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                                 className="h-4 w-4 text-primary focus:ring-primary accent-primary"
                                                             />
                                                             <div className="flex-1 flex gap-2">
-                                                                <Input
-                                                                    placeholder={`Option ${optIndex + 1}`}
-                                                                    value={typeof opt === 'object' ? (opt as any).text : opt}
-                                                                    onChange={(e) => {
-                                                                        const newOptions = [...q.options!];
-                                                                        newOptions[optIndex] = e.target.value;
-                                                                        updateQuestion(index, { options: newOptions });
-                                                                    }}
-                                                                    className="h-8 text-sm"
-                                                                />
-                                                                <label className="flex items-center justify-center p-1.5 rounded-lg border border-neutral-300 dark:border-neutral-600 hover:bg-surface cursor-pointer transition-colors relative" title="Add Option Image">
-                                                                    {uploading[`o-${index}-${optIndex}`] ? (
-                                                                        <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                                                                    ) : (
-                                                                        <>
-                                                                            <ImageIcon className="h-4 w-4 text-muted" />
-                                                                            <input
-                                                                                type="file"
-                                                                                className="hidden"
-                                                                                accept="image/*"
-                                                                                disabled={uploading[`o-${index}-${optIndex}`]}
-                                                                                onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'option', index, optIndex)}
-                                                                            />
-                                                                        </>
-                                                                    )}
-                                                                </label>
+                                                                {q.type === 'true_false' ? (
+                                                                    <div className="flex items-center h-8 text-sm font-medium px-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                                                                        {opt}
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <Input
+                                                                            placeholder={`Option ${optIndex + 1}`}
+                                                                            value={typeof opt === 'object' ? (opt as any).text : opt}
+                                                                            onChange={(e) => {
+                                                                                const newOptions = [...q.options!];
+                                                                                newOptions[optIndex] = e.target.value;
+                                                                                updateQuestion(index, { options: newOptions });
+                                                                            }}
+                                                                            className="h-8 text-sm"
+                                                                        />
+                                                                        <label className="flex items-center justify-center p-1.5 rounded-lg border border-neutral-300 dark:border-neutral-600 hover:bg-surface cursor-pointer transition-colors relative" title="Add Option Image">
+                                                                            {uploading[`o-${index}-${optIndex}`] ? (
+                                                                                <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                                                                            ) : (
+                                                                                <>
+                                                                                    <ImageIcon className="h-4 w-4 text-muted" />
+                                                                                    <input
+                                                                                        type="file"
+                                                                                        className="hidden"
+                                                                                        accept="image/*"
+                                                                                        disabled={uploading[`o-${index}-${optIndex}`]}
+                                                                                        onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'option', index, optIndex)}
+                                                                                    />
+                                                                                </>
+                                                                            )}
+                                                                        </label>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         {q.optionImages?.[optIndex] && (

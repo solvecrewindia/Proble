@@ -30,7 +30,7 @@ export interface Student {
 export interface Question {
     id: string;
     quizId: string;
-    type: 'mcq' | 'msq' | 'text' | 'numeric' | 'code' | 'range';
+    type: 'mcq' | 'msq' | 'text' | 'numeric' | 'code' | 'range' | 'true_false';
     stem: string;
     imageUrl?: string;
     options?: string[];
