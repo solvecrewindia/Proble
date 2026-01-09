@@ -341,14 +341,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const logout = async () => {
-        await supabase.auth.signOut();
+        // Optimistic: Clear local state immediately for instant UI feedback
         setUser(null);
         localStorage.removeItem('cached_user_profile');
-
-        // Clear game state so next user starts fresh (or loads their own if we implement user-keyed storage later)
-        // For now, simple clear prevents "shared" scores.
         localStorage.removeItem('proble_flashcard_state');
         localStorage.removeItem('proble_puzzle_state');
+
+        // Background: Tell server to invalidate session
+        try {
+            await supabase.auth.signOut();
+        } catch (err) {
+            console.warn("Background logout error (ignorable):", err);
+        }
     };
 
     return (
