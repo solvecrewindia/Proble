@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Search, Sun, Moon, Gamepad2 } from 'lucide-react';
+import { Search, Sun, Moon, Gamepad2, Download } from 'lucide-react';
 import UserProfileDropdown from './UserProfileDropdown';
 
 interface HeaderProps {
@@ -10,12 +10,14 @@ interface HeaderProps {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
     const { theme, setTheme } = useTheme();
     const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const { isInstallable, installApp } = usePWAInstall();
 
     const handlePracticeClick = () => {
         if (user?.role === 'student') {
@@ -125,6 +127,15 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                             </>
                         ) : (
                             <div className="flex items-center gap-2 md:gap-3">
+                                {isInstallable && (
+                                    <button
+                                        onClick={installApp}
+                                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-primary"
+                                        title="Install App"
+                                    >
+                                        <Download className="w-5 h-5" />
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                                     className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text"

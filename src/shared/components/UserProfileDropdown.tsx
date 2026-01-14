@@ -1,10 +1,11 @@
 ﻿import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Sun, Moon, LogOut, Home, Settings, LayoutDashboard, List, Link2, MessageCircle } from 'lucide-react';
+import { ChevronDown, Sun, Moon, LogOut, Home, Settings, LayoutDashboard, List, Link2, MessageCircle, Download } from 'lucide-react';
 import ReportProblemModal from './ReportProblemModal';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { getAvatarColor } from '../utils/color';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 
 const UserProfileDropdown: React.FC = () => {
@@ -16,6 +17,7 @@ const UserProfileDropdown: React.FC = () => {
     const navigate = useNavigate();
     const isDarkMode = theme === 'dark';
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const { isInstallable, installApp } = usePWAInstall();
 
     // Derived state for display
     const displayName = user?.full_name || user?.username || user?.email?.split('@')[0] || 'User';
@@ -273,6 +275,22 @@ const UserProfileDropdown: React.FC = () => {
                     )}
 
 
+
+                    {/* Install App Section */}
+                    {isInstallable && (
+                        <div className="px-2 py-1 border-t border-neutral-300 dark:border-neutral-600">
+                            <button
+                                onClick={() => {
+                                    installApp();
+                                    setIsOpen(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-primary hover:bg-primary/10 transition-all duration-200 hover:translate-x-1 group"
+                            >
+                                <Download className="w-4 h-4" />
+                                <span className="text-sm font-medium">Install App</span>
+                            </button>
+                        </div>
+                    )}
 
                     {/* Logout Section */}
                     <div className="p-2 border-t border-neutral-300 dark:border-neutral-600">

@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './shared/context/AuthContext'
 import { ThemeProvider } from './shared/context/ThemeContext';
 import Header from './shared/components/Header';
 import RegistrationNumberModal from './shared/components/RegistrationNumberModal';
+import InstallPwaPopup from './shared/components/InstallPwaPopup';
 import { useState, lazy, Suspense } from 'react';
 
 // Lazy Load Components
@@ -90,6 +91,7 @@ function AppContent() {
                 <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
             )}
             <RegistrationNumberModal />
+            <InstallPwaPopup />
             <Suspense fallback={<FullScreenLoader />}>
                 <Routes>
                     {/* Public Routes / Root Redirect */}
