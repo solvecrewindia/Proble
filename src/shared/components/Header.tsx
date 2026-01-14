@@ -64,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 />
             </div>
 
-            <div className="flex justify-center px-2 w-full max-w-[480px]">
+            <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 justify-center px-2 w-full max-w-[480px]">
                 {!location.pathname.startsWith('/student') && !location.pathname.includes('/game') && (
                     <div className="hidden md:flex w-full bg-background rounded-[50px] px-3 py-1.5 items-center border border-neutral-300 dark:border-neutral-600">
                         <input

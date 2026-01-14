@@ -194,7 +194,7 @@ const QuizDetails = () => {
             <div className="max-w-6xl mx-auto px-6 pt-8 pb-20">
                 {/* Back Button */}
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/')}
                     className="flex items-center gap-2 text-muted hover:text-text transition-colors mb-12 group"
                 >
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />

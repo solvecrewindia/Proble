@@ -14,8 +14,21 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(() => {
+        try {
+            const cached = localStorage.getItem('cached_user_profile');
+            return cached ? JSON.parse(cached) : null;
+        } catch (error) {
+            console.error("AuthContext: Failed to parse cached user", error);
+            return null;
+        }
+    });
+
+    // Initialize loading state based on cache presence needed for instant reload
+    const [isLoading, setIsLoading] = useState(() => {
+        const cached = localStorage.getItem('cached_user_profile');
+        return !cached; // If cached user exists, we are NOT loading visually
+    });
 
     const fetchProfile = async (userId: string, email: string) => {
         try {
@@ -113,21 +126,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let mounted = true;
 
         const initializeAuth = async () => {
-            // OPTIMIZATION: Check for cached profile immediately
-            try {
-                const cached = localStorage.getItem('cached_user_profile');
-                if (cached) {
-                    const parsedUser = JSON.parse(cached);
-                    if (parsedUser && mounted) {
-                        console.log("AuthContext: Loaded cached profile.");
-                        setUser(parsedUser);
-                        // If we have a cache, we can stop loading immediately for UI speed
-                        setIsLoading(false);
-                    }
-                }
-            } catch (e) {
-                console.error("AuthContext: Cache parse error", e);
-            }
+            // OPTIMIZATION: State is now initialized from localStorage in useState (above)
+            // for instant First Input Delay (FID) reduction. No need to check here.
 
             try {
                 // Check active session

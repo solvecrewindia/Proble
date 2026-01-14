@@ -4,7 +4,7 @@ import { Card } from '../../shared/components/Card';
 import { Button } from '../../shared/components/Button';
 import { useAuth } from '../../shared/context/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { BookOpen, ArrowRight, Trash2, AlertCircle } from 'lucide-react';
+import { BookOpen, ArrowRight, Trash2, AlertCircle, ArrowLeft } from 'lucide-react';
 
 const PracticeList = () => {
     const navigate = useNavigate();
@@ -81,8 +81,15 @@ const PracticeList = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-                <div>
+            <header className="flex items-center gap-4">
+                <button
+                    onClick={() => navigate('/')}
+                    className="p-2 -ml-2 rounded-lg hover:bg-surface transition-colors text-muted hover:text-text"
+                    title="Back to Home"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="flex-1">
                     <h1 className="text-3xl font-bold text-text">My Practice</h1>
                     <p className="text-muted mt-2">Resume your learning journey.</p>
                 </div>

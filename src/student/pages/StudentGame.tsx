@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Puzzle, Lock, Clock } from 'lucide-react';
+import { Puzzle, Lock, Clock, ArrowLeft } from 'lucide-react';
 import GameLeaderboard from '../components/GameLeaderboard';
 import { isPuzzleLocked, syncScoreToSupabase, getPuzzleState, getFlashCardState } from '../utils/gameState';
 import { useAuth } from '../../shared/context/AuthContext';
@@ -91,7 +91,14 @@ const StudentGame = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <header>
+            <header className="flex items-center gap-4">
+                <button
+                    onClick={() => navigate('/')}
+                    className="p-2 -ml-2 rounded-lg hover:bg-surface transition-colors text-muted hover:text-text"
+                    title="Back to Home"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
                 <h1 className="text-3xl font-bold text-text">Game Mode</h1>
             </header>
 
