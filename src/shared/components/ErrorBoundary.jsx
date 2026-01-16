@@ -14,7 +14,8 @@ class ErrorBoundary extends React.Component {
         // Auto-reload on chunk load failure (deployment update)
         const isChunkError = error.message && (
             error.message.includes('Failed to fetch dynamically imported module') ||
-            error.message.includes('Importing a module script failed')
+            error.message.includes('Importing a module script failed') ||
+            error.message.includes("'text/html' is not a valid JavaScript MIME type")
         );
 
         if (isChunkError) {
