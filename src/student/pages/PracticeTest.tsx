@@ -1,11 +1,12 @@
 ﻿import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn, BookOpen, BrainCircuit, Target, ListChecks } from 'lucide-react';
+import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn, BookOpen, BrainCircuit, Target, ListChecks, Calculator as CalculatorIcon } from 'lucide-react';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { searchVideos, VideoResult } from '../services/videoSearchService';
 import { Youtube, PlayCircle } from 'lucide-react';
+import { Calculator } from '../../shared/components/Calculator';
 
 const PracticeTest = () => {
     const navigate = useNavigate();
@@ -18,6 +19,7 @@ const PracticeTest = () => {
     const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(true);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+    const [showCalculator, setShowCalculator] = useState(false);
 
     // AI Explanation State
     const [aiExplanation, setAiExplanation] = useState<any | null>(null);
@@ -350,6 +352,16 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                 </div>
 
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setShowCalculator(!showCalculator)}
+                        className={cn(
+                            "p-2 rounded-full transition-colors",
+                            showCalculator ? "bg-primary text-white" : "hover:bg-surface text-neutral-600 dark:text-neutral-400"
+                        )}
+                        title="Calculator"
+                    >
+                        <CalculatorIcon className="w-5 h-5" />
+                    </button>
                     <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-surface transition-colors">
                         {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5 text-neutral-600" />}
                     </button>
@@ -717,6 +729,8 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                     </div>
                 )
             }
+            {/* Calculator Overlay */}
+            {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
         </div>
     );
 };

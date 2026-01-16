@@ -2,10 +2,11 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
-import { Moon, Sun, Loader2, Maximize2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Moon, Sun, Loader2, Maximize2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 import { QuizTimer } from '../components/QuizTimer';
+import { Calculator } from '../../shared/components/Calculator';
 
 const MCQTest = () => {
     const navigate = useNavigate();
@@ -27,6 +28,7 @@ const MCQTest = () => {
     const [isPaused, setIsPaused] = useState(false);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     const [quizSettings, setQuizSettings] = useState<any>(null);
+    const [showCalculator, setShowCalculator] = useState(false);
 
     // Security State
     const [isWindowFocused, setIsWindowFocused] = useState(true);
@@ -383,6 +385,16 @@ const MCQTest = () => {
 
                 <div className="flex items-center gap-4">
                     <QuizTimer initialSeconds={(quizSettings?.duration || 20) * 60} onTimeUp={calculateAndShowResults} />
+                    <button
+                        onClick={() => setShowCalculator(!showCalculator)}
+                        className={cn(
+                            "p-2 rounded-full transition-colors",
+                            showCalculator ? "bg-primary text-white" : "hover:bg-surface text-neutral-600 dark:text-neutral-400"
+                        )}
+                        title="Calculator"
+                    >
+                        <CalculatorIcon className="w-5 h-5" />
+                    </button>
                     <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-surface transition-colors">
                         {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5 text-neutral-600" />}
                     </button>
@@ -606,6 +618,9 @@ const MCQTest = () => {
                     <img src={zoomedImage} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
                 </div>
             )}
+
+            {/* Calculator Overlay */}
+            {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
         </div>
     );
 };
