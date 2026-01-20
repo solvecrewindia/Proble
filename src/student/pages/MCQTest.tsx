@@ -214,30 +214,43 @@ const MCQTest = () => {
                 if (error) throw error;
 
                 if (data && data.length > 0) {
-                    const mapped = data.map((q: any, index: number) => ({
-                        id: index + 1,
-                        dbId: q.id,
-                        type: q.type || 'mcq',
-                        question: q.text,
-                        imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null,
-                        options: q.choices,
-                        correct: (() => {
+                    const mapped = data.map((q: any, index: number) => {
+                        const parsedCorrect = (() => {
                             try {
-                                if (q.type === 'msq') return JSON.parse(q.correct_answer || '[]');
-                                if (q.type === 'range') {
-                                    const parsed = JSON.parse(q.correct_answer || '{}');
-                                    if (typeof parsed === 'object' && parsed !== null && 'min' in parsed) {
-                                        return parsed;
+                                return JSON.parse(q.correct_answer || '{}');
+                            } catch { return null; }
+                        })();
+
+                        // Auto-detect range type if not explicitly set but data matches
+                        let derivedType = (q.type || 'mcq').toLowerCase();
+                        if (derivedType === 'mcq' && parsedCorrect && typeof parsedCorrect === 'object' && 'min' in parsedCorrect && 'max' in parsedCorrect) {
+                            derivedType = 'range';
+                        }
+
+                        return {
+                            id: index + 1,
+                            dbId: q.id,
+                            type: derivedType,
+                            question: q.text,
+                            imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null,
+                            options: q.choices || [], // Ensure array
+                            correct: (() => {
+                                try {
+                                    if (derivedType === 'msq') return JSON.parse(q.correct_answer || '[]');
+                                    if (derivedType === 'range') {
+                                        if (parsedCorrect && typeof parsedCorrect === 'object' && 'min' in parsedCorrect) {
+                                            return parsedCorrect;
+                                        }
+                                        return { min: 0, max: 0 };
                                     }
-                                    return { min: 0, max: 0 };
+                                    return (Number(q.correct_answer) || 0);
+                                } catch (e) {
+                                    console.error("Error parsing answer for Q:", q.id, e);
+                                    return derivedType === 'msq' ? [] : { min: 0, max: 0 };
                                 }
-                                return (Number(q.correct_answer) || 0);
-                            } catch (e) {
-                                console.error("Error parsing answer for Q:", q.id, e);
-                                return q.type === 'msq' ? [] : { min: 0, max: 0 };
-                            }
-                        })()
-                    }));
+                            })()
+                        };
+                    });
                     setQuestions(mapped);
                 }
             } catch (err) {
@@ -480,7 +493,7 @@ const MCQTest = () => {
                         <div className="mt-2 flex flex-col gap-2">
                             {activeQuestion.type === 'range' ? (
                                 <div className="max-w-xs">
-                                    <label className="text-sm font-medium text-muted mb-1 block">Enter numeric answer (e.g. 5 or 5.25)</label>
+                                    <label className="text-sm font-medium text-muted mb-1 block">Enter the number</label>
                                     <input
                                         type="number"
                                         placeholder="Type answer here..."

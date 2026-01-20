@@ -47,7 +47,7 @@ export function StepPreview({ data, questions }: any) {
                             )}
                             <p className="text-lg font-medium text-text">{q.stem}</p>
 
-                            {(q.type === 'mcq' || q.type === 'msq') && q.options && (
+                            {(q.type === 'mcq' || q.type === 'msq' || q.type === 'true_false') && q.options && (
                                 <div className="space-y-2">
                                     {q.options.map((opt: any, i) => (
                                         <div

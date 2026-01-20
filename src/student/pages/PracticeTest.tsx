@@ -16,10 +16,11 @@ const PracticeTest = () => {
 
     const [questions, setQuestions] = useState<any[]>([]);
     const [currentQIndex, setCurrentQIndex] = useState(0);
-    const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
+    const [userAnswers, setUserAnswers] = useState<Record<number, number | string>>({});
     const [loading, setLoading] = useState(true);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     const [showCalculator, setShowCalculator] = useState(false);
+    const [currentInput, setCurrentInput] = useState<string>('');
 
     // AI Explanation State
     const [aiExplanation, setAiExplanation] = useState<any | null>(null);
@@ -34,6 +35,7 @@ const PracticeTest = () => {
 
     useEffect(() => {
         setRelatedVideos([]);
+        setCurrentInput('');
     }, [currentQIndex]);
 
     // Fetch videos when AI explanation provides a topic
@@ -88,6 +90,15 @@ const PracticeTest = () => {
                         return { text: c.text || '', image: c.image || null };
                     }) : [];
 
+                    const parsedCorrect = (() => {
+                        try { return JSON.parse(q.correct_answer || '{}'); } catch (e) { return null; }
+                    })();
+
+                    let derivedType = (q.type || 'mcq').toLowerCase();
+                    if (derivedType === 'mcq' && parsedCorrect && typeof parsedCorrect === 'object' && 'min' in parsedCorrect && 'max' in parsedCorrect) {
+                        derivedType = 'range';
+                    }
+
                     return {
                         id: index + 1,
                         dbId: q.id,
@@ -95,7 +106,9 @@ const PracticeTest = () => {
                         imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null,
                         options: options,
                         correct: Number(q.correct_answer) || 0,
-                        explanation: q.explanation || q.answer_description || "No explanation available for this question."
+                        explanation: q.explanation || q.answer_description || "No explanation available for this question.",
+                        type: derivedType,
+                        correctRange: derivedType === 'range' ? (parsedCorrect || { min: 0, max: 0 }) : null
                     };
                 });
 
@@ -413,76 +426,156 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                             </div>
                         )}
 
-                        {/* Options */}
+                        {/* Options / Input */}
                         <div className="mt-2 flex flex-col gap-2">
-                            {q.options.map((opt: any, idx: number) => {
-                                const optText = typeof opt === 'object' ? opt.text : opt;
-                                const optImg = typeof opt === 'object' ? opt.image : null;
-
-                                let variantClasses = "";
-
-                                // Default State
-                                if (!isAnswered) {
-                                    variantClasses = "border-neutral-200 dark:border-neutral-700 bg-surface hover:border-primary/50 hover:bg-neutral-50 dark:hover:bg-white/5 cursor-pointer";
-                                } else {
-                                    // Evaluation State
-                                    if (idx === q.correct) {
-                                        // Correct Option (Always Green)
-                                        variantClasses = "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400";
-                                    } else if (idx === selectedOpt) {
-                                        // Wrong Selection (Red)
-                                        variantClasses = "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400";
-                                    } else {
-                                        // Unselected Other Options (Dimmed)
-                                        variantClasses = "border-neutral-200 dark:border-neutral-700 bg-surface opacity-50";
-                                    }
-                                }
-
-                                return (
-                                    <div
-                                        key={idx}
-                                        onClick={() => handleOptionClick(idx)}
-                                        className={cn(
-                                            "group relative p-3 rounded-lg border transition-all duration-200 flex items-center gap-3",
-                                            variantClasses
-                                        )}
-                                    >
-                                        {/* Indicator */}
-                                        <div className={cn(
-                                            "w-5 h-5 rounded-full border flex items-center justify-center transition-colors flex-shrink-0",
-                                            isAnswered && idx === q.correct ? "border-green-500 bg-green-500" :
-                                                isAnswered && idx === selectedOpt ? "border-red-500 bg-red-500" :
-                                                    "border-neutral-300 dark:border-neutral-300 dark:border-neutral-600 group-hover:border-primary/60"
-                                        )}>
-                                            {isAnswered && idx === q.correct && <Check className="w-3.5 h-3.5 text-white" />}
-                                            {isAnswered && idx === selectedOpt && idx !== q.correct && <X className="w-3.5 h-3.5 text-white" />}
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="flex-1">
-                                            <div className="text-sm font-medium">{optText}</div>
-                                            {optImg && (
-                                                <img
-                                                    src={optImg}
-                                                    className="mt-2 h-16 rounded-md border border-neutral-200 dark:border-neutral-700 object-contain cursor-zoom-in hover:opacity-90 transition-opacity"
-                                                    alt="Option"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setZoomedImage(optImg);
+                            {(q.type === 'range' || q.type === 'numeric') ? (
+                                <div className="max-w-xs space-y-3">
+                                    <div>
+                                        <label className="text-sm font-medium text-muted mb-2 block">Enter the number</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="number"
+                                                placeholder="Enter value"
+                                                className={cn(
+                                                    "w-full bg-surface border-2 rounded-lg p-3 text-lg font-mono focus:border-primary focus:outline-none transition-all shadow-sm",
+                                                    isAnswered
+                                                        ? (q.correctRange && Number(userAnswers[currentQIndex]) >= q.correctRange.min && Number(userAnswers[currentQIndex]) <= q.correctRange.max)
+                                                            ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
+                                                            : "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400"
+                                                        : "border-neutral-200 dark:border-neutral-700"
+                                                )}
+                                                value={isAnswered ? userAnswers[currentQIndex] : currentInput}
+                                                onChange={(e) => setCurrentInput(e.target.value)}
+                                                disabled={isAnswered}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !isAnswered && currentInput) {
+                                                        setUserAnswers(prev => ({ ...prev, [currentQIndex]: currentInput }));
+                                                    }
+                                                }}
+                                            />
+                                            {!isAnswered && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (currentInput) {
+                                                            setUserAnswers(prev => ({ ...prev, [currentQIndex]: currentInput }));
+                                                        }
                                                     }}
-                                                />
+                                                    disabled={!currentInput}
+                                                    className="px-4 py-2 bg-primary text-white rounded-lg font-bold disabled:opacity-50"
+                                                >
+                                                    Check
+                                                </button>
                                             )}
                                         </div>
-
-                                        {/* Right Icon (Check/X) optional reinforcement */}
-                                        {isAnswered && (idx === q.correct || (idx === selectedOpt && idx !== q.correct)) && (
-                                            <div className="ml-auto">
-                                                {idx === q.correct ? <Check className="w-5 h-5 text-green-500" /> : <X className="w-5 h-5 text-red-500" />}
-                                            </div>
-                                        )}
                                     </div>
-                                )
-                            })}
+
+                                    {/* Local State Handler Required - Inline Fix */}
+                                    {/* To avoid refactoring the entire component to separate "active input" vs "committed answer", 
+                                        we will check if the user has ALREADY submitted.
+                                        BUT `userAnswers` is the source of truth for "Answered".
+                                        
+                                        We will need a way to store "Draft" answer.
+                                        But since I can't easily add a new state hook in this ReplaceBlock without restarting the file read potentially or risking it,
+                                        I will do a simplified approach:
+                                        
+                                        We will change the logic:
+                                        Input value is controlled by a local var? No.
+                                        
+                                        New Plan for this block:
+                                        Render a separate component or just manage it carefully.
+                                        Actually, `PracticeTest` usually has MCQs.
+                                        
+                                        We will change `handleOptionClick` equivalent for Range.
+                                        
+                                        Let's assume we modify the `userAnswers` ONLY when "Check" is clicked.
+                                        Then the input needs its OWN state or use a ref.
+                                        
+                                        Since I can't add `useState` easily in middle of code, I will use `document.getElementById` to read value or similar? No that's hacky.
+                                        
+                                        Wait, I can replace the whole component if I really want, but `userAnswers` is the only state.
+                                        
+                                        Alternative: Use `userAnswers` to store the FINAL answer.
+                                        Use a temporary variable? No, React needs state.
+                                        
+                                        Okay, I will change the definition of `userAnswers` to only include COMMITTED answers.
+                                        But where do I store the typed text?
+                                        
+                                        I can add a new state `const [textInput, setTextInput] = useState('')` at the top?
+                                        Yes, I should do that.
+                                        
+                                        So I will abort this `ReplacementChunks` call and do a bigger one that adds the state at top too.
+                                    */}
+                                </div>
+                            ) : (
+                                q.options.map((opt: any, idx: number) => {
+                                    const optText = typeof opt === 'object' ? opt.text : opt;
+                                    const optImg = typeof opt === 'object' ? opt.image : null;
+
+                                    let variantClasses = "";
+
+                                    // Default State
+                                    if (!isAnswered) {
+                                        variantClasses = "border-neutral-200 dark:border-neutral-700 bg-surface hover:border-primary/50 hover:bg-neutral-50 dark:hover:bg-white/5 cursor-pointer";
+                                    } else {
+                                        // Evaluation State
+                                        if (idx === q.correct) {
+                                            // Correct Option (Always Green)
+                                            variantClasses = "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400";
+                                        } else if (idx === selectedOpt) {
+                                            // Wrong Selection (Red)
+                                            variantClasses = "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400";
+                                        } else {
+                                            // Unselected Other Options (Dimmed)
+                                            variantClasses = "border-neutral-200 dark:border-neutral-700 bg-surface opacity-50";
+                                        }
+                                    }
+
+                                    return (
+                                        <div
+                                            key={idx}
+                                            onClick={() => handleOptionClick(idx)}
+                                            className={cn(
+                                                "group relative p-3 rounded-lg border transition-all duration-200 flex items-center gap-3",
+                                                variantClasses
+                                            )}
+                                        >
+                                            {/* Indicator */}
+                                            <div className={cn(
+                                                "w-5 h-5 rounded-full border flex items-center justify-center transition-colors flex-shrink-0",
+                                                isAnswered && idx === q.correct ? "border-green-500 bg-green-500" :
+                                                    isAnswered && idx === selectedOpt ? "border-red-500 bg-red-500" :
+                                                        "border-neutral-300 dark:border-neutral-300 dark:border-neutral-600 group-hover:border-primary/60"
+                                            )}>
+                                                {isAnswered && idx === q.correct && <Check className="w-3.5 h-3.5 text-white" />}
+                                                {isAnswered && idx === selectedOpt && idx !== q.correct && <X className="w-3.5 h-3.5 text-white" />}
+                                            </div>
+
+                                            {/* Content */}
+                                            <div className="flex-1">
+                                                <div className="text-sm font-medium">{optText}</div>
+                                                {optImg && (
+                                                    <img
+                                                        src={optImg}
+                                                        className="mt-2 h-16 rounded-md border border-neutral-200 dark:border-neutral-700 object-contain cursor-zoom-in hover:opacity-90 transition-opacity"
+                                                        alt="Option"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setZoomedImage(optImg);
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+
+                                            {/* Right Icon (Check/X) optional reinforcement */}
+                                            {isAnswered && (idx === q.correct || (idx === selectedOpt && idx !== q.correct)) && (
+                                                <div className="ml-auto">
+                                                    {idx === q.correct ? <Check className="w-5 h-5 text-green-500" /> : <X className="w-5 h-5 text-red-500" />}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })
+                            )}
                         </div>
                     </div>
 

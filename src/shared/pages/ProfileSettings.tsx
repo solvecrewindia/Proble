@@ -287,6 +287,25 @@ const ProfileSettings = () => {
                                 <div className="font-medium text-text px-3 py-2">{formData.email}</div>
                             )}
                         </div>
+
+                        {/* Registration Number - SRMIST Only */}
+                        {formData.email.endsWith('@srmist.edu.in') && (
+                            <div>
+                                <label className="block text-sm text-muted mb-1">Registration Number</label>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        name="registration_number"
+                                        value={formData.registration_number}
+                                        onChange={handleChange}
+                                        placeholder="Enter Registration Number"
+                                        className="w-full bg-background border border-neutral-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    />
+                                ) : (
+                                    <div className="font-medium text-text px-3 py-2">{formData.registration_number || 'Not set'}</div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

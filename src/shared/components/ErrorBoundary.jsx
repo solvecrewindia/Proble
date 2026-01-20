@@ -19,15 +19,22 @@ class ErrorBoundary extends React.Component {
         );
 
         if (isChunkError) {
-            const lastReload = sessionStorage.getItem('chunk_reload_ts');
-            const now = Date.now();
-            // Prevent infinite loops - only reload if > 10s since last attempt
-            if (!lastReload || now - parseInt(lastReload) > 10000) {
-                console.warn("Chunk load error detected. Reloading...");
-                sessionStorage.setItem('chunk_reload_ts', String(now));
-                window.location.reload();
+            const retryCount = parseInt(sessionStorage.getItem('chunk_retry_count') || '0');
+
+            if (retryCount < 3) {
+                console.warn(`Chunk load error detected. Reloading (Attempt ${retryCount + 1})...`);
+                sessionStorage.setItem('chunk_retry_count', String(retryCount + 1));
+
+                // Cache busting reload
+                if (window.location.search.includes('?')) {
+                    window.location.reload();
+                } else {
+                    window.location.href = window.location.href + '?t=' + Date.now();
+                }
                 return;
             }
+            // Reset count if we showed the error UI so next genuine reload works
+            sessionStorage.removeItem('chunk_retry_count');
         }
 
         this.setState({ error, errorInfo });
