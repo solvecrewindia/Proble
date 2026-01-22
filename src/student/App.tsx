@@ -13,6 +13,7 @@ import StudentGame from './pages/StudentGame';
 import FlashCardGame from './pages/games/FlashCardGame';
 import PuzzleGame from './pages/games/PuzzleGame';
 import DebuggerGame from './pages/games/DebuggerGame';
+import FlashCards from './pages/FlashCards';
 const NoSidebarLayout = () => (
     <div className="min-h-screen bg-background">
         <main className="transition-all duration-300 ease-in-out">
@@ -59,6 +60,7 @@ const StudentApp = () => {
             <Route path="practice/mcq/:id" element={<MCQTest />} />
             <Route path="test/:id" element={<MCQTest />} />
             <Route path="practice/test/:id" element={<PracticeTest />} />
+            <Route path="practice/flashcards/:id" element={<FlashCards />} />
         </Routes>
     );
 };

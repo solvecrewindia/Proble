@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
-import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2 } from 'lucide-react';
+import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2, Layers, Trophy } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../shared/context/AuthContext';
 
@@ -201,58 +201,41 @@ const QuizDetails = () => {
                     <span className="text-sm font-medium">Back</span>
                 </button>
 
-                {/* Header Content */}
-                <div className="space-y-4 mb-8">
-                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-text leading-tight">
-                        {quiz.title}
-                    </h1>
-                    <p className="text-muted text-lg leading-relaxed max-w-3xl">
-                        {quiz.description || "No description available for this assessment."}
-                    </p>
-                </div>
-
-                {/* Metadata Row */}
-                <div className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm text-muted mb-16 border-b border-neutral-300 dark:border-neutral-600 pb-16">
-                    <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span>{quiz.duration}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4" />
-                        <span>{quiz.questions} Questions</span>
-                    </div>
-
-                    {quiz.type === 'global' && (
-                        <div className="flex items-center gap-6 ml-2 animate-in fade-in duration-500">
-                            <div className="flex items-center gap-1.5 bg-yellow-500/10 px-2.5 py-0.5 rounded text-yellow-500 border border-yellow-500/20">
-                                <Star className="w-4 h-4 fill-yellow-500" />
-                                <span className="font-bold">{averageRating || 0}</span>
-                                <span className="text-yellow-500/50 text-xs">({totalRatings})</span>
-                            </div>
-
-                            <div className="flex items-center gap-1 group">
-                                <span className="text-muted mr-2 text-xs uppercase font-bold tracking-wider group-hover:text-text transition-colors">Rate:</span>
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <button
-                                        key={star}
-                                        onClick={() => handleRating(star)}
-                                        className="focus:outline-none transition-all hover:scale-110 active:scale-95"
-                                    >
-                                        <Star
-                                            className={`w-4 h-4 ${star <= userRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-800 hover:text-gray-400'}`}
-                                        />
-                                    </button>
-                                ))}
-                            </div>
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row gap-8 items-start justify-between mb-16 border-b border-neutral-200 dark:border-neutral-800 pb-12">
+                    <div className="space-y-6 max-w-2xl">
+                        <div className="space-y-2">
+                            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-text leading-tight text-balance">
+                                {quiz.title}
+                            </h1>
+                            <p className="text-muted text-lg leading-relaxed">
+                                {quiz.description || "No description available for this assessment."}
+                            </p>
                         </div>
-                    )}
+
+                        <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border border-neutral-200 dark:border-neutral-700 text-sm font-medium text-muted">
+                                <Clock className="w-4 h-4" />
+                                <span>{quiz.duration}</span>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border border-neutral-200 dark:border-neutral-700 text-sm font-medium text-muted">
+                                <BookOpen className="w-4 h-4" />
+                                <span>{quiz.questions} Questions</span>
+                            </div>
+                            {quiz.type === 'global' && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-sm font-medium text-yellow-600 dark:text-yellow-500">
+                                    <Star className="w-4 h-4 fill-current" />
+                                    <span>{averageRating || 0} ({totalRatings})</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     {!moduleId && (
                         <button
                             onClick={togglePractice}
                             disabled={practiceLoading}
-                            className={`ml-auto px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-xl
+                            className={`px-6 py-3 rounded-xl font-bold transition-all active:scale-95 text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-xl shrink-0
                                 ${isAddedToPractice
                                     ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20'
                                     : 'bg-primary hover:bg-primary/90 text-white shadow-primary/25 hover:shadow-primary/40'
@@ -263,34 +246,88 @@ const QuizDetails = () => {
                             ) : isAddedToPractice ? (
                                 <>
                                     <Check className="w-4 h-4" />
-                                    <span>Added</span>
+                                    <span>In My Practice</span>
                                 </>
                             ) : (
                                 <>
+                                    <Plus className="w-4 h-4" />
                                     <span>Add to My Practice</span>
-                                    <ArrowRight className="w-4 h-4" />
                                 </>
                             )}
                         </button>
                     )}
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    {quiz.type !== 'master' && (
-                        <button
-                            onClick={() => navigate(`/student/practice/setup/${id}`)}
-                            className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-surface text-text border border-neutral-300 dark:border-neutral-600 font-semibold hover:bg-background transition-all active:scale-95 text-sm"
-                        >
-                            Practice Test
-                        </button>
-                    )}
-                    <button
-                        onClick={() => navigate(`/student/test/${id}`)}
-                        className="w-full sm:w-auto min-w-[180px] h-11 px-8 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(0,151,178,0.3)] hover:shadow-[0_0_25px_rgba(0,151,178,0.5)] active:scale-95 text-sm"
+                {/* Action Cards Grid */}
+                <h2 className="text-xl font-bold mb-6 text-text">Choose your mode</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Flashcards Card (Hero - Full Width) */}
+                    <div
+                        onClick={() => navigate(`/student/practice/flashcards/${id}`)}
+                        className="group relative md:col-span-2 bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-indigo-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both"
                     >
-                        Mock Test
-                    </button>
+                        {/* Subtle Glow Effect */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-opacity group-hover:opacity-100" />
+
+                        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                            <div className="p-5 rounded-2xl bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                                <Layers className="w-10 h-10" />
+                            </div>
+                            <div className="flex-1 space-y-2">
+                                <h3 className="text-2xl font-bold text-text group-hover:text-indigo-400 transition-colors">Flashcards Mode</h3>
+                                <p className="text-muted text-base leading-relaxed max-w-2xl">
+                                    Master concepts in record time. Swipe through smart flashcards designed for quick recall and active retention.
+                                </p>
+                            </div>
+                            <div className="mt-4 md:mt-0 px-6 py-3 rounded-xl font-bold text-sm bg-[#61dafbaa] text-black border border-[#61dafbaa]/20 hover:bg-[#61dafbaa] hover:text-black transition-all flex items-center gap-2 shadow-sm">
+                                Open Deck <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Practice Mode Card */}
+                    {quiz.type !== 'master' && (
+                        <div
+                            onClick={() => navigate(`/student/practice/setup/${id}`)}
+                            className="group relative bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-blue-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both"
+                        >
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+
+                            <div className="relative z-10 flex flex-col h-full">
+                                <div className="mb-6 p-4 w-fit rounded-2xl bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+                                    <BookOpen className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-bold text-text mb-2 group-hover:text-blue-400 transition-colors">Practice Test</h3>
+                                <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
+                                    Untimed learning environment with instant feedback and AI-powered explanations.
+                                </p>
+                                <div className="flex items-center text-sm font-bold text-[#61dafbaa] group-hover:translate-x-1 transition-transform">
+                                    Start Practice <ArrowRight className="w-4 h-4 ml-2" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Mock Test Card */}
+                    <div
+                        onClick={() => navigate(`/student/test/${id}`)}
+                        className={`group relative bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-cyan-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${quiz.type === 'master' ? 'md:col-span-2' : ''}`}
+                    >
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+
+                        <div className="relative z-10 flex flex-col h-full">
+                            <div className="mb-6 p-4 w-fit rounded-2xl bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                                <Trophy className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-xl font-bold text-text mb-2 group-hover:text-cyan-400 transition-colors">Mock Test</h3>
+                            <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
+                                Full exam simulation under strict timed conditions. Get detailed analytics and global ranking.
+                            </p>
+                            <div className="flex items-center text-sm font-bold text-[#61dafbaa] group-hover:translate-x-1 transition-transform">
+                                Begin Exam <ArrowRight className="w-4 h-4 ml-2" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
