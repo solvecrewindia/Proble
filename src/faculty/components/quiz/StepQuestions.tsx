@@ -1,5 +1,5 @@
 ﻿import React, { useState, useCallback } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Library } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression';
@@ -11,6 +11,7 @@ import { supabase } from '../../../lib/supabase';
 import { cn } from '../../lib/utils';
 import type { Question } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
+import { ExistingQuizBrowser } from './ExistingQuizBrowser';
 
 export function StepQuestions({ questions, setQuestions, quizId }: any) {
     const [activeType, setActiveType] = useState<Question['type']>('mcq');
@@ -609,16 +610,12 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                         </div>
                     </div>
                 ) : view === 'existing' ? (
-                    <div className="text-center py-20 border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-xl">
-                        <Library className="mx-auto h-12 w-12 text-muted mb-4" />
-                        <h3 className="text-lg font-medium text-text">Select from Existing Quiz</h3>
-                        <p className="text-muted mt-2 mb-6 max-w-md mx-auto">
-                            Choose questions from your previously created quizzes to add to this one.
-                        </p>
-                        <Button variant="outline" onClick={() => alert("Feature coming soon: Select questions from existing quizzes")}>
-                            Browse Your Quizzes
-                        </Button>
-                    </div>
+                    <ExistingQuizBrowser
+                        onAddQuestions={(newQuestions: Question[]) => {
+                            setQuestions((prev: any) => [...prev, ...newQuestions]);
+                            setView('list');
+                        }}
+                    />
                 ) : (
                     <div className="space-y-4">
                         {questions.map((q: Question, index: number) => (
