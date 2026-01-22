@@ -24,6 +24,8 @@ interface GlobalQuiz {
     duration: number;   // from settings.duration
     thumbnail: string;
     type?: string; // 'Test' or 'Module'
+    description?: string;
+    accessCode?: string;
 }
 
 export default function Dashboard() {
@@ -37,36 +39,41 @@ export default function Dashboard() {
         const fetchGlobalContent = async () => {
             setLoading(true);
             try {
-                // 1. Fetch Quizzes (Global)
+                // 1. Fetch Quizzes (Global) without Join
                 const { data: quizzes, error: quizError } = await supabase
                     .from('quizzes')
-                    .select(`
-                        *,
-                        profiles:created_by (
-                            username,
-                            email,
-                            role
-                        )
-                    `)
-                    .eq('type', 'global')
-                    .eq('status', 'active');
+                    .select('*')
+                    .eq('type', 'global');
 
                 if (quizError) throw quizError;
 
-                // 2. Fetch Modules (Global Courses) - Matching Student App "Global" tab logic
+                // 2. Fetch Modules (Global Courses) without Join
                 const { data: modules, error: moduleError } = await supabase
                     .from('modules')
-                    .select(`
-                        *,
-                        profiles:created_by (
-                            username,
-                            email,
-                            role
-                        )
-                    `)
-                    .eq('category', 'Global'); // Filter for Global modules
+                    .select('*')
+                    .eq('category', 'Global');
 
                 if (moduleError) throw moduleError;
+
+                // 3. Get all unique creator IDs
+                const creatorIds = new Set<string>();
+                quizzes?.forEach((q: any) => q.created_by && creatorIds.add(q.created_by));
+                modules?.forEach((m: any) => m.created_by && creatorIds.add(m.created_by));
+
+                // 4. Fetch Profiles Manually
+                let profilesMap: Record<string, any> = {};
+                if (creatorIds.size > 0) {
+                    const { data: profiles, error: profilesError } = await supabase
+                        .from('profiles')
+                        .select('id, username, email, role')
+                        .in('id', Array.from(creatorIds));
+
+                    if (!profilesError && profiles) {
+                        profiles.forEach((p: any) => {
+                            profilesMap[p.id] = p;
+                        });
+                    }
+                }
 
                 let mergedContent: GlobalQuiz[] = [];
 
@@ -78,12 +85,14 @@ export default function Dashboard() {
                         const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-red-500', 'bg-indigo-500'];
                         const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
+                        const profile = profilesMap[q.created_by];
+
                         return {
                             id: q.id,
                             title: q.title,
                             instructor: {
-                                name: q.profiles?.username || 'Unknown Faculty',
-                                avatar: (q.profiles?.username?.[0] || 'U').toUpperCase(),
+                                name: profile?.username || 'Unknown Faculty',
+                                avatar: (profile?.username?.[0] || 'U').toUpperCase(),
                                 department: 'Faculty'
                             },
                             rating: 4.5,
@@ -92,7 +101,9 @@ export default function Dashboard() {
                             questions: 10,
                             duration: settings.duration || 60,
                             thumbnail: q.image_url ? `url(${q.image_url})` : randomColor,
-                            type: 'Test'
+                            type: 'Test',
+                            description: q.description,
+                            accessCode: q.code || q.accessCode
                         };
                     });
                     mergedContent = [...mergedContent, ...mappedQuizzes];
@@ -101,12 +112,13 @@ export default function Dashboard() {
                 // Map Modules
                 if (modules) {
                     const mappedModules = (modules as any[]).map(m => {
+                        const profile = profilesMap[m.created_by];
                         return {
                             id: m.id,
                             title: m.title,
                             instructor: {
-                                name: m.profiles?.username || 'Unknown Faculty',
-                                avatar: (m.profiles?.username?.[0] || 'U').toUpperCase(),
+                                name: profile?.username || 'Unknown Faculty',
+                                avatar: (profile?.username?.[0] || 'U').toUpperCase(),
                                 department: 'Faculty'
                             },
                             rating: 4.8,
@@ -115,7 +127,8 @@ export default function Dashboard() {
                             questions: 0,
                             duration: 0,
                             thumbnail: m.image_url ? `url(${m.image_url})` : 'bg-pink-500',
-                            type: 'Module'
+                            type: 'Module',
+                            description: m.description
                         };
                     });
                     mergedContent = [...mergedContent, ...mappedModules];
@@ -123,8 +136,8 @@ export default function Dashboard() {
 
                 setGlobalQuizzes(mergedContent);
 
-            } catch (err) {
-                console.error('Error fetching global content:', err);
+            } catch (err: any) {
+                console.error('Error fetching global content (Dashboard):', err);
             } finally {
                 setLoading(false);
             }
@@ -140,8 +153,19 @@ export default function Dashboard() {
         return matchesSearch && matchesCategory;
     });
 
+    const handleCopyLink = async (quiz: GlobalQuiz) => {
+        const identifier = quiz.accessCode || quiz.id; // Correct logic for identifier
+        const link = `${window.location.origin}/quiz/${identifier}`;
+        try {
+            await navigator.clipboard.writeText(link);
+            alert("Link copied to clipboard!");
+        } catch (err) {
+            console.error('Failed to copy', err);
+        }
+    }
+
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in duration-500">
             {/* Hero / Welcome Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -247,7 +271,7 @@ export default function Dashboard() {
                                 onClick={() => setSelectedQuiz(null)}
                                 className="absolute top-4 right-4 h-8 w-8 rounded-full bg-black/20 hover:bg-black/40 text-white flex items-center justify-center transition-colors"
                             >
-                                âœ•
+                                ✕
                             </button>
                         </div>
 
@@ -262,7 +286,7 @@ export default function Dashboard() {
                                 <h2 className="text-3xl font-bold text-text mt-2">{selectedQuiz.title}</h2>
                                 <div className="flex items-center gap-2 mt-3 text-muted">
                                     <span className="font-medium">{selectedQuiz.instructor.name}</span>
-                                    <span>â€¢</span>
+                                    <span>•</span>
                                     <span>{selectedQuiz.instructor.department}</span>
                                 </div>
                             </div>
@@ -300,15 +324,15 @@ export default function Dashboard() {
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg text-text">Description</h3>
                                 <p className="text-muted leading-relaxed">
-                                    {selectedQuiz.type === 'Test'
+                                    {selectedQuiz.description || (selectedQuiz.type === 'Test'
                                         ? "This assessment covers key concepts and evaluates your understanding of the subject matter. Ensure you are prepared before starting."
-                                        : "This module provides a comprehensive learning path including lessons, resources, and assessments to master the topic."}
+                                        : "This module provides a comprehensive learning path including lessons, resources, and assessments to master the topic.")}
                                 </p>
                             </div>
 
                             <div className="pt-4 flex gap-3">
-                                <Button className="flex-1 h-12 text-lg gap-2" onClick={() => alert(`Starting ${selectedQuiz.type || 'Assessment'}...`)}>
-                                    <PlayCircle className="h-5 w-5" /> Start {selectedQuiz.type || 'Assessment'}
+                                <Button className="flex-1 h-12 text-lg gap-2" onClick={() => handleCopyLink(selectedQuiz)}>
+                                    <PlayCircle className="h-5 w-5" /> Share {selectedQuiz.type || 'Assessment'}
                                 </Button>
                                 <Button variant="outline" className="h-12 px-6" onClick={() => setSelectedQuiz(null)}>
                                     Cancel
