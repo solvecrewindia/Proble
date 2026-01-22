@@ -1,5 +1,5 @@
 ﻿import React, { useState, useCallback } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Library } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression';
@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export function StepQuestions({ questions, setQuestions, quizId }: any) {
     const [activeType, setActiveType] = useState<Question['type']>('mcq');
-    const [view, setView] = useState<'list' | 'import'>('list');
+    const [view, setView] = useState<'list' | 'import' | 'existing'>('list');
     const [error, setError] = useState<string | null>(null);
     const [uploading, setUploading] = useState<{ [key: string]: boolean }>({});
 
@@ -457,6 +457,17 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                 >
                     Bulk Import
                 </button>
+                <button
+                    className={cn(
+                        "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
+                        view === 'existing'
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted hover:text-text hover:border-neutral-300 dark:border-neutral-600"
+                    )}
+                    onClick={() => setView('existing')}
+                >
+                    Select from Existing Quiz
+                </button>
             </div>
 
             <div className="mt-6">
@@ -596,6 +607,17 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                 </table>
                             </div>
                         </div>
+                    </div>
+                ) : view === 'existing' ? (
+                    <div className="text-center py-20 border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-xl">
+                        <Library className="mx-auto h-12 w-12 text-muted mb-4" />
+                        <h3 className="text-lg font-medium text-text">Select from Existing Quiz</h3>
+                        <p className="text-muted mt-2 mb-6 max-w-md mx-auto">
+                            Choose questions from your previously created quizzes to add to this one.
+                        </p>
+                        <Button variant="outline" onClick={() => alert("Feature coming soon: Select questions from existing quizzes")}>
+                            Browse Your Quizzes
+                        </Button>
                     </div>
                 ) : (
                     <div className="space-y-4">
