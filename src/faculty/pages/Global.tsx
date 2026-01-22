@@ -139,7 +139,7 @@ export default function Global() {
                 setGlobalQuizzes(mergedContent);
 
             } catch (err: any) {
-                console.error('Error fetching global content:', err);
+                console.error('Error fetching global content (Global.tsx):', err);
             } finally {
                 setLoading(false);
             }
