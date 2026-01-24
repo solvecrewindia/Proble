@@ -471,29 +471,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                 </button>
             </div>
 
-            <div className="mt-6">
-                {view === 'list' && (
-                    <div className="flex justify-end mb-4">
-                        <div className="flex gap-2">
-                            <select
-                                className="h-9 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-2"
-                                value={activeType}
-                                onChange={(e) => setActiveType(e.target.value as any)}
-                            >
-                                <option value="mcq">Multiple Choice</option>
-                                <option value="true_false">True / False</option>
-                                <option value="text">Descriptive Text</option>
-                                <option value="numeric">Numeric Answer</option>
-                                <option value="range">Range Answer</option>
-                                <option value="code">Code Snippet</option>
-                            </select>
-                            <Button size="sm" onClick={addQuestion}>
-                                <Plus className="mr-2 h-4 w-4" /> Add Question
-                            </Button>
-                        </div>
-                    </div>
-                )}
-            </div>
+
 
 
             {
@@ -854,6 +832,25 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                 No questions added yet. Click "Add Question" to start or use Import.
                             </div>
                         )}
+                        <div className="flex justify-end pt-4">
+                            <div className="flex gap-2">
+                                <select
+                                    className="h-9 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-2"
+                                    value={activeType}
+                                    onChange={(e) => setActiveType(e.target.value as any)}
+                                >
+                                    <option value="mcq">Multiple Choice</option>
+                                    <option value="true_false">True / False</option>
+                                    <option value="text">Descriptive Text</option>
+                                    <option value="numeric">Numeric Answer</option>
+                                    <option value="range">Range Answer</option>
+                                    <option value="code">Code Snippet</option>
+                                </select>
+                                <Button size="sm" onClick={addQuestion}>
+                                    <Plus className="mr-2 h-4 w-4" /> Add Question
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )
             }
