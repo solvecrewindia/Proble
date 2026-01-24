@@ -2,7 +2,8 @@
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Copy, Plus, Edit, Download, RotateCw, Link as LinkIcon } from 'lucide-react';
+import { Copy, Plus, Edit, Download, RotateCw, Link as LinkIcon, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Quiz } from '../types';
@@ -109,6 +110,62 @@ export default function Master() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const downloadStudentResult = (result: any) => {
+        if (!selectedQuizId) return;
+        const quiz = quizzes.find(q => q.id === selectedQuizId);
+        if (!quiz || !quiz.questions) {
+            alert("Quiz data not found for generating report.");
+            return;
+        }
+
+        const reportData = quiz.questions.map((q, index) => {
+            const userAnswer = result.answers ? result.answers[q.id] : null;
+
+            // Helper to format answer
+            const formatAnswer = (ans: any, type: string) => {
+                if (ans === null || ans === undefined) return "Skipped";
+                if (type === 'mcq' || type === 'true_false') {
+                    // Try to map index to Option Text if available, else A/B/C/D
+                    if (q.options && q.options[ans]) {
+                        return `${String.fromCharCode(65 + Number(ans))}. ${q.options[ans]}`;
+                    }
+                    return String.fromCharCode(65 + Number(ans));
+                }
+                if (type === 'msq') {
+                    if (Array.isArray(ans)) {
+                        return ans.map(a => String.fromCharCode(65 + Number(a))).join(', ');
+                    }
+                }
+                return ans;
+            };
+
+            const given = formatAnswer(userAnswer, q.type);
+            const correct = formatAnswer(q.correct, q.type);
+
+            // Determine status
+            let isCorrect = false;
+            // Simple equality check for now, can be improved for MSQ/Range
+            if (JSON.stringify(userAnswer) === JSON.stringify(q.correct)) isCorrect = true; // Very basic check
+
+            return {
+                "Question No": `Q${index + 1}`,
+                "Question": q.stem,
+                "Given Answer": given,
+                "Correct Answer": correct,
+                "Status": isCorrect ? "Correct" : "Incorrect",
+                "Points": isCorrect ? q.weight : 0
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(reportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Result Report");
+
+        const studentName = result.profiles?.registration_number || result.profiles?.username || "Student";
+        const safeName = studentName.replace(/[^a-z0-9]/gi, '_');
+        XLSX.writeFile(wb, `${safeName}_Report.xlsx`);
     };
 
     const handleRetest = async (resultId: string, studentName: string) => {
@@ -263,6 +320,15 @@ export default function Master() {
                                                         title="Allow Retest (Delete Result)"
                                                     >
                                                         <RotateCw className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-primary hover:bg-primary/10"
+                                                        onClick={() => downloadStudentResult(res)}
+                                                        title="Download Detailed Report"
+                                                    >
+                                                        <FileSpreadsheet className="h-4 w-4" />
                                                     </Button>
                                                 </td>
                                             </tr>

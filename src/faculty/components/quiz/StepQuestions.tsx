@@ -1,5 +1,5 @@
 ﻿import React, { useState, useCallback } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression';
@@ -80,6 +80,17 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
             console.error(`Failed to upload ${fileName}`, err);
             return null;
         }
+    };
+
+    const downloadTemplate = () => {
+        const headers = ['Question No', 'Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer'];
+        const sampleRow = ['Q1', 'Sample Question?', 'Option A', 'Option B', 'Option C', 'Option D', 'A'];
+
+        const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template");
+
+        XLSX.writeFile(wb, "quiz_template.xlsx");
     };
 
     // Handle Excel Drop and Processing
@@ -558,7 +569,18 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                         )}
 
                         <div className="bg-surface p-4 rounded-lg">
-                            <h3 className="text-sm font-medium text-text mb-2">Required Columns (Exact Match)</h3>
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-sm font-medium text-text">Required Columns (Exact Match)</h3>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={downloadTemplate}
+                                    className="text-xs h-7 px-2 gap-1 text-primary border-primary/20 hover:bg-primary/5"
+                                >
+                                    <Download className="h-3 w-3" />
+                                    Download Template
+                                </Button>
+                            </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-xs text-left text-muted">
                                     <thead className="bg-background">
