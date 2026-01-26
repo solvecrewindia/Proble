@@ -316,7 +316,7 @@ const MCQTest = () => {
     if (showResults) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 animate-in fade-in zoom-in duration-300">
-                <div className="bg-surface border border-neutral-300 dark:border-neutral-600 p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+                <div className="bg-surface border border-neutral-300 dark:border-neutral-600 p-8 rounded-2xl shadow-xl max-w-4xl w-full text-center">
                     <h1 className="text-3xl font-bold mb-4 text-text">Test Completed</h1>
                     <div className="mb-8">
                         <div className="text-6xl font-bold text-primary mb-2">
@@ -324,6 +324,77 @@ const MCQTest = () => {
                         </div>
                         <p className="text-muted">You scored {score} out of {questions.length}</p>
                     </div>
+
+                    {/* Detailed Question Review */}
+                    <div className="text-left mb-8 space-y-4">
+                        {questions.map((q, index) => {
+                            const userAnswer = answers[q.id];
+
+                            // Determine correctness (Using same logic as calculateAndShowResults)
+                            let isCorrect = false;
+                            if (q.type === 'msq') {
+                                const correctArr = Array.isArray(q.correct) ? q.correct : [];
+                                const userArr = Array.isArray(userAnswer) ? userAnswer : [];
+                                if (userArr.length === correctArr.length &&
+                                    userArr.every((val: any) => correctArr.includes(val))) {
+                                    isCorrect = true;
+                                }
+                            } else if (q.type === 'range') {
+                                const userVal = Number(userAnswer);
+                                if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
+                                    isCorrect = true;
+                                }
+                            } else {
+                                if (userAnswer === q.correct) isCorrect = true;
+                            }
+
+                            // Format Helper
+                            const formatAns = (ans: any, type: string) => {
+                                if (ans === undefined || ans === null || ans === '') return <span className="text-muted italic">Skipped</span>;
+                                if (type === 'mcq' || type === 'true_false') {
+                                    if (q.options && q.options[ans]) return q.options[ans].text || q.options[ans];
+                                    return `Option ${Number(ans) + 1}`;
+                                }
+                                if (type === 'msq') {
+                                    if (Array.isArray(ans)) {
+                                        return ans.map((a: any) => q.options[a]?.text || q.options[a] || `Option ${Number(a) + 1}`).join(', ');
+                                    }
+                                }
+                                return ans;
+                            };
+
+                            return (
+                                <div key={q.id} className={cn("p-4 rounded-lg border", isCorrect ? "border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-900/10" : "border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-900/10")}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-medium text-text text-sm">Question {index + 1}</h3>
+                                        <div className={cn("px-2 py-0.5 rounded-full text-xs font-bold", isCorrect ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
+                                            {isCorrect ? "Correct" : "Incorrect"}
+                                        </div>
+                                    </div>
+                                    {q.imageUrl && (
+                                        <img
+                                            src={q.imageUrl}
+                                            alt={`Question ${index + 1}`}
+                                            className="max-h-48 rounded-lg border border-neutral-300 dark:border-neutral-600 mb-3 object-contain mx-auto"
+                                        />
+                                    )}
+                                    <p className="text-sm text-text mb-3 font-semibold">{q.question}</p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                        <div>
+                                            <span className="text-muted block mb-1">Your Answer:</span>
+                                            <div className="font-medium text-text">{formatAns(userAnswer, q.type)}</div>
+                                        </div>
+                                        <div>
+                                            <span className="text-muted block mb-1">Correct Answer:</span>
+                                            <div className="font-medium text-text">{formatAns(q.correct, q.type)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
                     <p className="text-sm text-gray-400 mb-8">Violations Recorded: {violations}</p>
                     <button onClick={() => navigate(`/student/practice/${id}`)} className="w-full btn-primary py-3 rounded-xl font-bold shadow-lg shadow-primary/20">Return to Test Details</button>
                 </div>

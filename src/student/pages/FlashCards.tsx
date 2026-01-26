@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, Loader2, RotateCw, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Loader2, RotateCw, Lightbulb, ZoomIn } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface ReferenceCard {
@@ -10,6 +10,7 @@ interface ReferenceCard {
     answer: string;
     type: string;
     options?: any[];
+    imageUrl?: string;
 }
 
 const FlashCards = () => {
@@ -21,6 +22,7 @@ const FlashCards = () => {
 
     // State to track which cards are flipped
     const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
+    const [hoveredImage, setHoveredImage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchContent = async () => {
@@ -77,7 +79,8 @@ const FlashCards = () => {
                             question: q.text,
                             answer: answerText,
                             type: q.type,
-                            options: q.choices
+                            options: q.choices,
+                            imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : undefined
                         };
                     });
                     setQuestions(processed);
@@ -124,13 +127,17 @@ const FlashCards = () => {
 
                 {/* Grid - 5 columns for "up 5 down 5" layout */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 perspective-1000">
-                    {questions.map((card) => (
+                    {questions.map((card, index) => (
                         <div
                             key={card.id}
                             className={cn(
-                                "group relative h-80 cursor-pointer perspective-1000",
+                                "group relative h-80 cursor-pointer perspective-1000 opacity-0 animate-slide-up",
                                 // "perspective" class is essential for 3d flip
                             )}
+                            style={{
+                                animationDelay: `${index * 100}ms`,
+                                animationFillMode: 'forwards'
+                            }}
                             onClick={() => handleCardClick(card.id)}
                         >
                             <div className={cn(
@@ -142,7 +149,20 @@ const FlashCards = () => {
                                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary shrink-0">
                                         <Lightbulb className="w-5 h-5" />
                                     </div>
-                                    <div className="flex-1 w-full overflow-y-auto no-scrollbar pr-2 flex items-center justify-center">
+                                    <div className="flex-1 w-full overflow-y-auto no-scrollbar pr-2 flex flex-col items-center justify-center">
+                                        {card.imageUrl && (
+                                            <div
+                                                className="relative group/image mb-3 cursor-pointer"
+                                                onMouseEnter={() => setHoveredImage(card.imageUrl || null)}
+                                                onMouseLeave={() => setHoveredImage(null)}
+                                            >
+                                                <img
+                                                    src={card.imageUrl}
+                                                    alt="Question"
+                                                    className="max-h-24 rounded-lg border border-neutral-300 dark:border-neutral-600 object-contain hover:opacity-80 transition-opacity"
+                                                />
+                                            </div>
+                                        )}
                                         <h3 className="font-medium text-sm select-none text-text leading-relaxed">
                                             {card.question}
                                         </h3>
@@ -173,8 +193,38 @@ const FlashCards = () => {
                     .rotate-y-180 { transform: rotateY(180deg); }
                     .no-scrollbar::-webkit-scrollbar { display: none; }
                     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                    
+                    @keyframes slideUp {
+                        from {
+                            opacity: 0;
+                            transform: translateY(20px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                    .animate-slide-up {
+                        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    }
                 `}</style>
             </div>
+
+            {/* Hover Zoom Overlay - Centered and Large */}
+            {
+                hoveredImage && (
+                    <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center p-4">
+                        <div className="bg-black/95 backdrop-blur-sm p-2 rounded-xl border border-white/20 shadow-2xl animate-in zoom-in-95 duration-200">
+                            <img
+                                src={hoveredImage}
+                                alt="Zoomed Question"
+                                className="max-h-[70vh] max-w-[80vw] object-contain rounded-lg"
+                            />
+                        </div>
+                    </div>
+                )
+            }
+
         </div >
     );
 };
