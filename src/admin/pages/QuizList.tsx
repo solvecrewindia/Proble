@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Plus, Clock, FileText, ChevronRight, ArrowLeft, Trash2, Search, Folder, Layers, Edit } from 'lucide-react';
+import { Plus, Clock, FileText, ChevronRight, ArrowLeft, Trash2, Folder, Layers, Edit } from 'lucide-react';
 import { Module } from '../../faculty/types';
 
 const QuizList = () => {
@@ -14,7 +14,7 @@ const QuizList = () => {
     const [currentModule, setCurrentModule] = useState<Module | null>(null);
 
     const categoryTitle = category ? category.toUpperCase() : (currentModule?.category || 'Global');
-    const isModuleSupported = ['NPTEL', 'GATE', 'SRMIST'].includes(categoryTitle);
+    const isModuleSupported = ['NPTEL', 'GATE', 'SRMIST', 'PLACEMENT'].includes(categoryTitle);
 
     useEffect(() => {
         fetchData();

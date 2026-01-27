@@ -37,7 +37,7 @@ function App({ searchQuery = '' }: AppProps) {
           moduleCategory = 'NPTEL';
         } else if (activeTab === 'placement') {
           dbType = 'placement';
-          moduleCategory = 'Placement';
+          moduleCategory = 'PLACEMENT';
         } else if (activeTab === 'global') {
           dbType = 'global';
           moduleCategory = 'Global';
