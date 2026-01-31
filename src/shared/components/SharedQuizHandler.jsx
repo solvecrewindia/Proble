@@ -13,9 +13,9 @@ const SharedQuizHandler = () => {
 
         if (!user) {
             // User not logged in, redirect to login
-            // Pass the current location so they can be redirected back after login
-            navigate('/login', {
-                state: { from: location },
+            // Pass the current location as a query param so it persists through refreshes
+            const returnTo = encodeURIComponent(location.pathname + location.search);
+            navigate(`/login?returnTo=${returnTo}`, {
                 replace: true
             });
         } else {

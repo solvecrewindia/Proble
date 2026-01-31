@@ -99,12 +99,9 @@ export default function Login() {
     };
 
     const onSignIn = async (data: any) => {
-        console.log("Login: onSignIn called with", data.email);
         try {
             setIsLoading(true);
-            console.log("Login: calling auth.login...");
             const user = await login(data.email, data.password);
-            console.log("Login: auth.login returned:", user);
 
             if (user) {
                 if (rememberMe) {
@@ -113,8 +110,17 @@ export default function Login() {
                     localStorage.removeItem('rememberedEmail');
                 }
 
-                // Check if there's a return path in state
+                // Check if there's a return path in state OR query params
                 const state = (location as any).state;
+                const searchParams = new URLSearchParams(location.search);
+                const returnTo = searchParams.get('returnTo');
+
+                if (returnTo) {
+                    const target = decodeURIComponent(returnTo);
+                    navigate(target, { replace: true });
+                    return;
+                }
+
                 if (state?.from?.pathname) {
                     const from = state.from.pathname + (state.from.search || '');
                     navigate(from, { replace: true });
@@ -126,7 +132,6 @@ export default function Login() {
                 if (user.role === 'admin') path = '/admin';
                 else if (user.role === 'faculty' || user.role === 'teacher') path = '/faculty';
 
-                console.log(`Login: Navigating to ${path} for role ${user.role}`);
                 navigate(path);
             } else {
                 console.error("Login: User object is null/undefined after successful login call.");
@@ -136,7 +141,6 @@ export default function Login() {
             console.error('Login: failed with error:', error);
             alert('Login failed: ' + (error.message || 'Invalid credentials'));
         } finally {
-            console.log("Login: finally block - resetting isLoading");
             setIsLoading(false);
         }
     };
