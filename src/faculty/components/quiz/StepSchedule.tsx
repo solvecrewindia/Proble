@@ -1,11 +1,15 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Key, Shield, Link, Copy, Check } from 'lucide-react';
+import { Calendar, Clock, Key, Shield, Link, Copy, Check, QrCode, Play, AlertCircle } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { QRCodeModal } from './QRCodeModal';
+import { supabase } from '../../../lib/supabase';
 
 export function StepSchedule({ data, update }: any) {
     const [copied, setCopied] = useState(false);
+    const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
+
 
     useEffect(() => {
         if (!data.accessCode) {
@@ -25,8 +29,23 @@ export function StepSchedule({ data, update }: any) {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleShowQRCode = () => {
+        const link = `${window.location.origin}/quiz/${data.accessCode || 'CODE'}`;
+        setQrCodeData({ url: link, code: data.accessCode || 'CODE' });
+    };
+
+
+
     return (
         <div className="space-y-6 max-w-2xl mx-auto">
+            {qrCodeData && (
+                <QRCodeModal
+                    url={qrCodeData.url}
+                    code={qrCodeData.code}
+                    onClose={() => setQrCodeData(null)}
+                />
+            )}
+
             <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-text">Schedule & Access</h2>
                 <p className="text-sm text-muted">Configure when and how students can access this quiz.</p>
@@ -90,6 +109,9 @@ export function StepSchedule({ data, update }: any) {
                         <Button variant="outline" onClick={copyLink} disabled={!data.accessCode}>
                             {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                         </Button>
+                        <Button variant="outline" onClick={handleShowQRCode} disabled={!data.accessCode} title="Show QR Code">
+                            <QrCode className="h-4 w-4" />
+                        </Button>
                     </div>
                     <p className="text-xs text-muted">Direct link for students to join the quiz.</p>
                 </div>
@@ -107,6 +129,9 @@ export function StepSchedule({ data, update }: any) {
                         </div>
                     </div>
                 </div>
+
+                {/* Direct Action */}
+
             </Card>
         </div>
     );

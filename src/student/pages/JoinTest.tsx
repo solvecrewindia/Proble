@@ -11,7 +11,7 @@ const JoinTest = () => {
     const urlCode = searchParams.get('code');
 
     const [code, setCode] = useState(urlCode || '');
-    const [loading, setLoading] = useState(false);
+
     const [verifying, setVerifying] = useState(!!urlCode);
     const [quiz, setQuiz] = useState<any>(null);
     const [error, setError] = useState('');

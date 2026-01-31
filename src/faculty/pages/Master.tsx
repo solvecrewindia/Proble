@@ -2,17 +2,21 @@
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Copy, Plus, Edit, Download, RotateCw, Link as LinkIcon, FileSpreadsheet } from 'lucide-react';
+import { Copy, Plus, Edit, Download, RotateCw, Link as LinkIcon, FileSpreadsheet, QrCode, Play } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Quiz } from '../types';
+import { QRCodeModal } from '../components/quiz/QRCodeModal';
 
 export default function Master() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('ongoing');
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // QR Code State
+    const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
 
     const fetchQuizzes = React.useCallback(async () => {
         setLoading(true);
@@ -254,6 +258,11 @@ export default function Master() {
         alert(`Link copied: ${link}`);
     };
 
+    const handleShowQRCode = (code: string) => {
+        const url = `${window.location.origin}/quiz/${code}`;
+        setQrCodeData({ url, code });
+    };
+
     // Filter quizzes based on active tab
     const filteredQuizzes = quizzes.filter(quiz => {
         if (activeTab === 'ongoing') return quiz.status === 'active' || quiz.status === 'paused' || !quiz.status; // Default to active if null
@@ -266,10 +275,20 @@ export default function Master() {
 
     return (
         <div className="space-y-6 relative">
-            {/* Results Modal Overlay */}
+            {/* QR Code Modal */}
+            {qrCodeData && (
+                <QRCodeModal
+                    url={qrCodeData.url}
+                    code={qrCodeData.code}
+                    onClose={() => setQrCodeData(null)}
+                />
+            )}
+
+            {/* ... (omit results modal checks, keeping existing) ... */}
             {viewingResults && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-surface border border-neutral-300 dark:border-neutral-600 rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+                        {/* ... result content ... */}
                         <div className="p-6 border-b border-neutral-300 dark:border-neutral-600 flex justify-between items-center">
                             <h2 className="text-xl font-bold text-text">Student Results</h2>
                             <div className="flex gap-2">
@@ -397,6 +416,9 @@ export default function Master() {
                                             </Button>
                                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1" onClick={() => copyLink(quiz.accessCode || (quiz as any).code || '')} title="Copy Direct Link">
                                                 <LinkIcon className="h-3 w-3" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1 text-primary" onClick={() => handleShowQRCode(quiz.accessCode || (quiz as any).code || '')} title="Show QR Code">
+                                                <QrCode className="h-3 w-3" />
                                             </Button>
                                         </p>
                                     </div>
