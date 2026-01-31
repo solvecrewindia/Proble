@@ -4,12 +4,12 @@ import { useAuth } from '../context/AuthContext';
 
 const SharedQuizHandler = () => {
     const { code } = useParams();
-    const { user, loading } = useAuth();
+    const { user, isLoading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
     useEffect(() => {
-        if (loading) return;
+        if (isLoading) return;
 
         if (!user) {
             // User not logged in, redirect to login
@@ -22,9 +22,9 @@ const SharedQuizHandler = () => {
             // User logged in, redirect to student join page with code
             navigate(`/student/join?code=${code}`, { replace: true });
         }
-    }, [user, loading, code, navigate, location]);
+    }, [user, isLoading, code, navigate, location]);
 
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen bg-background">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
