@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Puzzle, Lock, Clock, ArrowLeft } from 'lucide-react';
 import GameLeaderboard from '../components/GameLeaderboard';
-import { isPuzzleLocked, syncScoreToSupabase, getPuzzleState, getFlashCardState } from '../utils/gameState';
+import { isPuzzleLocked, syncScoreToSupabase, getPuzzleState, getFlashCardState, isRapidFireLocked, getRapidFireState } from '../utils/gameState';
 import { useAuth } from '../../shared/context/AuthContext';
 
 const StudentGame = () => {
@@ -10,9 +10,11 @@ const StudentGame = () => {
     const { user } = useAuth();
 
     const [puzzleLocked, setPuzzleLocked] = useState(false); // New lock state
+    const [rapidLocked, setRapidLocked] = useState(false);
     const [timeRemaining, setTimeRemaining] = useState('');
     const [flashCardScore, setFlashCardScore] = useState(0);
     const [puzzleScore, setPuzzleScore] = useState(0);
+    const [rapidScore, setRapidScore] = useState(0);
 
     useEffect(() => {
         // Initial Score Load
@@ -22,11 +24,15 @@ const StudentGame = () => {
             setFlashCardScore(flashState.totalScore);
             const puzzleState = getPuzzleState(user.id);
             setPuzzleScore(puzzleState.totalScore);
+            const rapidState = getRapidFireState(user.id);
+            setRapidScore(rapidState.totalScore);
         } else {
             const flashState = getFlashCardState();
             setFlashCardScore(flashState.totalScore);
             const puzzleState = getPuzzleState();
             setPuzzleScore(puzzleState.totalScore);
+            const rapidState = getRapidFireState();
+            setRapidScore(rapidState.totalScore);
         }
 
         if (user) {
@@ -37,7 +43,10 @@ const StudentGame = () => {
             const isPuzLocked = isPuzzleLocked(user.id);
             setPuzzleLocked(isPuzLocked);
 
-            if (isPuzLocked) {
+            const isRapidLocked = isRapidFireLocked(user.id);
+            setRapidLocked(isRapidLocked);
+
+            if (isPuzLocked || isRapidLocked) {
                 startTimer();
             }
         }
@@ -53,6 +62,7 @@ const StudentGame = () => {
             const diff = tomorrow.getTime() - now.getTime();
             if (diff <= 0) {
                 setPuzzleLocked(false);
+                setRapidLocked(false);
                 return;
             }
 
@@ -80,8 +90,17 @@ const StudentGame = () => {
             score: puzzleScore,
             locked: puzzleLocked // Use new lock state
         },
-
-
+        {
+            id: 'rapid-fire',
+            title: 'Rapid Fire Challenge',
+            description: '30 Questions. 5 Minutes. 1 Attempt Daily.',
+            icon: Clock,
+            color: 'text-red-500',
+            bg: 'bg-red-500/10',
+            path: '/student/game/rapid-fire',
+            score: rapidScore,
+            locked: rapidLocked
+        }
     ];
 
     const handleGameClick = (game: any) => {

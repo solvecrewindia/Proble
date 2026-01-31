@@ -81,7 +81,8 @@ export const syncScoreToSupabase = async (userId: string) => {
     try {
         const puzzle = getPuzzleState(userId);
         const flash = getFlashCardState(userId);
-        const total = puzzle.totalScore + flash.totalScore;
+        const rapid = getRapidFireState(userId);
+        const total = puzzle.totalScore + flash.totalScore + rapid.totalScore;
         const currentWeek = getWeekId();
 
         const { error } = await supabase
@@ -138,6 +139,7 @@ export const resetFlashCardState = (userId?: string) => {
 export const hardResetStats = (userId?: string) => {
     localStorage.removeItem(getPuzzleKey(userId));
     localStorage.removeItem(getFlashKey(userId));
+    localStorage.removeItem(getRapidFireKey(userId));
     window.location.reload(); // Force reload to reflect changes
 };
 
@@ -204,5 +206,53 @@ export const isDailyChallengeLocked = (userId?: string): boolean => {
 };
 
 
+
+// --- Rapid Fire State ---
+export interface RapidFireState {
+    lastPlayedDate: string | null;
+    totalScore: number;
+    dailyScore: number;
+}
+
+const getRapidFireKey = (userId?: string) => `proble_rapid_fire_state_v1_${userId || 'guest'}`;
+
+export const getRapidFireState = (userId?: string): RapidFireState => {
+    const key = getRapidFireKey(userId);
+    const stored = localStorage.getItem(key);
+    if (!stored) {
+        return {
+            lastPlayedDate: null,
+            totalScore: 0,
+            dailyScore: 0
+        };
+    }
+    return JSON.parse(stored);
+};
+
+export const isRapidFireLocked = (userId?: string): boolean => {
+    const state = getRapidFireState(userId);
+    const today = new Date().toLocaleDateString('en-CA');
+    return state.lastPlayedDate === today;
+};
+
+export const saveRapidFireScore = (points: number, userId?: string) => {
+    const state = getRapidFireState(userId);
+    const today = new Date().toLocaleDateString('en-CA');
+
+    if (state.lastPlayedDate !== today) {
+        state.dailyScore = 0;
+        state.lastPlayedDate = today;
+    }
+
+    state.dailyScore += points;
+    state.totalScore += points;
+
+    const key = getRapidFireKey(userId);
+    localStorage.setItem(key, JSON.stringify(state));
+
+    if (userId) syncScoreToSupabase(userId);
+};
+
 // --- Mistake Finder State ---
+
 
