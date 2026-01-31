@@ -514,7 +514,7 @@ const MCQTest = () => {
 
 
             {/* --- MAIN LAYOUT --- */}
-            <main className="max-w-7xl mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 min-h-[calc(100vh-80px)]">
+            <main className="max-w-7xl mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 min-h-[calc(100dvh-80px)]">
 
                 {/* --- LEFT: QUESTION --- */}
                 <div className="lg:col-span-8 flex flex-col gap-4">
