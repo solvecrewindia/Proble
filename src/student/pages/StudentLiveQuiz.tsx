@@ -5,7 +5,7 @@ import { useAuth } from '../../shared/context/AuthContext';
 import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { Loader2, CheckCircle, Clock } from 'lucide-react';
-import { cn } from '../../shared/lib/utils';
+import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
 
 export default function StudentLiveQuiz() {
