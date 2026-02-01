@@ -15,6 +15,12 @@ const SharedQuizHandler = () => {
             // User not logged in, redirect to login
             // Pass the current location as a query param so it persists through refreshes
             const returnTo = encodeURIComponent(location.pathname + location.search);
+
+            // INTENT: Save quiz code to local storage so Onboarding knows to treat them as a student
+            if (code) {
+                localStorage.setItem('quiz_join_intent', code);
+            }
+
             navigate(`/login?returnTo=${returnTo}`, {
                 replace: true
             });

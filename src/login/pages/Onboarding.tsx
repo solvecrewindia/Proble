@@ -24,6 +24,18 @@ export default function Onboarding() {
             return;
         }
 
+        // AUTO-DETECT STUDENT INTENT (from SharedQuizHandler)
+        const quizIntent = localStorage.getItem('quiz_join_intent');
+        if (quizIntent) {
+            console.log("Onboarding: Auto-selecting Student role due to Quiz Intent:", quizIntent);
+            setSelectedRole('student');
+            setStep(2);
+            // Optionally clear it here, or wait until success. 
+            // Clearing it now prevents stuck state if they reload.
+            // But we might want to keep it if they refresh on step 2. 
+            // Let's keep it until success.
+        }
+
         // Try to pre-fill data from Google metadata if available
         const fetchMetadata = async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -72,11 +84,9 @@ export default function Onboarding() {
             alert("Please fill in all required fields.");
             return;
         }
-        if (selectedRole === 'student' && !regNo) {
-            // Ideally we force RegNo for SRM, but maybe not all students are SRM? 
-            // The prompt implies "if srm means it will also take reg no", suggesting optional if not SRM.
-            // But if they picked STUDENT, we usually want some ID. Let's make it optional but recommended?
-            // Actually, for this specific request, let's keep it simple.
+        if (selectedRole === 'student' && user.email?.endsWith('@srmist.edu.in') && !regNo) {
+            alert("Please enter your Registration Number.");
+            return;
         }
 
         try {
@@ -103,9 +113,17 @@ export default function Onboarding() {
             await refreshUser();
 
             // 3. Redirect
-            if (selectedRole === 'admin') navigate('/admin');
-            else if (selectedRole === 'faculty' || selectedRole === 'teacher') navigate('/faculty');
-            else navigate('/');
+
+            // Check for quiz intent redirect first
+            const quizIntent = localStorage.getItem('quiz_join_intent');
+            if (quizIntent && selectedRole === 'student') {
+                localStorage.removeItem('quiz_join_intent'); // Consume it
+                navigate(`/student/join?code=${quizIntent}`);
+            } else {
+                if (selectedRole === 'admin') navigate('/admin');
+                else if (selectedRole === 'faculty' || selectedRole === 'teacher') navigate('/faculty');
+                else navigate('/');
+            }
 
         } catch (error: any) {
             console.error("Onboarding failed:", error);
@@ -114,6 +132,14 @@ export default function Onboarding() {
             setIsLoading(false);
         }
     };
+
+    // Clean up intent on unmount or success
+    useEffect(() => {
+        return () => {
+            // We don't strictly clear it on unmount because they might refresh. 
+            // Ideally we clear it on successful profile creation or explicit cancel.
+        };
+    }, []);
 
     if (!user) return null;
 
@@ -206,19 +232,20 @@ export default function Onboarding() {
                                 </div>
                             </div>
 
-                            {selectedRole === 'student' && (
+                            {selectedRole === 'student' && user.email?.endsWith('@srmist.edu.in') && (
                                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                                     <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">
-                                        Registration Number (Optional)
+                                        Registration Number <span className="text-red-500">*</span>
                                     </label>
                                     <Input
                                         value={regNo}
                                         onChange={(e) => setRegNo(e.target.value)}
                                         placeholder="RA..."
+                                        required
                                         className="h-12 bg-gray-50 dark:bg-neutral-900"
                                     />
                                     <p className="text-xs text-neutral-400 ml-1">
-                                        Use your SRM Registration Number if applicable.
+                                        Required for SRMIST students.
                                     </p>
                                 </div>
                             )}
