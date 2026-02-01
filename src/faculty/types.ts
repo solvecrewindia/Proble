@@ -44,7 +44,7 @@ export interface Quiz {
     title: string;
     description: string;
     image_url?: string;
-    type: 'global' | 'master';
+    type: 'global' | 'master' | 'live';
     status: 'draft' | 'active' | 'completed' | 'paused';
     accessCode?: string;
     scheduledAt?: string;
@@ -56,6 +56,7 @@ export interface Quiz {
         antiCheatLevel: 'low' | 'standard' | 'strict';
         allowRetake: boolean;
         category?: string;
+        timePerQuestion?: number; // seconds
     };
     created_by: string; // Foreign Key to profiles
     createdAt: string;

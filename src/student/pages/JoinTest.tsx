@@ -86,7 +86,11 @@ const JoinTest = () => {
 
     const handleStartTest = () => {
         if (quiz) {
-            navigate(`/student/test/${quiz.id}`);
+            if (quiz.type === 'live') {
+                navigate(`/student/live/${quiz.id}`);
+            } else {
+                navigate(`/student/test/${quiz.id}`);
+            }
         }
     };
 

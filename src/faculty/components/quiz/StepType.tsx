@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Globe, Lock } from 'lucide-react';
+import { Globe, Lock, Radio } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export function StepType({ data, update }: any) {
@@ -10,7 +10,7 @@ export function StepType({ data, update }: any) {
                 <p className="text-muted">Select how you want to publish this test.</p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 pt-8">
+            <div className="grid md:grid-cols-3 gap-6 pt-8">
                 <button
                     onClick={() => update({ type: 'global' })}
                     className={cn(
@@ -52,6 +52,27 @@ export function StepType({ data, update }: any) {
                     <p className="text-sm text-muted leading-relaxed">
                         Private assessment restricted by access code or invite. Ideal for internal exams, class tests, and hiring.
                         Includes live proctoring.
+                    </p>
+                </button>
+
+                <button
+                    onClick={() => update({ type: 'live' })}
+                    className={cn(
+                        "relative p-8 rounded-2xl border-2 text-left transition-all hover:shadow-lg group",
+                        data.type === 'live'
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-neutral-300 dark:border-neutral-600 hover:border-primary/50 bg-surface"
+                    )}
+                >
+                    <div className={cn(
+                        "h-12 w-12 rounded-full flex items-center justify-center mb-4 transition-colors",
+                        data.type === 'live' ? "bg-primary text-white" : "bg-neutral-100 dark:bg-neutral-800 text-muted group-hover:text-primary"
+                    )}>
+                        <Radio className="h-6 w-6" />
+                    </div>
+                    <h3 className="text-xl font-bold text-text mb-2">Live Test</h3>
+                    <p className="text-sm text-muted leading-relaxed">
+                        Real-time assessment for simultaneous participation. Ideal for quizzes, competitions, and live events.
                     </p>
                 </button>
             </div>

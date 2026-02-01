@@ -71,17 +71,33 @@ export function StepSchedule({ data, update }: any) {
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-text flex items-center">
-                            <Clock className="mr-2 h-4 w-4" /> Duration (minutes)
-                        </label>
-                        <Input
-                            type="number"
-                            placeholder="e.g. 60"
-                            value={data.durationMinutes || ''}
-                            onChange={(e) => update({ durationMinutes: Number(e.target.value) })}
-                        />
-                    </div>
+                    {data.type === 'live' ? (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-text flex items-center">
+                                <Clock className="mr-2 h-4 w-4" /> Time per Question (seconds)
+                            </label>
+                            <Input
+                                type="number"
+                                placeholder="e.g. 30"
+                                value={data.settings?.timePerQuestion || ''}
+                                onChange={(e) => update({
+                                    settings: { ...data.settings, timePerQuestion: Number(e.target.value) }
+                                })}
+                            />
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-text flex items-center">
+                                <Clock className="mr-2 h-4 w-4" /> Duration (minutes)
+                            </label>
+                            <Input
+                                type="number"
+                                placeholder="e.g. 60"
+                                value={data.durationMinutes || ''}
+                                onChange={(e) => update({ durationMinutes: Number(e.target.value) })}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="pt-6 border-t border-neutral-300 dark:border-neutral-600 space-y-4">

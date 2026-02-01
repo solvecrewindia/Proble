@@ -7,7 +7,8 @@ import {
     Lock,
     User,
     LogOut,
-    X
+    X,
+    Radio
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +27,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { icon: BarChart2, label: 'Analytics', to: '/faculty/analytics' },
         { icon: Globe, label: 'Global Tests', to: '/faculty/global' },
         { icon: Lock, label: 'Master Tests', to: '/faculty/master' },
+        { icon: Radio, label: 'Live Tests', to: '/faculty/live' },
     ];
 
     return (

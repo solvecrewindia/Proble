@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -7,7 +7,7 @@ import { Save, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { cn } from '../lib/utils';
-import type { QuizMeta, Question } from '../types';
+import type { QuizMeta } from '../types';
 
 import { StepMetadata } from '../components/quiz/StepMetadata';
 import { StepQuestions } from '../components/quiz/StepQuestions';
@@ -74,7 +74,7 @@ export default function QuizCreate() {
             }
 
             // Fetch Questions
-            const { data: qs, error: qError } = await supabase
+            const { data: qs, error: _ } = await supabase
                 .from('questions')
                 .select('*')
                 .eq('quiz_id', id);
@@ -112,6 +112,8 @@ export default function QuizCreate() {
             if (!userId) throw new Error("Not authenticated");
 
             const isMaster = data.type === 'master';
+            const isLive = data.type === 'live';
+            const needsCode = isMaster || isLive;
 
             // Enforce Master Test constraints
             if (isMaster) {
@@ -124,7 +126,7 @@ export default function QuizCreate() {
                 title: data.title,
                 description: data.description,
                 type: data.type,
-                code: isMaster ? (data.accessCode || generateCode()) : null,
+                code: needsCode ? (data.accessCode || generateCode()) : null,
                 settings: {
                     ...data.settings,
                     duration: data.durationMinutes, // Sync duration to settings
@@ -269,34 +271,78 @@ export default function QuizCreate() {
                 >
                     <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                 </Button>
-                <Button
-                    disabled={saveMutation.isPending}
-                    onClick={async () => {
-                        if (currentStep === STEPS.length - 1) {
-                            try {
-                                setIsSaving(true);
-                                await saveMutation.mutateAsync({ ...quizData, questions });
 
-                                if (quizData.type === 'master') {
-                                    navigate('/faculty/master');
+                <div className="flex gap-2">
+                    {currentStep === STEPS.length - 1 && quizData.type === 'live' ? (
+                        <>
+                            <Button
+                                variant="outline"
+                                disabled={saveMutation.isPending}
+                                onClick={async () => {
+                                    try {
+                                        setIsSaving(true);
+                                        // Force status to 'draft' or 'scheduled' if we had that logic, 
+                                        // but for now just save and redirect
+                                        await saveMutation.mutateAsync({ ...quizData, questions });
+                                        navigate('/faculty/live');
+                                    } catch (error) {
+                                        console.error("Failed to save:", error);
+                                        setIsSaving(false);
+                                    }
+                                }}
+                            >
+                                <Save className="mr-2 h-4 w-4" /> Save & Exit
+                            </Button>
+                            <Button
+                                disabled={saveMutation.isPending}
+                                onClick={async () => {
+                                    try {
+                                        setIsSaving(true);
+                                        // In a real app, this might trigger a specific 'live' status
+                                        await saveMutation.mutateAsync({ ...quizData, questions });
+                                        navigate('/faculty/live');
+                                    } catch (error) {
+                                        console.error("Failed to publish:", error);
+                                        setIsSaving(false);
+                                    }
+                                }}
+                            >
+                                {saveMutation.isPending ? 'Publishing...' : 'Publish Now'} <ChevronRight className="ml-2 h-4 w-4" />
+                            </Button>
+                        </>
+                    ) : (
+                        <Button
+                            disabled={saveMutation.isPending}
+                            onClick={async () => {
+                                if (currentStep === STEPS.length - 1) {
+                                    try {
+                                        setIsSaving(true);
+                                        await saveMutation.mutateAsync({ ...quizData, questions });
+
+                                        if (quizData.type === 'master') {
+                                            navigate('/faculty/master');
+                                        } else if (quizData.type === 'live') {
+                                            navigate('/faculty/live');
+                                        } else {
+                                            navigate('/faculty/global');
+                                        }
+                                    } catch (error) {
+                                        console.error("Failed to publish:", error);
+                                        alert("Failed to save quiz. Please try again.");
+                                        setIsSaving(false);
+                                    }
                                 } else {
-                                    navigate('/faculty/global');
+                                    setCurrentStep(prev => prev + 1);
                                 }
-                            } catch (error) {
-                                console.error("Failed to publish:", error);
-                                alert("Failed to save quiz. Please try again.");
-                                setIsSaving(false);
-                            }
-                        } else {
-                            setCurrentStep(prev => prev + 1);
-                        }
-                    }}
-                >
-                    {currentStep === STEPS.length - 1 ? (
-                        saveMutation.isPending ? 'Publishing...' : 'Publish Quiz'
-                    ) : 'Next Step'}
-                    {currentStep !== STEPS.length - 1 && <ChevronRight className="ml-2 h-4 w-4" />}
-                </Button>
+                            }}
+                        >
+                            {currentStep === STEPS.length - 1 ? (
+                                saveMutation.isPending ? 'Publishing...' : 'Publish Quiz'
+                            ) : 'Next Step'}
+                            {currentStep !== STEPS.length - 1 && <ChevronRight className="ml-2 h-4 w-4" />}
+                        </Button>
+                    )}
+                </div>
             </div>
         </div>
     );
