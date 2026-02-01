@@ -9,6 +9,7 @@ interface AuthContextType {
     logout: () => void;
     isLoading: boolean;
     refreshUser: () => Promise<void>;
+    signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +30,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cached = localStorage.getItem('cached_user_profile');
         return !cached; // If cached user exists, we are NOT loading visually
     });
+
+
 
     const fetchProfile = async (userId: string, email: string) => {
         try {
@@ -52,7 +55,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (error) {
                 console.warn('AuthContext: Supabase profile error:', error.message);
-                // If specific error (like PGRST116 - no rows), validation might fail
+                if (error.code === 'PGRST116') {
+                    // Code for "no rows found". This is a NEW USER from Google Sign In.
+                    // Return a partial user object so we can redirect to Onboarding.
+                    console.log("AuthContext: Profile not found (New User). Returning partial user for onboarding.");
+                    return {
+                        id: userId,
+                        email: email,
+                        role: null, // No role yet
+                        isNewUser: true, // Flag to trigger onboarding
+                        // We can't get metadata here easily unless we pass it in, 
+                        // but session usually has it. We'll handle metadata extraction in Onboarding.tsx
+                        // using the current session.
+                    } as unknown as User;
+                }
             }
 
             if (profile) {
@@ -355,8 +371,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const signInWithGoogle = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+            });
+            if (error) throw error;
+        } catch (error) {
+            console.error("Google Sign-In Error:", error);
+            throw error;
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, signInWithGoogle }}>
             {children}
         </AuthContext.Provider>
     );

@@ -17,6 +17,7 @@ const AboutUs = lazy(() => import('./homepage/AboutUs'));
 const StudentApp = lazy(() => import('./student/App'));
 const ForgotPassword = lazy(() => import('./login/pages/ForgotPassword'));
 const SharedQuizHandler = lazy(() => import('./shared/components/SharedQuizHandler'));
+const Onboarding = lazy(() => import('./login/pages/Onboarding'));
 
 // Loading Screen Component
 const FullScreenLoader = () => (
@@ -47,6 +48,19 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return children;
 };
 
+// Onboarding Guard - Only for new users or those without role
+const OnboardingRoute = ({ children }) => {
+    const { user, isLoading } = useAuth();
+    if (isLoading) return <FullScreenLoader />;
+    if (!user) return <Navigate to="/login" replace />;
+
+    // If user HAS a role, they shouldn't be here (unless we allow re-onboarding? No)
+    if (user.role && !user.isNewUser) {
+        return <Navigate to="/" replace />;
+    }
+    return children;
+};
+
 
 
 // Root Redirect Component
@@ -59,6 +73,11 @@ const RootRedirect = ({ searchQuery }) => {
 
     // Role Guard: Redirect based on role
     if (user) {
+        // Redirection for new users
+        if (user.isNewUser || !user.role) {
+            return <Navigate to="/onboarding" replace />;
+        }
+
         const role = user.role?.toLowerCase();
         if (role === 'faculty' || role === 'teacher') {
             return <Navigate to="/faculty/dashboard" replace />;
@@ -101,7 +120,18 @@ function AppContent() {
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/course/:id" element={<QuizDetails />} />
                     <Route path="/module/:id" element={<ModuleDetails />} />
+                    <Route path="/module/:id" element={<ModuleDetails />} />
                     <Route path="/quiz/:code" element={<SharedQuizHandler />} />
+
+                    {/* Onboarding Route */}
+                    <Route
+                        path="/onboarding"
+                        element={
+                            <OnboardingRoute>
+                                <Onboarding />
+                            </OnboardingRoute>
+                        }
+                    />
 
                     {/* Protected Routes */}
                     <Route
