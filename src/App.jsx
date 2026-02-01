@@ -4,20 +4,23 @@ import { ThemeProvider } from './shared/context/ThemeContext';
 import Header from './shared/components/Header';
 import RegistrationNumberModal from './shared/components/RegistrationNumberModal';
 import InstallPwaPopup from './shared/components/InstallPwaPopup';
-import { useState, lazy, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 
 // Lazy Load Components
-const FacultyApp = lazy(() => import('./faculty/App'));
-const Login = lazy(() => import('./login/pages/Login'));
-const HomepageApp = lazy(() => import('./homepage/App'));
-const QuizDetails = lazy(() => import('./student/pages/QuizDetails'));
-const ModuleDetails = lazy(() => import('./homepage/ModuleDetails'));
-const AdminApp = lazy(() => import('./admin/App'));
-const AboutUs = lazy(() => import('./homepage/AboutUs'));
-const StudentApp = lazy(() => import('./student/App'));
-const ForgotPassword = lazy(() => import('./login/pages/ForgotPassword'));
-const SharedQuizHandler = lazy(() => import('./shared/components/SharedQuizHandler'));
-const Onboarding = lazy(() => import('./login/pages/Onboarding'));
+import { lazyRetry } from './shared/utils/lazyRetry';
+
+// Lazy Load Components
+const FacultyApp = lazyRetry(() => import('./faculty/App'), 'FacultyApp');
+const Login = lazyRetry(() => import('./login/pages/Login'), 'Login');
+const HomepageApp = lazyRetry(() => import('./homepage/App'), 'HomepageApp');
+const QuizDetails = lazyRetry(() => import('./student/pages/QuizDetails'), 'QuizDetails');
+const ModuleDetails = lazyRetry(() => import('./homepage/ModuleDetails'), 'ModuleDetails');
+const AdminApp = lazyRetry(() => import('./admin/App'), 'AdminApp');
+const AboutUs = lazyRetry(() => import('./homepage/AboutUs'), 'AboutUs');
+const StudentApp = lazyRetry(() => import('./student/App'), 'StudentApp');
+const ForgotPassword = lazyRetry(() => import('./login/pages/ForgotPassword'), 'ForgotPassword');
+const SharedQuizHandler = lazyRetry(() => import('./shared/components/SharedQuizHandler'), 'SharedQuizHandler');
+const Onboarding = lazyRetry(() => import('./login/pages/Onboarding'), 'Onboarding');
 
 // Loading Screen Component
 const FullScreenLoader = () => (
