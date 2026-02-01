@@ -63,16 +63,17 @@ export default function StudentLiveQuiz() {
                 const { data: existingAttempt } = await supabase
                     .from('attempts')
                     .select('*')
-                    .eq('quizId', id)
-                    .eq('studentId', user.id)
+                    .select('*')
+                    .eq('quiz_id', id)
+                    .eq('student_id', user.id)
                     .single();
 
                 if (!existingAttempt) {
                     await supabase.from('attempts').insert({
-                        quizId: id,
-                        studentId: user.id,
+                        quiz_id: id,
+                        student_id: user.id,
                         status: 'in-progress',
-                        startedAt: new Date().toISOString(),
+                        started_at: new Date().toISOString(),
                         flags: []
                     });
                 }

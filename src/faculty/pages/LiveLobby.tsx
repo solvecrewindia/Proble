@@ -38,16 +38,16 @@ export default function LiveLobby() {
                 .from('attempts')
                 .select(`
                     id, 
-                    studentId, 
+                    student_id, 
                     status,
                     student:students(id, name)
                 `)
-                .eq('quizId', id)
+                .eq('quiz_id', id)
                 .eq('status', 'in-progress');
 
             if (data) {
                 const mapped = data.map((attempt: any) => ({
-                    id: attempt.student?.id || attempt.studentId,
+                    id: attempt.student?.id || attempt.student_id,
                     name: attempt.student?.name || 'Unknown Student',
                     avatar: (attempt.student?.name || 'U').substring(0, 2).toUpperCase()
                 }));
@@ -67,7 +67,7 @@ export default function LiveLobby() {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'attempts',
-                    filter: `quizId=eq.${id}`
+                    filter: `quiz_id=eq.${id}`
                 },
                 (payload) => {
                     console.log('New participant joined:', payload);

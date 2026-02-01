@@ -56,9 +56,33 @@ export default function LiveController() {
                     }));
 
                     setQuiz({ ...quizData, questions: mappedQuestions });
-                    // Initialize dummy stats for first question
-                    if (mappedQuestions.length > 0) {
+
+                    // Initialize state from DB settings if available
+                    if (quizData.settings?.currentQuestionIndex !== undefined) {
+                        setCurrentQuestionIndex(quizData.settings.currentQuestionIndex);
+                        setViewMode(quizData.settings.viewMode || 'voting');
+                        if (mappedQuestions[quizData.settings.currentQuestionIndex]) {
+                            generateDummyStats(mappedQuestions[quizData.settings.currentQuestionIndex]);
+                        }
+                    } else if (mappedQuestions.length > 0) {
+                        // First time load - Sync Q1 to DB immediately so students see it
                         generateDummyStats(mappedQuestions[0]);
+                        // We need to call updateQuizState but we can't because quiz is not set in state yet.
+                        // So we do a direct update here.
+                        const timePerQuestion = Number(quizData.settings?.timePerQuestion) || 60;
+                        const questionExpiresAt = new Date(Date.now() + (timePerQuestion + 2) * 1000).toISOString();
+
+                        const newSettings = {
+                            ...quizData.settings,
+                            currentQuestionIndex: 0,
+                            viewMode: 'voting',
+                            questionExpiresAt
+                        };
+
+                        await supabase
+                            .from('quizzes')
+                            .update({ settings: newSettings })
+                            .eq('id', id);
                     }
                 }
             }
