@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { BarChart2, Share2, Plus, Check } from 'lucide-react';
+import { BarChart2, Share2, Plus, Check, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Quiz } from '../types';
@@ -106,6 +106,14 @@ export default function Global() {
                                                     quizCode={(quiz as any).code || quiz.accessCode}
                                                     quizId={quiz.id}
                                                 />
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="text-text border-neutral-300 dark:border-neutral-600 hover:bg-background"
+                                                    onClick={() => navigate(`/faculty/quizzes/${quiz.id}/edit`)}
+                                                >
+                                                    <Edit className="h-4 w-4 mr-2" /> Edit
+                                                </Button>
                                                 <Button variant="outline" size="sm" className="text-text border-neutral-300 dark:border-neutral-600 hover:bg-background">
                                                     <BarChart2 className="h-4 w-4 mr-2" /> Analytics
                                                 </Button>
