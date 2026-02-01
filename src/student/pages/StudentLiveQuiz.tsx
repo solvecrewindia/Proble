@@ -215,8 +215,8 @@ export default function StudentLiveQuiz() {
                     <div className="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
                         <Clock className="w-10 h-10" />
                     </div>
-                    <h1 className="text-2xl font-bold text-text">Waiting for Instructor</h1>
-                    <p className="text-muted">The session will begin shortly.</p>
+                    <h1 className="text-2xl font-bold text-text">You are in the Lobby</h1>
+                    <p className="text-muted">Waiting for the instructor to start the quiz...</p>
                 </Card>
             </div>
         );
