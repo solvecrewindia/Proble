@@ -78,6 +78,18 @@ const RootRedirect = ({ searchQuery }) => {
             return <Navigate to="/onboarding" replace />;
         }
 
+        // Check for quiz intent (Master Test / QR Code Scan)
+        const quizIntent = localStorage.getItem('quiz_join_intent');
+        if (quizIntent) {
+            // We consume it here OR let the target page consume it?
+            // If we redirect to /student/join, that page (JoinTest.tsx) should probably handle it.
+            // But usually we want to consume it so we don't get stuck in a loop if they navigate away.
+            // However, JoinTest usually takes a code param.
+            // Let's consume it and redirect.
+            localStorage.removeItem('quiz_join_intent');
+            return <Navigate to={`/student/join?code=${quizIntent}`} replace />;
+        }
+
         const role = user.role?.toLowerCase();
         if (role === 'faculty' || role === 'teacher') {
             return <Navigate to="/faculty/dashboard" replace />;
