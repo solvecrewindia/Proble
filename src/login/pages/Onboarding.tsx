@@ -9,8 +9,14 @@ import { Input } from '../components/ui/Input';
 export default function Onboarding() {
     const { user, refreshUser } = useAuth();
     const navigate = useNavigate();
-    const [step, setStep] = useState(1); // 1: Role Selection, 2: Details Confirmation
-    const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | null>(null);
+    // Initialize state directly from localStorage to prevent flash of Role Selection
+    const [step, setStep] = useState(() => {
+        return localStorage.getItem('quiz_join_intent') ? 2 : 1;
+    });
+    const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | null>(() => {
+        const intent = localStorage.getItem('quiz_join_intent');
+        return intent ? 'student' : null;
+    });
     const [isLoading, setIsLoading] = useState(false);
 
     // Form states
@@ -25,15 +31,13 @@ export default function Onboarding() {
         }
 
         // AUTO-DETECT STUDENT INTENT (from SharedQuizHandler)
+        // Redundant safely check in useEffect as well
         const quizIntent = localStorage.getItem('quiz_join_intent');
-        if (quizIntent) {
+        if (quizIntent && step === 1) {
+            // Fallback if init failed for some reason
             console.log("Onboarding: Auto-selecting Student role due to Quiz Intent:", quizIntent);
             setSelectedRole('student');
             setStep(2);
-            // Optionally clear it here, or wait until success. 
-            // Clearing it now prevents stuck state if they reload.
-            // But we might want to keep it if they refresh on step 2. 
-            // Let's keep it until success.
         }
 
         // Try to pre-fill data from Google metadata if available
