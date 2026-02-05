@@ -28,21 +28,64 @@ export default function StudentLiveQuiz() {
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [isTimeUp, setIsTimeUp] = useState(false);
 
-    useEffect(() => {
+    // Realtime Status
+    const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+
+    const fetchQuizState = async () => {
         if (!id || !user) return;
+        try {
+            // 1. Fetch Quiz & Questions
+            const { data: quizData, error: quizError } = await supabase
+                .from('quizzes')
+                .select('*')
+                .eq('id', id)
+                .single();
 
-        const initLiveSession = async () => {
-            try {
-                // 1. Fetch Quiz & Questions
-                const { data: quizData, error: quizError } = await supabase
-                    .from('quizzes')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
+            if (quizError) throw quizError;
 
-                if (quizError) throw quizError;
+            // Update Quiz State
+            setQuiz(quizData);
 
-                const { data: questionsData, error: _ } = await supabase
+            // Update Local State based on settings
+            if (quizData.settings) {
+                if (typeof quizData.settings.currentQuestionIndex === 'number') {
+                    setCurrentQuestionIndex((prev) => {
+                        if (prev !== quizData.settings.currentQuestionIndex) {
+                            // New Question: Reset state
+                            setSelectedOption(null);
+                            setIsSubmitted(false);
+                            setIsTimeUp(false);
+                            setTimeLeft(null);
+                            return quizData.settings.currentQuestionIndex;
+                        }
+                        return prev;
+                    });
+                }
+                if (quizData.settings.viewMode) {
+                    setViewMode(quizData.settings.viewMode);
+                    if (quizData.settings.viewMode === 'results') {
+                        setTimeLeft(null);
+                    }
+                }
+                // Sync Timer
+                if (quizData.settings.questionExpiresAt && quizData.settings.viewMode === 'voting') {
+                    const expiresAt = new Date(quizData.settings.questionExpiresAt).getTime();
+                    const now = Date.now();
+                    const diff = Math.max(0, Math.ceil((expiresAt - now) / 1000));
+                    setTimeLeft(diff);
+                    if (diff === 0) setIsTimeUp(true);
+                }
+            }
+
+            if (quizData.status === 'completed') {
+                setStatus('completed');
+            } else {
+                setStatus('active');
+            }
+
+            // Only fetch questions once if not already loaded
+            if (questions.length === 0) {
+                const { data: questionsData } = await supabase
                     .from('questions')
                     .select('*')
                     .eq('quiz_id', id)
@@ -55,61 +98,46 @@ export default function StudentLiveQuiz() {
                     options: q.choices,
                     correct: q.correct_answer,
                 })) || [];
-
-                setQuiz(quizData);
                 setQuestions(mappedQuestions);
-
-                // 2. Initialize Attempt
-                const { data: existingAttempt } = await supabase
-                    .from('attempts')
-                    .select('*')
-                    .select('*')
-                    .eq('quiz_id', id)
-                    .eq('student_id', user.id)
-                    .single();
-
-                if (!existingAttempt) {
-                    await supabase.from('attempts').insert({
-                        quiz_id: id,
-                        student_id: user.id,
-                        status: 'in-progress',
-                        started_at: new Date().toISOString(),
-                        flags: []
-                    });
-                }
-
-                // 3. Set Initial State
-                if (quizData.settings?.currentQuestionIndex !== undefined) {
-                    setCurrentQuestionIndex(quizData.settings.currentQuestionIndex);
-                }
-                if (quizData.settings?.viewMode) {
-                    setViewMode(quizData.settings.viewMode);
-                }
-
-                // Initialize Timer if mid-question
-                if (quizData.settings?.questionExpiresAt && quizData.settings.viewMode === 'voting') {
-                    const expiresAt = new Date(quizData.settings.questionExpiresAt).getTime();
-                    const now = Date.now();
-                    const diff = Math.max(0, Math.ceil((expiresAt - now) / 1000));
-                    setTimeLeft(diff);
-                    if (diff === 0) setIsTimeUp(true);
-                }
-
-                if (quizData.status === 'completed') {
-                    setStatus('completed');
-                } else {
-                    setStatus('active');
-                }
-
-                setLoading(false);
-
-            } catch (err) {
-                console.error("Failed to join live session:", err);
             }
-        };
 
-        initLiveSession();
+            // Initialize Attempt if needed (only once)
+            const { data: existingAttempt } = await supabase
+                .from('attempts')
+                .select('*')
+                .eq('quiz_id', id)
+                .eq('student_id', user.id)
+                .single();
 
+            if (!existingAttempt) {
+                await supabase.from('attempts').insert({
+                    quiz_id: id,
+                    student_id: user.id,
+                    status: 'in-progress',
+                    started_at: new Date().toISOString(),
+                    flags: []
+                });
+            }
+
+            setLoading(false);
+
+        } catch (err) {
+            console.error("Failed to sync session:", err);
+        }
+    };
+
+    useEffect(() => {
+        if (!id || !user) return;
+
+        // Initial Fetch
+        fetchQuizState();
+
+        // Polling Fallback (every 3 seconds)
+        const pollInterval = setInterval(() => {
+            fetchQuizState();
+        }, 3000);
+
+        // Realtime Subscription
         const channel = supabase
             .channel(`live-quiz-${id}`)
             .on(
@@ -121,6 +149,7 @@ export default function StudentLiveQuiz() {
                     filter: `id=eq.${id}`
                 },
                 (payload: any) => {
+                    console.log("Realtime Update Received:", payload);
                     const newSettings = payload.new.settings;
                     const newStatus = payload.new.status;
 
@@ -160,10 +189,16 @@ export default function StudentLiveQuiz() {
                     }
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log("Subscription Status:", status);
+                if (status === 'SUBSCRIBED') setRealtimeStatus('connected');
+                else if (status === 'CHANNEL_ERROR') setRealtimeStatus('disconnected');
+                else if (status === 'TIMED_OUT') setRealtimeStatus('disconnected');
+            });
 
         return () => {
             supabase.removeChannel(channel);
+            clearInterval(pollInterval);
         };
 
     }, [id, user]);
@@ -232,21 +267,37 @@ export default function StudentLiveQuiz() {
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 px-6 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <img src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg" />
+                    <div className="flex items-center gap-2 px-3 py-1 bg-surface rounded-full border border-neutral-200 dark:border-neutral-800">
+                        <div className={cn("w-2 h-2 rounded-full",
+                            realtimeStatus === 'connected' ? "bg-green-500 animate-pulse" :
+                                realtimeStatus === 'connecting' ? "bg-yellow-500" : "bg-red-500"
+                        )} />
+                        <span className="text-xs font-medium text-muted hidden sm:inline">
+                            {realtimeStatus === 'connected' ? 'Live' : 'Connecting...'}
+                        </span>
+                    </div>
                 </div>
 
                 {/* Timer Display */}
-                {viewMode === 'voting' && timeLeft !== null && (
-                    <div className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-full font-mono font-bold text-lg transition-colors",
-                        timeLeft <= 10 ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"
-                    )}>
-                        <Clock className={cn("w-5 h-5", timeLeft <= 10 && "animate-pulse")} />
-                        {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-                    </div>
-                )}
+                <div className="flex items-center gap-4">
 
-                <div className="text-sm font-medium text-muted">
-                    Q{currentQuestionIndex + 1} / {questions.length}
+                    <Button variant="ghost" size="sm" onClick={fetchQuizState} className="hidden sm:flex" title="Sync">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></svg>
+                    </Button>
+
+                    {viewMode === 'voting' && timeLeft !== null && (
+                        <div className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-full font-mono font-bold text-lg transition-colors",
+                            timeLeft <= 10 ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"
+                        )}>
+                            <Clock className={cn("w-5 h-5", timeLeft <= 10 && "animate-pulse")} />
+                            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                        </div>
+                    )}
+
+                    <div className="text-sm font-medium text-muted">
+                        Q{currentQuestionIndex + 1} / {questions.length}
+                    </div>
                 </div>
             </header>
 
