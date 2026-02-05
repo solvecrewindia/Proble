@@ -116,12 +116,14 @@ const JoinTest = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-8">
-                        <div className="p-4 rounded-xl bg-background border border-neutral-300 dark:border-neutral-600 flex items-center justify-center flex-col gap-2">
-                            <Clock className="w-6 h-6 text-primary" />
-                            <span className="font-medium text-text">{quiz.settings?.duration || 60} mins</span>
-                            <span className="text-xs text-muted">Duration</span>
-                        </div>
-                        <div className="p-4 rounded-xl bg-background border border-neutral-300 dark:border-neutral-600 flex items-center justify-center flex-col gap-2">
+                        {quiz.type !== 'live' && (
+                            <div className="p-4 rounded-xl bg-background border border-neutral-300 dark:border-neutral-600 flex items-center justify-center flex-col gap-2">
+                                <Clock className="w-6 h-6 text-primary" />
+                                <span className="font-medium text-text">{quiz.settings?.duration || 60} mins</span>
+                                <span className="text-xs text-muted">Duration</span>
+                            </div>
+                        )}
+                        <div className={`p-4 rounded-xl bg-background border border-neutral-300 dark:border-neutral-600 flex items-center justify-center flex-col gap-2 ${quiz.type === 'live' ? 'col-span-2' : ''}`}>
                             <AlertCircle className="w-6 h-6 text-primary" />
                             <span className="font-medium text-text">{quiz.question_count !== undefined ? quiz.question_count : 'N/A'}</span>
                             <span className="text-xs text-muted">Questions</span>
@@ -133,7 +135,7 @@ const JoinTest = () => {
                             className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
                             onClick={handleStartTest}
                         >
-                            <Play className="w-5 h-5 mr-2" /> Start Assessment
+                            <Play className="w-5 h-5 mr-2" /> Start Test
                         </Button>
                         <Button
                             variant="ghost"

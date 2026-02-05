@@ -101,25 +101,39 @@ export default function LiveController() {
         fetchQuiz();
     }, [id]);
 
+    const [participation, setParticipation] = useState(0);
+    const [onlineCount, setOnlineCount] = useState(0);
+
     const fetchRealStats = async (questionId: string) => {
         if (!id) return;
 
         // Fetch all attempts for this quiz
         const { data: attempts } = await supabase
             .from('attempts')
-            .select('answers')
+            .select('answers, student_id')
             .eq('quiz_id', id);
 
         if (attempts) {
+            setOnlineCount(attempts.length);
+
             const newStats: Record<string, number> = {};
+            let answeredCount = 0;
+
             attempts.forEach(attempt => {
                 const answers = attempt.answers || {};
                 const selectedOption = answers[questionId];
                 if (typeof selectedOption === 'number') {
                     newStats[selectedOption] = (newStats[selectedOption] || 0) + 1;
+                    answeredCount++;
                 }
             });
             setStats(newStats);
+
+            // Calculate Participation
+            // If total attempts (participants) is 0, participation is 0.
+            const totalParticipants = attempts.length;
+            const pct = totalParticipants > 0 ? Math.round((answeredCount / totalParticipants) * 100) : 0;
+            setParticipation(pct);
         }
     };
 
@@ -148,14 +162,8 @@ export default function LiveController() {
             )
             .subscribe();
 
-        // Polling Fallback (Robustness for when Realtime is not set up correctly)
-        const pollInterval = setInterval(() => {
-            if (currentQ?.id) fetchRealStats(currentQ.id);
-        }, 3000);
-
         return () => {
             supabase.removeChannel(channel);
-            clearInterval(pollInterval);
         };
     }, [id, quiz, currentQuestionIndex]);
 
@@ -372,15 +380,15 @@ export default function LiveController() {
                             <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800">
                                 <div className="flex justify-between items-center mb-4">
                                     <span className="font-medium text-text">Live Stats</span>
-                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">20 Online</span>
+                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">{onlineCount} Online</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-neutral-50 dark:bg-neutral-900 p-3 rounded-lg text-center">
-                                        <div className="text-2xl font-bold text-text">95%</div>
+                                        <div className="text-2xl font-bold text-text">{participation}%</div>
                                         <div className="text-xs text-muted">Participation</div>
                                     </div>
                                     <div className="bg-neutral-50 dark:bg-neutral-900 p-3 rounded-lg text-center">
-                                        <div className="text-2xl font-bold text-text">45s</div>
+                                        <div className="text-2xl font-bold text-text">-</div>
                                         <div className="text-xs text-muted">Avg Time</div>
                                     </div>
                                 </div>
