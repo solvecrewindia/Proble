@@ -3,9 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
-import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Play, Pause } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import type { Quiz, Question } from '../types';
+import type { Quiz } from '../types';
 
 export default function LiveController() {
     const { id } = useParams();
@@ -61,12 +61,22 @@ export default function LiveController() {
                     if (quizData.settings?.currentQuestionIndex !== undefined) {
                         setCurrentQuestionIndex(quizData.settings.currentQuestionIndex);
                         setViewMode(quizData.settings.viewMode || 'voting');
-                        if (mappedQuestions[quizData.settings.currentQuestionIndex]) {
-                            generateDummyStats(mappedQuestions[quizData.settings.currentQuestionIndex]);
+                        // If quiz was already running, ensure questionExpiresAt is set if in voting mode
+                        if (quizData.settings.viewMode === 'voting' && !quizData.settings.questionExpiresAt) {
+                            const timePerQuestion = Number(quizData.settings?.timePerQuestion) || 60;
+                            const questionExpiresAt = new Date(Date.now() + (timePerQuestion + 2) * 1000).toISOString();
+                            const newSettings = {
+                                ...quizData.settings,
+                                questionExpiresAt
+                            };
+                            await supabase
+                                .from('quizzes')
+                                .update({ settings: newSettings })
+                                .eq('id', id);
                         }
                     } else if (mappedQuestions.length > 0) {
                         // First time load - Sync Q1 to DB immediately so students see it
-                        generateDummyStats(mappedQuestions[0]);
+
                         // We need to call updateQuizState but we can't because quiz is not set in state yet.
                         // So we do a direct update here.
                         const timePerQuestion = Number(quizData.settings?.timePerQuestion) || 60;
@@ -91,15 +101,57 @@ export default function LiveController() {
         fetchQuiz();
     }, [id]);
 
-    const generateDummyStats = (question: Question | undefined) => {
-        if (!question?.options) return;
-        const newStats: Record<string, number> = {};
-        // Randomly distribute 20 votes
-        question.options.forEach((_, idx) => {
-            newStats[idx] = Math.floor(Math.random() * 10);
-        });
-        setStats(newStats);
+    const fetchRealStats = async (questionId: string) => {
+        if (!id) return;
+
+        // Fetch all attempts for this quiz
+        const { data: attempts } = await supabase
+            .from('attempts')
+            .select('answers')
+            .eq('quiz_id', id);
+
+        if (attempts) {
+            const newStats: Record<string, number> = {};
+            attempts.forEach(attempt => {
+                const answers = attempt.answers || {};
+                const selectedOption = answers[questionId];
+                if (typeof selectedOption === 'number') {
+                    newStats[selectedOption] = (newStats[selectedOption] || 0) + 1;
+                }
+            });
+            setStats(newStats);
+        }
     };
+
+    // Sub to attempts for real-time stats
+    useEffect(() => {
+        if (!quiz || !quiz.questions || quiz.questions.length === 0) return;
+
+        const currentQ = quiz.questions[currentQuestionIndex];
+        if (currentQ?.id) {
+            fetchRealStats(currentQ.id);
+        }
+
+        const channel = supabase
+            .channel(`live-stats-${id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'attempts',
+                    filter: `quiz_id=eq.${id}`
+                },
+                () => {
+                    if (currentQ?.id) fetchRealStats(currentQ.id);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [id, quiz, currentQuestionIndex]);
 
     const handleNext = async () => {
         if (!quiz?.questions) return;
@@ -107,7 +159,6 @@ export default function LiveController() {
             const nextIndex = currentQuestionIndex + 1;
             setCurrentQuestionIndex(nextIndex);
             setViewMode('voting');
-            generateDummyStats(quiz.questions[nextIndex]);
 
             // Sync with DB
             await updateQuizState(nextIndex, 'voting');
@@ -123,7 +174,6 @@ export default function LiveController() {
             const prevIndex = currentQuestionIndex - 1;
             setCurrentQuestionIndex(prevIndex);
             setViewMode('voting');
-            if (quiz?.questions) generateDummyStats(quiz.questions[prevIndex]);
 
             // Sync with DB
             await updateQuizState(prevIndex, 'voting');
@@ -160,9 +210,7 @@ export default function LiveController() {
         if (error) console.error("Failed to sync state:", error);
     };
 
-    const toggleView = () => {
-        setViewMode(prev => prev === 'voting' ? 'results' : 'voting');
-    };
+
 
     if (loading) return <div className="p-8 text-center">Loading controller...</div>;
     if (!quiz || !quiz.questions || quiz.questions.length === 0) return <div className="p-8 text-center">No questions found.</div>;

@@ -221,9 +221,45 @@ export default function StudentLiveQuiz() {
         return () => clearInterval(timer);
     }, [timeLeft]);
 
-    const handleSubmitAnswer = () => {
-        if (selectedOption === null) return;
+    const handleSubmitAnswer = async () => {
+        if (selectedOption === null || !user || !id) return;
+
         setIsSubmitted(true);
+
+        try {
+            // 1. Fetch current attempt to get existing answers
+            const { data: attempt } = await supabase
+                .from('attempts')
+                .select('answers, score')
+                .eq('quiz_id', id)
+                .eq('student_id', user.id)
+                .single();
+
+            const currentAnswers = attempt?.answers || {};
+            // Note: simple correct check, assuming index match or string match. Ideally backend validates or we validate against fetched Q.
+
+            // To be safe, let's just save the index for now.
+            // We use the Question ID as the key in the answers object
+            const questionId = questions[currentQuestionIndex].id;
+
+            const newAnswers = {
+                ...currentAnswers,
+                [questionId]: selectedOption
+            };
+
+            await supabase
+                .from('attempts')
+                .update({
+                    answers: newAnswers,
+                    // Optionally update score here if we want instant scoring
+                })
+                .eq('quiz_id', id)
+                .eq('student_id', user.id);
+
+        } catch (err) {
+            console.error("Failed to submit answer:", err);
+            // Revert optimistic UI if needed, but for now simple is fine
+        }
     };
 
     if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
