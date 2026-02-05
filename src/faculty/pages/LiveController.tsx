@@ -148,8 +148,14 @@ export default function LiveController() {
             )
             .subscribe();
 
+        // Polling Fallback (Robustness for when Realtime is not set up correctly)
+        const pollInterval = setInterval(() => {
+            if (currentQ?.id) fetchRealStats(currentQ.id);
+        }, 3000);
+
         return () => {
             supabase.removeChannel(channel);
+            clearInterval(pollInterval);
         };
     }, [id, quiz, currentQuestionIndex]);
 
