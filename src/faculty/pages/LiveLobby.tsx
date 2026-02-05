@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../components/ui/Button';
@@ -25,32 +25,45 @@ export default function LiveLobby() {
                 .single();
 
             if (data) setQuiz(data);
+            if (error) console.error("Error fetching quiz:", error);
         };
 
         const fetchParticipants = async () => {
             if (!id) return;
 
-            // Fetch attempts linked to this quiz. 
-            // We select student details if available via join.
-            // Note: This relies on a 'students' table relation being set up.
-            // If it fails, we fail gracefully to just showing IDs or empty names.
-            const { data, error } = await supabase
+            // 1. Fetch active attempts for this quiz
+            const { data: attemptsData, error: attemptsError } = await supabase
                 .from('attempts')
-                .select(`
-                    id, 
-                    student_id, 
-                    status,
-                    student:students(id, name)
-                `)
+                .select('id, student_id, status')
                 .eq('quiz_id', id)
                 .eq('status', 'in-progress');
 
-            if (data) {
-                const mapped = data.map((attempt: any) => ({
-                    id: attempt.student?.id || attempt.student_id,
-                    name: attempt.student?.name || 'Unknown Student',
-                    avatar: (attempt.student?.name || 'U').substring(0, 2).toUpperCase()
+            if (attemptsError) console.error("Error fetching attempts:", attemptsError);
+
+            if (!attemptsData || attemptsData.length === 0) {
+                setParticipants([]);
+                return;
+            }
+
+            // 2. Fetch profiles for these students
+            const studentIds = attemptsData.map(a => a.student_id);
+            const { data: profilesData, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, full_name, registration_number, avatar_url')
+                .in('id', studentIds);
+
+            if (profilesError) console.error("Error fetching profiles:", profilesError);
+
+            if (profilesData) {
+                // Map profiles to participants
+                const mapped = profilesData.map((profile: any) => ({
+                    id: profile.id,
+                    name: profile.full_name || 'Unknown Student',
+                    regNo: profile.registration_number,
+                    avatar: (profile.full_name || profile.email || 'U').substring(0, 2).toUpperCase()
                 }));
+                // Sort by name for better UX
+                mapped.sort((a, b) => a.name.localeCompare(b.name));
                 setParticipants(mapped);
             }
         };
@@ -160,7 +173,9 @@ export default function LiveLobby() {
                                 </div>
                                 <div>
                                     <p className="font-medium text-text">{p.name}</p>
-                                    <p className="text-xs text-muted">Ready</p>
+                                    <p className="text-xs text-muted">
+                                        {p.regNo ? `Reg: ${p.regNo}` : 'Ready'}
+                                    </p>
                                 </div>
                             </div>
                             <div className="text-sm text-green-600 font-medium bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full">
