@@ -246,7 +246,7 @@ export default function LiveController() {
                     </Button>
                     <div>
                         <h1 className="text-lg font-bold text-text">{quiz.title}</h1>
-                        <p className="text-xs text-muted">Live Session â€¢ Access Code: {quiz.accessCode || quiz.id.slice(0, 4)}</p>
+                        <p className="text-xs text-muted">Live Session • Access Code: {(quiz as any).code || quiz.accessCode || quiz.id.slice(0, 4)}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">

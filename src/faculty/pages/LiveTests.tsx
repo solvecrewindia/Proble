@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Play, Save, CheckCircle, Clock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase'; // Import supabase
@@ -26,7 +26,7 @@ export default function LiveTests() {
             if (!user) return;
 
             // Simple fetch for now, can refine status filtering later
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('quizzes')
                 .select('*')
                 .eq('created_by', user.id)
@@ -97,7 +97,7 @@ export default function LiveTests() {
                                             </span>
                                         )}
                                         <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-medium uppercase">
-                                            {quiz.accessCode || 'NO CODE'}
+                                            {(quiz as any).code || quiz.accessCode || 'NO CODE'}
                                         </span>
                                     </div>
                                 </div>
