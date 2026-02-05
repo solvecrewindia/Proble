@@ -117,6 +117,37 @@ export default function StudentLiveQuiz() {
                     started_at: new Date().toISOString(),
                     flags: []
                 });
+            } else if (existingAttempt) {
+                // RESTORE SAVED ANSWER
+                const currentQIndex = quizData.settings?.currentQuestionIndex ?? 0;
+
+                // We need the ID of the current question to look up the answer.
+                // If we have questions in state, use them.
+                // If we don't, we likely just fetched them in the block above, but that variable is out of scope.
+                // So we do a quick lightweight fetch of just IDs to be safe and ensure sync.
+
+                let qIds: any[] = questions;
+
+                if (questions.length === 0) {
+                    const { data: qData } = await supabase
+                        .from('questions')
+                        .select('id')
+                        .eq('quiz_id', id)
+                        .order('created_at', { ascending: true });
+                    if (qData) qIds = qData;
+                }
+
+                if (qIds[currentQIndex]) {
+                    const currentQId = qIds[currentQIndex].id;
+                    const savedAnswers = existingAttempt.answers || {};
+                    const savedOption = savedAnswers[currentQId];
+
+                    if (typeof savedOption === 'number') {
+                        // Only set if we haven't already selected something (prevents overwriting user's unsaved selection on pollen)
+                        setSelectedOption(prev => prev === null ? savedOption : prev);
+                        setIsSubmitted(true);
+                    }
+                }
             }
 
             setLoading(false);
