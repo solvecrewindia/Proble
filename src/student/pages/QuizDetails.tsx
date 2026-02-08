@@ -66,6 +66,16 @@ const QuizDetails = () => {
                     navigate('/login', { state: { from: location }, replace: true });
                     return;
                 }
+
+                // Domain Restriction Check
+                if (quizData.settings?.allowedDomain && user) {
+                    const userEmail = user.email || '';
+                    if (!userEmail.endsWith(quizData.settings.allowedDomain)) {
+                        alert(`This quiz is restricted to users from ${quizData.settings.allowedDomain} only.`);
+                        navigate('/'); // Redirect to home or another page
+                        return;
+                    }
+                }
             }
             setLoading(false);
         };

@@ -57,6 +57,7 @@ export interface Quiz {
         allowRetake: boolean;
         category?: string;
         timePerQuestion?: number; // seconds
+        allowedDomain?: string | null;
     };
     created_by: string; // Foreign Key to profiles
     createdAt: string;

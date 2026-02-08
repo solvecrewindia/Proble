@@ -126,8 +126,17 @@ export default function Global() {
                                                 <div className="text-xs text-muted">Participants</div>
                                             </div>
                                             <div>
-                                                <div className="text-2xl font-bold text-text">-</div>
-                                                <div className="text-xs text-muted">Rating</div>
+                                                <div className="flex items-center text-sm text-muted">
+                                                    <span className="font-medium text-text mr-2">Duration:</span>
+                                                    <span>{quiz.settings?.duration || 60} mins</span>
+                                                </div>
+
+                                                {/* Organization Badge */}
+                                                {quiz.settings?.allowedDomain && (
+                                                    <div className="flex items-center mt-2 px-2 py-1 w-fit rounded-full bg-blue-500/10 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                                        <span>Restricted to: {quiz.settings.allowedDomain}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div>
                                                 <div className="text-2xl font-bold text-text">-</div>

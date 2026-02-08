@@ -421,6 +421,13 @@ export default function Master() {
                                                 <QrCode className="h-3 w-3" />
                                             </Button>
                                         </p>
+
+                                        {/* Organization Badge */}
+                                        {quiz.settings?.allowedDomain && (
+                                            <div className="flex items-center mt-2 px-2 py-1 w-fit rounded-full bg-blue-500/10 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                                <span>Restricted to: {quiz.settings.allowedDomain}</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex gap-2">
                                         <Button variant="outline" onClick={() => fetchResults(quiz.id)}>
@@ -462,7 +469,7 @@ export default function Master() {
                                     </div>
                                 </div>
 
-                                <div className="mt-6 grid grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                                     <div className="bg-background p-3 rounded-lg border border-neutral-300 dark:border-neutral-600">
                                         <div className="text-2xl font-bold text-text">{activeStudents[quiz.id] || 0}</div>
                                         <div className="text-xs text-muted">Active Students</div>

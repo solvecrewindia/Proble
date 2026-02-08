@@ -69,6 +69,14 @@ const JoinTest = () => {
                 }
             }
 
+            // 5. Check for Domain Restriction
+            if (quizData.settings?.allowedDomain) {
+                const userEmail = user.email || '';
+                if (!userEmail.endsWith(quizData.settings.allowedDomain)) {
+                    throw new Error(`This quiz is restricted to users from ${quizData.settings.allowedDomain} only.`);
+                }
+            }
+
             setQuiz(quizData);
         } catch (err: any) {
             console.error('Error fetching quiz:', err);

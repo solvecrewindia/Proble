@@ -44,6 +44,39 @@ export function StepMetadata({ data, update }: any) {
                             <span className="text-sm font-medium text-text">Allow Retakes</span>
                         </label>
                     )}
+
+                    {/* Organization Restriction */}
+                    <div className="space-y-2">
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={!!data.settings?.allowedDomain}
+                                onChange={(e) => {
+                                    if (!e.target.checked) {
+                                        update({ settings: { ...data.settings, allowedDomain: null } });
+                                    } else {
+                                        update({ settings: { ...data.settings, allowedDomain: 'srmist.edu.in' } }); // Default
+                                    }
+                                }}
+                                className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 bg-background text-primary focus:ring-primary"
+                            />
+                            <span className="text-sm font-medium text-text">Restrict to Organization</span>
+                        </label>
+
+                        {data.settings?.allowedDomain && (
+                            <div className="ml-6 animate-in slide-in-from-top-2 duration-200">
+                                <Input
+                                    label="Allowed Email Domain"
+                                    placeholder="e.g. srmist.edu.in, company.com"
+                                    value={data.settings.allowedDomain}
+                                    onChange={(e) => update({
+                                        settings: { ...data.settings, allowedDomain: e.target.value }
+                                    })}
+                                />
+                                <p className="text-xs text-muted mt-1">Users must have an email ending with this domain to join.</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
