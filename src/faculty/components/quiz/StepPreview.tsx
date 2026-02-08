@@ -1,6 +1,5 @@
-﻿import React from 'react';
-import { Clock, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+﻿import { Clock, AlertCircle, Code2 } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import type { Question } from '../../types';
 
@@ -85,6 +84,51 @@ export function StepPreview({ data, questions }: any) {
                                     placeholder="Enter number..."
                                     disabled
                                 />
+                            )}
+
+                            {q.type === 'code' && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between text-sm text-muted">
+                                        <div className="flex items-center gap-2 font-mono bg-surface px-2 py-1 rounded border border-neutral-200 dark:border-neutral-700">
+                                            <Code2 className="w-3 h-3" />
+                                            {(q.correct as any)?.language || 'python'}
+                                        </div>
+                                        {((q.correct as any)?.allowedLanguages || []).filter((l: string) => l !== ((q.correct as any)?.language || 'python')).length > 0 && (
+                                            <div className="flex gap-1 items-center">
+                                                <span className="text-xs text-muted">Also allowed:</span>
+                                                {((q.correct as any)?.allowedLanguages || []).filter((l: string) => l !== ((q.correct as any)?.language || 'python')).map((lang: string) => (
+                                                    <span key={lang} className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 capitalize">
+                                                        {lang}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <span>Code Snippet</span>
+                                    </div>
+                                    <div className="relative rounded-lg overflow-hidden border border-neutral-300 dark:border-neutral-600 bg-[#1e1e1e]">
+                                        <div className="absolute top-2 right-2 text-xs text-muted/50 font-mono select-none">Starter Code</div>
+                                        <pre className="p-4 text-sm font-mono text-neutral-200 overflow-x-auto min-h-[100px]">
+                                            <code>{(q.correct as any)?.starterCode || ''}</code>
+                                        </pre>
+                                    </div>
+                                    {((q.correct as any)?.testCases || []).length > 0 && (
+                                        <div className="space-y-2">
+                                            <p className="text-sm font-medium text-text-secondary">Test Cases:</p>
+                                            <div className="grid gap-2">
+                                                {((q.correct as any)?.testCases || []).map((tc: any, i: number) => (
+                                                    <div key={i} className="text-xs bg-surface p-2 rounded border border-neutral-200 dark:border-neutral-700 font-mono">
+                                                        <div className="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
+                                                            <span className="text-muted font-semibold">In:</span>
+                                                            <span className="truncate text-text">{tc.input}</span>
+                                                            <span className="text-muted font-semibold">Out:</span>
+                                                            <span className="truncate text-text">{tc.output}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </CardContent>
                     </Card>

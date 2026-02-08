@@ -84,7 +84,17 @@ export default function QuizCreate() {
                     id: q.id,
                     stem: q.text,
                     options: q.choices,
-                    correct: q.correct_answer
+                    type: q.type, // Ensure type is passed
+                    correct: (() => {
+                        try {
+                            if (q.type === 'code' || q.type === 'msq' || q.type === 'range') {
+                                return JSON.parse(q.correct_answer || '{}');
+                            }
+                            return q.correct_answer;
+                        } catch (e) {
+                            return q.correct_answer;
+                        }
+                    })()
                 })));
             }
         };
@@ -157,8 +167,9 @@ export default function QuizCreate() {
                 const questionsPayload = questions.map(q => ({
                     quiz_id: savedQuiz.id,
                     text: q.stem,
+                    type: q.type,
                     choices: q.options || [],
-                    correct_answer: q.correct || '',
+                    correct_answer: typeof q.correct === 'object' ? JSON.stringify(q.correct) : String(q.correct ?? ''),
                 }));
                 const qResult = await supabase.from('questions').insert(questionsPayload);
                 if (qResult.error) throw qResult.error;
