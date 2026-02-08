@@ -1,5 +1,5 @@
-﻿import React, { useState, useCallback } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download } from 'lucide-react';
+﻿import { useState, useCallback } from 'react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download, PlusCircle, MinusCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression';
@@ -410,7 +410,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
             stem: '',
             weight: 1,
             options: activeType === 'mcq' ? ['', '', '', ''] : activeType === 'true_false' ? ['True', 'False'] : undefined,
-            correct: activeType === 'mcq' || activeType === 'true_false' ? 0 : activeType === 'msq' ? [] : '',
+            correct: activeType === 'mcq' || activeType === 'true_false' ? 0 : activeType === 'msq' ? [] : activeType === 'code' ? { language: 'python', starterCode: '', testCases: [{ input: '', output: '' }] } : '',
         };
         setQuestions([...questions, newQuestion]);
     };
@@ -678,12 +678,12 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                         // Reset correct answer when switching types
                                                         updateQuestion(index, {
                                                             type: newType,
-                                                            correct: newType === 'msq' ? [] : 0,
                                                             options: newType === 'mcq'
                                                                 ? ['', '', '', '']
                                                                 : newType === 'true_false'
                                                                     ? ['True', 'False']
-                                                                    : undefined
+                                                                    : undefined,
+                                                            correct: newType === 'code' ? { language: 'python', starterCode: '', testCases: [{ input: '', output: '' }] } : newType === 'msq' ? [] : 0
                                                         });
                                                     }}
                                                 >
@@ -691,6 +691,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                     <option value="msq">Multi Correct (MSQ)</option>
                                                     <option value="true_false">True / False</option>
                                                     <option value="range">Range Answer</option>
+                                                    <option value="code">Code Snippet</option>
                                                 </select>
                                             </div>
                                             <div className="w-24">
@@ -785,6 +786,176 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                                                         )}
                                                     </div>
                                                 ))}
+                                            </div>
+                                        )}
+
+                                        {q.type === 'code' && (
+                                            <div className="space-y-4 p-4 border rounded-lg bg-surface/50 border-neutral-300 dark:border-neutral-600">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-medium text-text-secondary">Default Language</label>
+                                                        <select
+                                                            className="h-10 w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-2"
+                                                            value={(q.correct as any)?.language || 'python'}
+                                                            onChange={(e) => {
+                                                                const current = (q.correct as any) || { starterCode: '', testCases: [] };
+                                                                updateQuestion(index, { correct: { ...current, language: e.target.value } });
+                                                            }}
+                                                        >
+                                                            <option value="python">Python</option>
+                                                            <option value="javascript">JavaScript</option>
+                                                            <option value="cpp">C++</option>
+                                                            <option value="c">C</option>
+                                                            <option value="java">Java</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-medium text-text-secondary">Allowed Languages (Optional)</label>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {['python', 'javascript', 'cpp', 'c', 'java'].map(lang => {
+                                                                const currentCorrect = (q.correct as any) || {};
+                                                                const allowed = currentCorrect.allowedLanguages || [];
+                                                                const isAllowed = allowed.includes(lang);
+
+                                                                return (
+                                                                    <button
+                                                                        key={lang}
+                                                                        onClick={() => {
+                                                                            let newAllowed;
+                                                                            if (isAllowed) {
+                                                                                newAllowed = allowed.filter((l: string) => l !== lang);
+                                                                            } else {
+                                                                                newAllowed = [...allowed, lang];
+                                                                            }
+
+                                                                            const updates: any = { allowedLanguages: newAllowed };
+
+                                                                            // If we have allowed languages, and the current default is NOT in them, switch default
+                                                                            if (newAllowed.length > 0 && !newAllowed.includes(currentCorrect.language || 'python')) {
+                                                                                updates.language = newAllowed[0];
+                                                                            }
+
+                                                                            updateQuestion(index, { correct: { ...currentCorrect, ...updates } });
+                                                                        }}
+                                                                        className={cn(
+                                                                            "px-2 py-1 text-xs rounded border transition-colors capitalize",
+                                                                            isAllowed
+                                                                                ? "bg-primary text-white border-primary"
+                                                                                : "bg-surface text-muted border-neutral-200 dark:border-neutral-700 hover:border-primary/50"
+                                                                        )}
+                                                                    >
+                                                                        {lang === 'cpp' ? 'C++' : lang}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        <p className="text-[10px] text-muted">If empty, only Default Language is allowed.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-medium text-text-secondary">Starter Code</label>
+                                                    <textarea
+                                                        className="w-full h-32 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-3 font-mono text-sm"
+                                                        placeholder="# Write your code here"
+                                                        value={(q.correct as any)?.starterCode || ''}
+                                                        onChange={(e) => {
+                                                            const current = (q.correct as any) || { language: 'python', testCases: [] };
+                                                            updateQuestion(index, { correct: { ...current, starterCode: e.target.value } });
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-medium text-text-secondary">Hidden Driver Code (Appended to Student Code)</label>
+                                                    <textarea
+                                                        className="w-full h-32 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-3 font-mono text-sm"
+                                                        placeholder={`# Example Driver Code (Python):
+import sys
+import json
+
+# Read all input and split by lines, removing empty ones
+lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+
+if len(lines) < 2:
+    print("Error: Invalid Input Format")
+    sys.exit(1)
+
+# Parse inputs
+nums = json.loads(lines[0])
+target = int(lines[1])
+
+# Call student's function
+s = Solution()
+result = s.twoSum(nums, target)
+print(result)`}
+                                                        value={(q.correct as any)?.driverCode || ''}
+                                                        onChange={(e) => {
+                                                            const current = (q.correct as any) || { language: 'python', testCases: [] };
+                                                            updateQuestion(index, { correct: { ...current, driverCode: e.target.value } });
+                                                        }}
+                                                    />
+                                                    <p className="text-[10px] text-muted">This code runs after the student's code. Use it to call their function and print the result to stdout.</p>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-medium text-text-secondary flex justify-between items-center">
+                                                        Test Cases
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                const current = (q.correct as any) || { language: 'python', starterCode: '', testCases: [] };
+                                                                const cases = current?.testCases || [];
+                                                                updateQuestion(index, { correct: { ...current, testCases: [...cases, { input: '', output: '' }] } });
+                                                            }}
+                                                        >
+                                                            <PlusCircle className="h-4 w-4 mr-1" /> Add Case
+                                                        </Button>
+                                                    </label>
+                                                    <div className="space-y-2">
+                                                        {((q.correct as any)?.testCases || []).map((tc: any, tcIndex: number) => (
+                                                            <div key={tcIndex} className="flex gap-2 items-start">
+                                                                <div className="grid grid-cols-2 gap-2 flex-1">
+                                                                    <textarea
+                                                                        placeholder="Input (stdin)"
+                                                                        value={tc.input}
+                                                                        onChange={(e) => {
+                                                                            const current = (q.correct as any);
+                                                                            const newCases = [...current.testCases];
+                                                                            newCases[tcIndex] = { ...tc, input: e.target.value };
+                                                                            updateQuestion(index, { correct: { ...current, testCases: newCases } });
+                                                                        }}
+                                                                        className="w-full h-20 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-2 font-mono text-xs resize-y"
+                                                                    />
+                                                                    <textarea
+                                                                        placeholder="Expected Output (stdout)"
+                                                                        value={tc.output}
+                                                                        onChange={(e) => {
+                                                                            const current = (q.correct as any);
+                                                                            const newCases = [...current.testCases];
+                                                                            newCases[tcIndex] = { ...tc, output: e.target.value };
+                                                                            updateQuestion(index, { correct: { ...current, testCases: newCases } });
+                                                                        }}
+                                                                        className="w-full h-20 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-2 font-mono text-xs resize-y"
+                                                                    />
+                                                                </div>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="text-red-500 hover:text-red-600"
+                                                                    onClick={() => {
+                                                                        const current = (q.correct as any);
+                                                                        const newCases = current.testCases.filter((_: any, i: number) => i !== tcIndex);
+                                                                        updateQuestion(index, { correct: { ...current, testCases: newCases } });
+                                                                    }}
+                                                                >
+                                                                    <MinusCircle className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
 

@@ -111,6 +111,14 @@ export function StepPreview({ data, questions }: any) {
                                             <code>{(q.correct as any)?.starterCode || ''}</code>
                                         </pre>
                                     </div>
+                                    {(q.correct as any)?.driverCode && (
+                                        <div className="relative rounded-lg overflow-hidden border border-dashed border-neutral-300 dark:border-neutral-600 bg-[#1a1a1a]">
+                                            <div className="absolute top-2 right-2 text-xs text-muted/50 font-mono select-none">Hidden Driver Code</div>
+                                            <pre className="p-4 text-sm font-mono text-neutral-200/50 overflow-x-auto">
+                                                <code>{(q.correct as any)?.driverCode}</code>
+                                            </pre>
+                                        </div>
+                                    )}
                                     {((q.correct as any)?.testCases || []).length > 0 && (
                                         <div className="space-y-2">
                                             <p className="text-sm font-medium text-text-secondary">Test Cases:</p>
