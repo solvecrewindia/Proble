@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Play, Save, CheckCircle, Clock } from 'lucide-react';
+import { Play, Save, CheckCircle, Clock, Copy, QrCode, Link as LinkIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase'; // Import supabase
 import { Card, CardContent } from '../components/ui/Card'; // Import UI components
 import { Button } from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import type { Quiz } from '../types';
+import { QRCodeModal } from '../components/quiz/QRCodeModal';
 
 export default function LiveTests() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'live' | 'saved' | 'completed'>('saved'); // Default to saved as that's where we look first
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
     const [loading, setLoading] = useState(false);
+
+    // QR Code State
+    const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
 
     const tabs = [
         { id: 'live', label: 'Live Tests', icon: Play },
@@ -40,8 +44,33 @@ export default function LiveTests() {
         fetchQuizzes();
     }, [activeTab]);
 
+    const copyCode = (code: string) => {
+        navigator.clipboard.writeText(code);
+        alert(`Code copied: ${code}`);
+    };
+
+    const copyLink = (code: string) => {
+        const link = `${window.location.origin}/quiz/${code}`;
+        navigator.clipboard.writeText(link);
+        alert(`Link copied: ${link}`);
+    };
+
+    const handleShowQRCode = (code: string) => {
+        const url = `${window.location.origin}/quiz/${code}`;
+        setQrCodeData({ url, code });
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {/* QR Code Modal */}
+            {qrCodeData && (
+                <QRCodeModal
+                    url={qrCodeData.url}
+                    code={qrCodeData.code}
+                    onClose={() => setQrCodeData(null)}
+                />
+            )}
+
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-text">Live Tests</h1>
@@ -96,9 +125,20 @@ export default function LiveTests() {
                                                 {quiz.settings.timePerQuestion}s / question
                                             </span>
                                         )}
-                                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-medium uppercase">
-                                            {(quiz as any).code || quiz.accessCode || 'NO CODE'}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-medium uppercase font-mono">
+                                                {(quiz as any).code || quiz.accessCode || 'NO CODE'}
+                                            </span>
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => copyCode(quiz.accessCode || (quiz as any).code || '')} title="Copy Code">
+                                                <Copy className="h-3 w-3" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1" onClick={() => copyLink(quiz.accessCode || (quiz as any).code || '')} title="Copy Direct Link">
+                                                <LinkIcon className="h-3 w-3" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1 text-primary" onClick={() => handleShowQRCode(quiz.accessCode || (quiz as any).code || '')} title="Show QR Code">
+                                                <QrCode className="h-3 w-3" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
