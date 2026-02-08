@@ -37,4 +37,15 @@ export default defineConfig({
     })
   ],
   envPrefix: ['VITE_', 'GROQ_'],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['lucide-react'],
+          'query-vendor': ['@tanstack/react-query']
+        }
+      }
+    }
+  }
 })
