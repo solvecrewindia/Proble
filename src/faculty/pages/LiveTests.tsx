@@ -8,11 +8,14 @@ import { useNavigate } from 'react-router-dom';
 import type { Quiz } from '../types';
 import { QRCodeModal } from '../components/quiz/QRCodeModal';
 
+import { useAuth } from '../../shared/context/AuthContext';
+
 export default function LiveTests() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'live' | 'saved' | 'completed'>('saved'); // Default to saved as that's where we look first
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // QR Code State
     const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
@@ -25,24 +28,33 @@ export default function LiveTests() {
 
     useEffect(() => {
         const fetchQuizzes = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            }
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            try {
+                // Simple fetch for now, can refine status filtering later
+                const { data, error } = await supabase
+                    .from('quizzes')
+                    .select('*')
+                    .eq('created_by', user.id)
+                    .eq('type', 'live')
+                    .order('created_at', { ascending: false });
 
-            // Simple fetch for now, can refine status filtering later
-            const { data } = await supabase
-                .from('quizzes')
-                .select('*')
-                .eq('created_by', user.id)
-                .eq('type', 'live')
-                .order('created_at', { ascending: false });
-
-            if (data) setQuizzes(data as any);
-            setLoading(false);
+                if (error) {
+                    console.error("Error fetching live quizzes:", error);
+                }
+                if (data) setQuizzes(data as any);
+            } catch (err) {
+                console.error("Unexpected error in LiveTests:", err);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchQuizzes();
-    }, [activeTab]);
+    }, [activeTab, user]);
 
     const copyCode = (code: string) => {
         navigator.clipboard.writeText(code);

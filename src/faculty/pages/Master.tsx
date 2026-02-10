@@ -6,11 +6,13 @@ import { Copy, Plus, Edit, Download, RotateCw, Link as LinkIcon, FileSpreadsheet
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../shared/context/AuthContext';
 import type { Quiz } from '../types';
 import { QRCodeModal } from '../components/quiz/QRCodeModal';
 
 export default function Master() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('ongoing');
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
     const [loading, setLoading] = useState(true);
@@ -19,20 +21,30 @@ export default function Master() {
     const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
 
     const fetchQuizzes = React.useCallback(async () => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        
+        try {
+            const { data, error } = await supabase
+                .from('quizzes')
+                .select('*')
+                .eq('created_by', user.id)
+                .eq('type', 'master')
+                .order('created_at', { ascending: false });
 
-        const { data } = await supabase
-            .from('quizzes')
-            .select('*')
-            .eq('created_by', user.id)
-            .eq('type', 'master')
-            .order('created_at', { ascending: false });
-
-        if (data) setQuizzes(data as any);
-        setLoading(false);
-    }, []);
+            if (error) {
+                console.error("Error fetching master quizzes:", error);
+            }
+            if (data) setQuizzes(data as any);
+        } catch (err) {
+            console.error("Unexpected error fetching quizzes:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [user]);
 
     useEffect(() => {
         fetchQuizzes();
