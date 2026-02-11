@@ -177,6 +177,22 @@ const UserProfileDropdown: React.FC = () => {
                             <div className="px-2 py-1">
                                 <button
                                     onClick={() => {
+                                        navigate('/student/join?scan=true');
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
+                                >
+                                    <div className="w-4 h-4 text-muted group-hover:text-primary transition-colors flex items-center justify-center">
+                                        {/* Using QrCode icon directly since it's already available in lucide-react */}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-qr-code"><rect width="5" height="5" x="3" y="3" /><rect width="5" height="5" x="16" y="3" /><rect width="5" height="5" x="3" y="16" /><path d="M21 16h-3a2 2 0 0 0-2 2v3" /><path d="M21 21v.01" /><path d="M12 7v3a2 2 0 0 1-2 2H7" /><path d="M3 12h.01" /><path d="M12 3h.01" /><path d="M12 16v.01" /><path d="M16 12h1" /><path d="M21 12v.01" /><path d="M12 21v-1" /></svg>
+                                    </div>
+                                    <span className="text-sm font-medium">Scan QR Code</span>
+                                </button>
+                            </div>
+
+                            <div className="px-2 py-1">
+                                <button
+                                    onClick={() => {
                                         setIsReportModalOpen(true);
                                         setIsOpen(false);
                                     }}

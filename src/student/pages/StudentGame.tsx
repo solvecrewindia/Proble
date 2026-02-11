@@ -93,7 +93,7 @@ const StudentGame = () => {
         {
             id: 'rapid-fire',
             title: 'Rapid Fire Challenge',
-            description: '30 Questions. 5 Minutes. 1 Attempt Daily.',
+            description: '20 Questions. 5 Minutes. 1 Attempt Daily.',
             icon: Clock,
             color: 'text-red-500',
             bg: 'bg-red-500/10',

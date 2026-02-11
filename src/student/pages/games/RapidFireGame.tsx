@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Trophy, AlertCircle, ArrowRight, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Clock, Trophy, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../shared/context/AuthContext';
 import { saveRapidFireScore, isRapidFireLocked } from '../../utils/gameState';
@@ -10,6 +10,7 @@ interface Question {
     question: string;
     options: string[];
     correctKey: number; // 0-3 index
+    isModuleQ?: boolean;
 }
 
 const GAME_DURATION = 300; // 5 minutes in seconds
@@ -62,25 +63,87 @@ const RapidFireGame = () => {
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
+    const [dailyTopic, setDailyTopic] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Fetch daily topic on mount
+        const fetchDailyTopic = async () => {
+            try {
+                const { data: modules } = await supabase.from('modules').select('id, title');
+                if (modules && modules.length > 0) {
+                    const today = new Date();
+                    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
+                    const moduleIndex = dayOfYear % modules.length;
+                    setDailyTopic(modules[moduleIndex].title);
+                }
+            } catch (e) {
+                console.error("Failed to fetch daily topic", e);
+            }
+        };
+        fetchDailyTopic();
+    }, []);
+
     const fetchQuestions = async () => {
         setGameState('loading');
         setError(null);
         try {
-            // First try to get questions with specific quiz_id if known, otherwise random
-            // Since we don't have a specific ID, we'll fetch random questions
-            // Fetching only necessary columns to improve performance
-            const { data, error } = await supabase
-                .from('questions')
-                .select('question, text, choices, correct_answer')
-                .limit(50);
+            // 1. Determine Daily Module
+            let dailyModuleId: string | null = null;
+            const { data: modules } = await supabase.from('modules').select('id, title');
 
-            if (error) throw error;
-            if (!data || data.length < QUESTIONS_COUNT) {
+            if (modules && modules.length > 0) {
+                const today = new Date();
+                const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
+                const moduleIndex = dayOfYear % modules.length;
+                dailyModuleId = modules[moduleIndex].id;
+                setDailyTopic(modules[moduleIndex].title);
+            }
+
+            let finalQuestions: any[] = [];
+
+            // 2. Fetch Questions from Daily Module
+            if (dailyModuleId) {
+                console.log("Fetching questions for module:", dailyModuleId);
+                const { data: moduleQuestions } = await supabase
+                    .from('questions')
+                    .select('text, choices, correct_answer, quiz_id, quizzes!inner(module_id)')
+                    .eq('quizzes.module_id', dailyModuleId);
+
+                if (moduleQuestions) {
+                    finalQuestions = moduleQuestions;
+                    console.log("Found module questions:", finalQuestions.length);
+                }
+            }
+
+            // 3. Fallback / Fill: If < 20, fetch random from others
+            if (finalQuestions.length < QUESTIONS_COUNT) {
+                console.log("Not enough module questions, fetching random fallback...");
+                // const limit = QUESTIONS_COUNT - finalQuestions.length + 10; // Fetch extra to be safe
+                // Note: Ideally we exclude already fetched IDs, but for simplicity and performance we'll just shuffle and dedup logic if needed
+                // or just fetch random 50 and append.
+
+                const { data: randomQuestions } = await supabase
+                    .from('questions')
+                    .select('text, choices, correct_answer')
+                    .limit(50); // Fetch pool
+
+                if (randomQuestions) {
+                    // Filter out duplicates if IDs were available, but here we just append uniqueness by content/index later
+                    // For now, simpler to just combine.
+                    finalQuestions = [...finalQuestions, ...randomQuestions];
+                }
+            }
+
+            if (finalQuestions.length < QUESTIONS_COUNT) {
                 throw new Error('Not enough questions available in the database.');
             }
 
-            // Transform and Shuffle
-            const transformed = data.map((q: any, index: number) => {
+            // Refine Logic:
+            // 1. Module Qs
+            // 2. Random Qs (filtered to not be in Module Qs ideally, but low collision prob for now)
+
+            // Transform
+            const transformed = finalQuestions.map((q: any, index: number) => {
                 let options = [];
                 try {
                     options = typeof q.choices === 'string' ? JSON.parse(q.choices) : q.choices;
@@ -91,17 +154,28 @@ const RapidFireGame = () => {
                 }
 
                 return {
-                    id: index, // Use local index for tracking
+                    id: index, // Use local index
                     question: q.question || q.text || "Question Text Missing",
                     options: options,
-                    correctKey: Number(q.correct_answer) || 0
+                    correctKey: Number(q.correct_answer) || 0,
+                    isModuleQ: dailyModuleId && q.quizzes?.module_id === dailyModuleId
                 };
             });
 
-            // Randomize array
-            const shuffled = transformed.sort(() => 0.5 - Math.random()).slice(0, QUESTIONS_COUNT);
-            setQuestions(shuffled);
+            // Split into Module and Random groups to shuffle independently
+            const moduleSubset = transformed.filter(t => t.isModuleQ);
+            const randomSubset = transformed.filter(t => !t.isModuleQ);
+
+            // Shuffle helper
+            const shuffle = (arr: any[]) => arr.sort(() => 0.5 - Math.random());
+
+            // Combine: Shuffled Module Qs first, then Shuffled Random Qs
+            // Take top 20
+            const finalSet = [...shuffle(moduleSubset), ...shuffle(randomSubset)].slice(0, QUESTIONS_COUNT);
+
+            setQuestions(finalSet);
             setGameState('playing');
+
         } catch (err: any) {
             console.error("Failed to load questions:", err);
             setError(err.message || 'Failed to load game');
@@ -177,25 +251,15 @@ const RapidFireGame = () => {
                         Answer 20 questions in 5 minutes!
                         <br />
                         <span className="font-bold text-primary">20 XP</span> per correct answer.
+                        {dailyTopic && (
+                            <div className="mt-4 py-2 px-4 bg-primary/10 rounded-lg inline-block">
+                                <span className="text-sm font-semibold text-primary">Topic of the Day:</span>
+                                <div className="text-xl font-bold text-text">{dailyTopic}</div>
+                            </div>
+                        )}
                     </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-left">
-                        <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                            <Clock className="w-6 h-6 text-blue-500 mb-2" />
-                            <h3 className="font-bold text-text">5 Minutes</h3>
-                            <p className="text-xs text-muted">Strict time limit</p>
-                        </div>
-                        <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                            <AlertCircle className="w-6 h-6 text-orange-500 mb-2" />
-                            <h3 className="font-bold text-text">One Attempt</h3>
-                            <p className="text-xs text-muted">Per day only</p>
-                        </div>
-                        <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                            <Trophy className="w-6 h-6 text-purple-500 mb-2" />
-                            <h3 className="font-bold text-text">Weekly XP</h3>
-                            <p className="text-xs text-muted">Boost your rank</p>
-                        </div>
-                    </div>
+
 
                     {error && (
                         <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-3 rounded-lg mb-6 text-sm">

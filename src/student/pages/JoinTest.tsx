@@ -1,9 +1,10 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
-import { Key, Clock, FileText, AlertCircle, Play } from 'lucide-react';
+import { Key, Clock, FileText, AlertCircle, Play, QrCode, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../shared/components/Card';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const JoinTest = () => {
     const [searchParams] = useSearchParams();
@@ -16,11 +17,63 @@ const JoinTest = () => {
     const [quiz, setQuiz] = useState<any>(null);
     const [error, setError] = useState('');
 
+    const [scanning, setScanning] = useState(false);
+    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+
     useEffect(() => {
         if (urlCode) {
             handleVerifyCode(urlCode);
         }
-    }, [urlCode]);
+
+        // Auto-start scanner if requested
+        if (searchParams.get('scan') === 'true') {
+            setScanning(true);
+        }
+    }, [urlCode, searchParams]);
+
+    useEffect(() => {
+        if (scanning) {
+            // Include a small delay to ensure the element exists
+            const timer = setTimeout(() => {
+                if (!scannerRef.current) {
+                    const scanner = new Html5QrcodeScanner(
+                        "reader",
+                        {
+                            fps: 10,
+                            qrbox: { width: 250, height: 250 },
+                            aspectRatio: 1.0
+                        },
+                        /* verbose= */ false
+                    );
+                    scannerRef.current = scanner;
+                    scanner.render(onScanSuccess, onScanFailure);
+                }
+            }, 100);
+
+            return () => {
+                clearTimeout(timer);
+                if (scannerRef.current) {
+                    scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+                    scannerRef.current = null;
+                }
+            };
+        }
+    }, [scanning]);
+
+    const onScanSuccess = (decodedText: string, decodedResult: any) => {
+        console.log(`Scan result: ${decodedText}`, decodedResult);
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(err => console.error("Failed to clear scanner on success", err));
+            scannerRef.current = null;
+        }
+        setScanning(false);
+        setCode(decodedText);
+        handleVerifyCode(decodedText);
+    };
+
+    const onScanFailure = (error: any) => {
+        // console.warn(`Code scan error = ${error}`);
+    };
 
     const handleVerifyCode = async (codeToVerify: string) => {
         setVerifying(true);
@@ -163,7 +216,30 @@ const JoinTest = () => {
     }
 
     return (
-        <div className="max-w-md mx-auto mt-20">
+        <div className="max-w-md mx-auto mt-20 relative">
+            {/* Scanner Overlay */}
+            {scanning && (
+                <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
+                    <div className="bg-surface p-4 rounded-2xl w-full max-w-sm relative">
+                        <button
+                            onClick={() => {
+                                setScanning(false);
+                                if (scannerRef.current) {
+                                    scannerRef.current.clear().catch(console.error);
+                                    scannerRef.current = null;
+                                }
+                            }}
+                            className="absolute top-2 right-2 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors z-10"
+                        >
+                            <X className="w-6 h-6 text-text" />
+                        </button>
+                        <h2 className="text-xl font-bold text-center mb-4 text-text">Scan QR Code</h2>
+                        <div id="reader" className="w-full rounded-xl overflow-hidden"></div>
+                        <p className="text-center text-sm text-muted mt-4">Point your camera at a Master Test QR Code</p>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-surface p-8 rounded-2xl border border-neutral-300 dark:border-neutral-600 shadow-sm text-center space-y-6">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
                     <Key className="w-8 h-8" />
@@ -174,24 +250,44 @@ const JoinTest = () => {
                     <p className="text-muted mt-2">Enter the access code provided by your instructor to join the test.</p>
                 </div>
 
-                <form onSubmit={handleManualJoin} className="space-y-4">
-                    <input
-                        type="text"
-                        placeholder="ENTER CODE"
-                        value={code}
-                        onChange={(e) => setCode(e.target.value.toUpperCase())}
-                        className="w-full h-12 text-center text-xl font-mono tracking-widest uppercase rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                        maxLength={8}
-                    />
-                    {error && (
-                        <p className="text-sm text-red-500 flex items-center justify-center gap-1">
-                            <AlertCircle className="w-4 h-4" /> {error}
-                        </p>
-                    )}
-                    <Button type="submit" className="w-full h-12 text-lg" disabled={!code}>
-                        Verify & Join
+                <div className="space-y-4">
+                    {/* Mobile Camera Button - Visible mainly on mobile but useful generally */}
+                    <Button
+                        type="button"
+                        onClick={() => setScanning(true)}
+                        className="w-full h-12 text-lg bg-neutral-100 dark:bg-neutral-800 text-text hover:bg-neutral-200 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-600"
+                    >
+                        <QrCode className="w-5 h-5 mr-2" /> Scan QR Code
                     </Button>
-                </form>
+
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-neutral-300 dark:border-neutral-700" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-surface px-2 text-muted-foreground">Or enter code</span>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleManualJoin} className="space-y-4">
+                        <input
+                            type="text"
+                            placeholder="ENTER CODE"
+                            value={code}
+                            onChange={(e) => setCode(e.target.value.toUpperCase())}
+                            className="w-full h-12 text-center text-xl font-mono tracking-widest uppercase rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                            maxLength={8}
+                        />
+                        {error && (
+                            <p className="text-sm text-red-500 flex items-center justify-center gap-1">
+                                <AlertCircle className="w-4 h-4" /> {error}
+                            </p>
+                        )}
+                        <Button type="submit" className="w-full h-12 text-lg" disabled={!code}>
+                            Verify & Join
+                        </Button>
+                    </form>
+                </div>
             </div>
         </div>
     );
