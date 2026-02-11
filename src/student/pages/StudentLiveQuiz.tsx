@@ -11,7 +11,7 @@ import { useTheme } from '../../shared/context/ThemeContext';
 export default function StudentLiveQuiz() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, isLoading: authLoading } = useAuth();
     const { theme } = useTheme();
 
     // State
@@ -158,7 +158,12 @@ export default function StudentLiveQuiz() {
     };
 
     useEffect(() => {
-        if (!id || !user) return;
+        if (authLoading) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+        if (!id) return;
 
         // Initial Fetch
         fetchQuizState();
@@ -232,7 +237,7 @@ export default function StudentLiveQuiz() {
             clearInterval(pollInterval);
         };
 
-    }, [id, user]);
+    }, [id, user, authLoading]);
 
     // Timer Interval
     useEffect(() => {
@@ -293,7 +298,19 @@ export default function StudentLiveQuiz() {
         }
     };
 
-    if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
+    if (loading || authLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
+
+    if (!user) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
+                <Card className="max-w-md w-full p-8 text-center space-y-6">
+                    <h1 className="text-2xl font-bold text-text">Access Denied</h1>
+                    <p className="text-muted">You must be logged in to join a live quiz.</p>
+                    <Button onClick={() => navigate('/login')} className="w-full">Go to Login</Button>
+                </Card>
+            </div>
+        );
+    }
 
     if (status === 'completed') {
         return (

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
@@ -101,6 +101,32 @@ const MCQTest = () => {
 
     // BUT! I will define it first to be clean.
 
+    // Save Progress (Debounced)
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Save Progress (Debounced)
+    const saveProgress = useCallback((currentAnswers: any) => {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+        saveTimeoutRef.current = setTimeout(async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user || !id || id === 'combined' || !testActive) return;
+
+                console.log("Auto-saving draft...");
+                await supabase.from('attempts').upsert({
+                    quiz_id: id,
+                    student_id: user.id,
+                    answers: currentAnswers,
+                    status: 'in-progress',
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'student_id, quiz_id' });
+            } catch (err) {
+                console.error("Failed to save draft:", err);
+            }
+        }, 2000);
+    }, [id, testActive]);
+
     const calculateAndShowResults = useCallback(async () => {
         let calculatedScore = 0;
         questions.forEach((q) => {
@@ -142,29 +168,32 @@ const MCQTest = () => {
         }
 
         try {
-            // Use the user from useAuth context if available, or fetch fresh
-            // const { data: { user } } = await supabase.auth.getUser(); // Existing logic fetches fresh
-            // We can stick to existing logic for the DB insert to be safe and consistent with original code
-
-            const { data: { user: dbUser } } = await supabase.auth.getUser();
-            const targetUser = dbUser || user;
-
-            if (targetUser && id && id !== 'combined') {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user && id && id !== 'combined') {
+                // 1. Save to quiz_results (Legacy/Dashboard support)
                 await supabase.from('quiz_results').insert({
                     quiz_id: id,
-                    student_id: targetUser.id,
+                    student_id: user.id,
                     score: calculatedScore,
                     total_questions: questions.length,
                     percentage: (calculatedScore / questions.length) * 100
                 });
 
+                // 2. Mark Attempt as Completed
+                await supabase.from('attempts').update({
+                    status: 'completed',
+                    score: calculatedScore,
+                    completed_at: new Date().toISOString(),
+                    answers: answers // Final save
+                }).eq('quiz_id', id).eq('student_id', user.id);
+
                 // Clear Local Storage on Successful Submit
-                localStorage.removeItem(`quiz_progress_${targetUser.id}_${id}`);
+                localStorage.removeItem(`quiz_progress_${user.id}_${id}`);
             }
         } catch (err) {
             console.error("Error saving results:", err);
         }
-    }, [answers, questions, id, codeExecutionStatus, user]);
+    }, [answers, questions, id, codeExecutionStatus]);
 
     // Security State (Moved here to access calculateAndShowResults)
     useEffect(() => {
@@ -252,17 +281,35 @@ const MCQTest = () => {
                     if (user) {
                         const isMaster = quizData.type === 'master';
                         if (isMaster) {
-                            const { data: existingAttempts } = await supabase
+                            // Check for COMPLETED attempts only
+                            const { data: completedAttempts } = await supabase
                                 .from('quiz_results')
                                 .select('id')
                                 .eq('quiz_id', quizData.id)
                                 .eq('student_id', user.id)
                                 .limit(1);
 
-                            if (existingAttempts && existingAttempts.length > 0) {
+                            if (completedAttempts && completedAttempts.length > 0) {
                                 alert("You have already completed this assessment.");
-                                navigate(`/ student / practice / ${id} `);
+                                navigate(`/student/practice/${id}`);
                                 return;
+                            }
+
+                            // Load Draft / In-Progress Attempt
+                            const { data: draftAttempt } = await supabase
+                                .from('attempts')
+                                .select('answers, status')
+                                .eq('quiz_id', quizData.id)
+                                .eq('student_id', user.id)
+                                .eq('status', 'in-progress')
+                                .order('updated_at', { ascending: false }) // Get latest
+                                .limit(1)
+                                .single();
+
+                            if (draftAttempt && draftAttempt.answers) {
+                                console.log("Restoring Data:", draftAttempt.answers);
+                                setAnswers(draftAttempt.answers);
+                                // Optional: Restore other state if saved
                             }
                         }
                     }
@@ -362,16 +409,23 @@ const MCQTest = () => {
         if (currentQ.type === 'msq') {
             setAnswers(prev => {
                 const current = (prev[currentQuestion] as number[]) || [];
+                let next;
                 if (current.includes(optionIndex)) {
-                    return { ...prev, [currentQuestion]: current.filter(i => i !== optionIndex) };
+                    next = { ...prev, [currentQuestion]: current.filter(i => i !== optionIndex) };
                 } else {
-                    return { ...prev, [currentQuestion]: [...current, optionIndex] };
+                    next = { ...prev, [currentQuestion]: [...current, optionIndex] };
                 }
+                saveProgress(next);
+                return next;
             });
         } else {
-            setAnswers(prev => ({ ...prev, [currentQuestion]: optionIndex }));
+            setAnswers(prev => {
+                const next = { ...prev, [currentQuestion]: optionIndex };
+                saveProgress(next);
+                return next;
+            });
         }
-    }, [currentQuestion, questions]);
+    }, [currentQuestion, questions, saveProgress]);
 
     const handleRunCode = async () => {
         const q = questions[currentQuestion - 1];
@@ -731,7 +785,14 @@ const MCQTest = () => {
                                         placeholder="Type answer here..."
                                         className="w-full bg-background border-2 border-neutral-200 dark:border-neutral-700 rounded-lg p-3 text-lg font-mono focus:border-primary focus:outline-none transition-all shadow-sm"
                                         value={String(answers[currentQuestion] ?? '')}
-                                        onChange={(e) => setAnswers(prev => ({ ...prev, [currentQuestion]: e.target.value }))}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setAnswers(prev => {
+                                                const next = { ...prev, [currentQuestion]: val };
+                                                saveProgress(next);
+                                                return next;
+                                            });
+                                        }}
                                     />
                                     <p className="text-[10px] text-muted mt-1 ml-1">Value must be between Min and Max specified.</p>
                                 </div>
@@ -791,7 +852,14 @@ const MCQTest = () => {
                                     <div className="relative">
                                         <div className="absolute top-2 right-2 z-10 flex gap-2">
                                             <button
-                                                onClick={() => setAnswers(prev => ({ ...prev, [currentQuestion]: activeQuestion.correct.starterCode || '' }))}
+                                                onClick={() => {
+                                                    const val = activeQuestion.correct.starterCode || '';
+                                                    setAnswers(prev => {
+                                                        const next = { ...prev, [currentQuestion]: val };
+                                                        saveProgress(next);
+                                                        return next;
+                                                    });
+                                                }}
                                                 className="p-1.5 bg-neutral-200 dark:bg-neutral-700 rounded hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
                                                 title="Reset Code"
                                             >
@@ -800,7 +868,14 @@ const MCQTest = () => {
                                         </div>
                                         <textarea
                                             value={(answers[currentQuestion] as string) ?? activeQuestion.correct.starterCode ?? ''}
-                                            onChange={(e) => setAnswers(prev => ({ ...prev, [currentQuestion]: e.target.value }))}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setAnswers(prev => {
+                                                    const next = { ...prev, [currentQuestion]: val };
+                                                    saveProgress(next);
+                                                    return next;
+                                                });
+                                            }}
                                             className="w-full h-64 bg-[#1e1e1e] text-neutral-200 font-mono text-sm p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                                             spellCheck="false"
                                             placeholder="// Write your code here..."

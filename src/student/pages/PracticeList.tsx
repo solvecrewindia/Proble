@@ -8,13 +8,17 @@ import { BookOpen, ArrowRight, Trash2, AlertCircle, ArrowLeft } from 'lucide-rea
 
 const PracticeList = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, isLoading: authLoading } = useAuth();
     const [practiceItems, setPracticeItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchPracticeList = async () => {
-            if (!user) return;
+            if (authLoading) return;
+            if (!user) {
+                setLoading(false);
+                return;
+            }
             setLoading(true);
 
             try {
@@ -52,7 +56,7 @@ const PracticeList = () => {
         };
 
         fetchPracticeList();
-    }, [user]);
+    }, [user, authLoading]);
 
     const removeFromPractice = async (itemId: string, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent card click

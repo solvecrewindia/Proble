@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Save, CheckCircle, Clock, Copy, QrCode, Link as LinkIcon } from 'lucide-react';
+import { Play, Save, CheckCircle, Clock, Copy, QrCode, Link as LinkIcon, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase'; // Import supabase
 import { Card, CardContent } from '../components/ui/Card'; // Import UI components
@@ -8,41 +8,72 @@ import { useNavigate } from 'react-router-dom';
 import type { Quiz } from '../types';
 import { QRCodeModal } from '../components/quiz/QRCodeModal';
 
+import { useAuth } from '../../shared/context/AuthContext';
+
 export default function LiveTests() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'live' | 'saved' | 'completed'>('saved'); // Default to saved as that's where we look first
+    const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState<'saved' | 'live' | 'completed'>('saved');
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // QR Code State
     const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
 
     const tabs = [
-        { id: 'live', label: 'Live Tests', icon: Play },
         { id: 'saved', label: 'Saved Tests', icon: Save },
+        { id: 'live', label: 'Live Tests', icon: Play },
         { id: 'completed', label: 'Completed', icon: CheckCircle },
     ];
 
     useEffect(() => {
         const fetchQuizzes = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            }
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            try {
+                const { data, error } = await supabase
+                    .from('quizzes')
+                    .select('*')
+                    .eq('created_by', user.id)
+                    .eq('type', 'live')
+                    .order('created_at', { ascending: false });
 
-            // Simple fetch for now, can refine status filtering later
-            const { data } = await supabase
-                .from('quizzes')
-                .select('*')
-                .eq('created_by', user.id)
-                .eq('type', 'live')
-                .order('created_at', { ascending: false });
-
-            if (data) setQuizzes(data as any);
-            setLoading(false);
+                if (error) {
+                    console.error("Error fetching live quizzes:", error);
+                }
+                if (data) setQuizzes(data as any);
+            } catch (err) {
+                console.error("Unexpected error in LiveTests:", err);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchQuizzes();
-    }, [activeTab]);
+    }, [user]);
+
+    const isExpired = (quiz: Quiz) => {
+        if (!quiz.scheduledAt || !quiz.settings?.duration) return false;
+        const endTime = new Date(new Date(quiz.scheduledAt).getTime() + quiz.settings.duration * 60000); // duration is in minutes
+        return new Date() > endTime;
+    };
+
+    const filteredQuizzes = quizzes.filter(quiz => {
+        const isQuizExpired = isExpired(quiz);
+        if (activeTab === 'saved') {
+            return quiz.status === 'draft';
+        }
+        if (activeTab === 'live') {
+            return quiz.status === 'active' && !isQuizExpired;
+        }
+        if (activeTab === 'completed') {
+            return quiz.status === 'completed' || (quiz.status === 'active' && isQuizExpired);
+        }
+        return false;
+    });
 
     const copyCode = (code: string) => {
         navigator.clipboard.writeText(code);
@@ -58,6 +89,30 @@ export default function LiveTests() {
     const handleShowQRCode = (code: string) => {
         const url = `${window.location.origin}/quiz/${code}`;
         setQrCodeData({ url, code });
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this test? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('quizzes')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                console.error('Error deleting quiz:', error);
+                alert('Failed to delete quiz');
+                return;
+            }
+
+            setQuizzes(prev => prev.filter(q => q.id !== id));
+        } catch (err) {
+            console.error('Error in handleDelete:', err);
+            alert('An unexpected error occurred while deleting');
+        }
     };
 
     return (
@@ -103,13 +158,13 @@ export default function LiveTests() {
             {/* Content Area */}
             {loading ? (
                 <div className="p-8 text-center text-muted">Loading...</div>
-            ) : quizzes.length === 0 ? (
+            ) : filteredQuizzes.length === 0 ? (
                 <div className="min-h-[200px] flex flex-col items-center justify-center text-muted border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl bg-surface/50">
                     <p>No {activeTab} tests found.</p>
                 </div>
             ) : (
                 <div className="grid gap-4">
-                    {quizzes.map(quiz => (
+                    {filteredQuizzes.map(quiz => (
                         <Card key={quiz.id} className="bg-surface hover:border-primary/50 transition-colors">
                             <CardContent className="p-6 flex items-center justify-between">
                                 <div>
@@ -151,6 +206,15 @@ export default function LiveTests() {
                                     </Button>
                                     <Button variant="outline" size="sm" onClick={() => navigate(`/faculty/quizzes/${quiz.id}/edit`)}>
                                         Edit
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                        onClick={() => handleDelete(quiz.id)}
+                                        title="Delete Quiz"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
                                     </Button>
                                 </div>
                             </CardContent>
