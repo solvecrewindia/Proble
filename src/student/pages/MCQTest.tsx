@@ -2,6 +2,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
+import { useAuth } from '../../shared/context/AuthContext';
 import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAntiCheat } from '../hooks/useAntiCheat';
@@ -12,6 +13,7 @@ const MCQTest = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const { theme, setTheme } = useTheme();
+    const { user } = useAuth();
     const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
     const [questions, setQuestions] = useState<any[]>([]);
@@ -36,6 +38,51 @@ const MCQTest = () => {
 
     // Security State
     const [isWindowFocused, setIsWindowFocused] = useState(true);
+
+    // --- PERSISTENCE LOGIC START ---
+    // 1. Restore Progress on Mount
+    useEffect(() => {
+        if (!user || !id || id === 'combined') return;
+
+        const storageKey = `quiz_progress_${user.id}_${id}`;
+        try {
+            const savedData = localStorage.getItem(storageKey);
+            if (savedData) {
+                const parsed = JSON.parse(savedData);
+                if (parsed.answers) setAnswers(parsed.answers);
+                // Logic to set selectedLanguages if it exists
+                if (parsed.selectedLanguages) setSelectedLanguages(parsed.selectedLanguages);
+                if (parsed.codeExecutionStatus) setCodeExecutionStatus(parsed.codeExecutionStatus);
+                // Optional: Restore current question to where they left off
+                if (parsed.currentQuestion) setCurrentQuestion(parsed.currentQuestion);
+
+                // console.log("Restored quiz progress from local storage");
+            }
+        } catch (e) {
+            console.error("Failed to restore quiz progress", e);
+        }
+    }, [id, user]);
+
+    // 2. Save Progress on Change
+    useEffect(() => {
+        if (!user || !id || id === 'combined' || showResults || loading) return;
+
+        const storageKey = `quiz_progress_${user.id}_${id}`;
+        const dataToSave = {
+            answers,
+            selectedLanguages,
+            codeExecutionStatus,
+            currentQuestion,
+            updatedAt: Date.now()
+        };
+
+        const timeoutId = setTimeout(() => {
+            localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+        }, 500); // Debounce save by 500ms
+
+        return () => clearTimeout(timeoutId);
+    }, [answers, selectedLanguages, codeExecutionStatus, currentQuestion, id, user, showResults, loading]);
+    // --- PERSISTENCE LOGIC END ---
 
 
 
@@ -95,20 +142,29 @@ const MCQTest = () => {
         }
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user && id && id !== 'combined') {
+            // Use the user from useAuth context if available, or fetch fresh
+            // const { data: { user } } = await supabase.auth.getUser(); // Existing logic fetches fresh
+            // We can stick to existing logic for the DB insert to be safe and consistent with original code
+
+            const { data: { user: dbUser } } = await supabase.auth.getUser();
+            const targetUser = dbUser || user;
+
+            if (targetUser && id && id !== 'combined') {
                 await supabase.from('quiz_results').insert({
                     quiz_id: id,
-                    student_id: user.id,
+                    student_id: targetUser.id,
                     score: calculatedScore,
                     total_questions: questions.length,
                     percentage: (calculatedScore / questions.length) * 100
                 });
+
+                // Clear Local Storage on Successful Submit
+                localStorage.removeItem(`quiz_progress_${targetUser.id}_${id}`);
             }
         } catch (err) {
             console.error("Error saving results:", err);
         }
-    }, [answers, questions, id, codeExecutionStatus]);
+    }, [answers, questions, id, codeExecutionStatus, user]);
 
     // Security State (Moved here to access calculateAndShowResults)
     useEffect(() => {
