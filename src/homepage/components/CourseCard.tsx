@@ -27,9 +27,9 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, showDate }) => {
                 className="w-full object-cover"
                 style={{ height: '160px' }}
             />
-            <div className="p-3">
+            <div className="p-3 text-center">
                 <div className="text-sm font-bold mb-2 line-clamp-2 h-10 text-text">{course.title}</div>
-                <div className="flex justify-between text-xs text-muted items-center">
+                <div className="flex justify-center gap-4 text-xs text-muted items-center">
                     <div className="flex items-center gap-2">
                         {course.author === 'Proble' || course.author === 'Admin' ? (
                             <span>Proble</span>
