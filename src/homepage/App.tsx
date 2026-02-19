@@ -215,7 +215,7 @@ function App({ searchQuery = '' }: AppProps) {
         ) : activeTab === 'global' && filteredCourses.length === 0 ? (
           <div className="text-center py-12 text-muted">No global challenges active properly at the moment. Check back later!</div>
         ) : (
-          <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
+          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 justify-items-center">
             {filteredCourses.map((course) => (
               <CourseCard
                 key={course.id}
