@@ -32,7 +32,7 @@ alter table public.profiles enable row level security;
 
 -- Create policies
 
--- 1. Allow public read access (necessary for checking usernames, etc.)
+-- 1. Public profiles (username, avatar, role) differ from private data (email)
 create policy "Public profiles are viewable by everyone."
   on public.profiles for select
   using ( true );
@@ -68,9 +68,12 @@ create policy "Public global quizzes are viewable by everyone."
   on public.quizzes for select
   using ( type = 'global' );
 
-create policy "Master quizzes are viewable by code (conceptually), or by creator."
+-- Secure Master Quizzes: Only creator or via RPC (handled at app level by joining)
+-- For now, we restrict generic select to creator only for non-global.
+-- Students "join" by knowing the code, which we handle via a secure function or specific query.
+create policy "Creators can view their own quizzes."
   on public.quizzes for select
-  using ( true ); -- Simplified for demo; ideally restrict Master to creator or enrolled students
+  using ( auth.uid() = created_by or type = 'global' );
 
 create policy "Faculty can insert quizzes."
   on public.quizzes for insert
@@ -99,9 +102,11 @@ create table public.questions (
 alter table public.questions enable row level security;
 
 -- Question Policies
-create policy "Questions are viewable by everyone who can view the quiz."
+-- Only allow viewing questions if you can view the quiz (which is now restricted)
+-- AND if the quiz is 'active' (optional hardening)
+create policy "Questions are viewable if quiz is accessible."
   on public.questions for select
-  using ( true ); -- Simplified
+  using ( exists (select 1 from public.quizzes where id = quiz_id and (type = 'global' or created_by = auth.uid())) );
 
 create policy "Faculty can manage questions."
   on public.questions for all

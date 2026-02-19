@@ -4,7 +4,7 @@ import { Button } from '../../shared/components/Button';
 import { Key, Clock, FileText, AlertCircle, Play, QrCode, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../shared/components/Card';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const JoinTest = () => {
     const [searchParams] = useSearchParams();
@@ -18,43 +18,51 @@ const JoinTest = () => {
     const [error, setError] = useState('');
 
     const [scanning, setScanning] = useState(false);
-    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+    const scannerRef = useRef<Html5Qrcode | null>(null);
 
-    useEffect(() => {
-        if (urlCode) {
-            handleVerifyCode(urlCode);
-        }
-
-        // Auto-start scanner if requested
-        if (searchParams.get('scan') === 'true') {
-            setScanning(true);
-        }
-    }, [urlCode, searchParams]);
+    // ... (existing urlCode effect)
 
     useEffect(() => {
         if (scanning) {
-            // Include a small delay to ensure the element exists
+            // Include a small delay to ensure the DOM element exists
             const timer = setTimeout(() => {
                 if (!scannerRef.current) {
-                    const scanner = new Html5QrcodeScanner(
-                        "reader",
-                        {
-                            fps: 10,
-                            qrbox: { width: 250, height: 250 },
-                            aspectRatio: 1.0
-                        },
-                        /* verbose= */ false
-                    );
-                    scannerRef.current = scanner;
-                    scanner.render(onScanSuccess, onScanFailure);
+                    const html5QrCode = new Html5Qrcode("reader");
+                    scannerRef.current = html5QrCode;
+
+                    const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+
+                    // Start with environment camera (Back Camera)
+                    html5QrCode.start(
+                        { facingMode: "environment" },
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    ).catch(err => {
+                        console.error("Error starting scanner", err);
+                        // If environment fails, try user facing or default
+                        html5QrCode.start(
+                            { facingMode: "user" },
+                            config,
+                            onScanSuccess,
+                            onScanFailure
+                        ).catch(e => console.error("Failed to start scanner completely", e));
+                    });
                 }
             }, 100);
 
             return () => {
                 clearTimeout(timer);
                 if (scannerRef.current) {
-                    scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
-                    scannerRef.current = null;
+                    if (scannerRef.current.isScanning) {
+                        scannerRef.current.stop().then(() => {
+                            scannerRef.current?.clear();
+                            scannerRef.current = null;
+                        }).catch(err => console.error("Failed to stop scanner", err));
+                    } else {
+                        scannerRef.current.clear();
+                        scannerRef.current = null;
+                    }
                 }
             };
         }
@@ -62,11 +70,8 @@ const JoinTest = () => {
 
     const onScanSuccess = (decodedText: string, decodedResult: any) => {
         console.log(`Scan result: ${decodedText}`, decodedResult);
-        if (scannerRef.current) {
-            scannerRef.current.clear().catch(err => console.error("Failed to clear scanner on success", err));
-            scannerRef.current = null;
-        }
         setScanning(false);
+        // Cleanup is handled by the useEffect return when scanning becomes false
         setCode(decodedText);
         handleVerifyCode(decodedText);
     };
@@ -217,25 +222,43 @@ const JoinTest = () => {
 
     return (
         <div className="max-w-md mx-auto mt-20 relative">
-            {/* Scanner Overlay */}
+            {/* Scanner Overlay - Full Screen Custom UI */}
             {scanning && (
-                <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
-                    <div className="bg-surface p-4 rounded-2xl w-full max-w-sm relative">
-                        <button
-                            onClick={() => {
-                                setScanning(false);
-                                if (scannerRef.current) {
-                                    scannerRef.current.clear().catch(console.error);
-                                    scannerRef.current = null;
-                                }
-                            }}
-                            className="absolute top-2 right-2 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors z-10"
-                        >
-                            <X className="w-6 h-6 text-text" />
-                        </button>
-                        <h2 className="text-xl font-bold text-center mb-4 text-text">Scan QR Code</h2>
-                        <div id="reader" className="w-full rounded-xl overflow-hidden"></div>
-                        <p className="text-center text-sm text-muted mt-4">Point your camera at a Master Test QR Code</p>
+                <div className="fixed inset-0 z-50 bg-black flex flex-col">
+                    {/* Close Button */}
+                    <button
+                        onClick={() => {
+                            setScanning(false);
+                            // Cleanup handled in useEffect
+                        }}
+                        className="absolute top-6 right-6 p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors z-[60]"
+                    >
+                        <X className="w-8 h-8" />
+                    </button>
+
+                    {/* Camera Viewport */}
+                    <div className="relative w-full h-full flex items-center justify-center bg-black">
+                        <div id="reader" className="w-full h-full" style={{ objectFit: 'cover' }}></div>
+
+                        {/* Custom Scanning Frame Overlay */}
+                        <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-50">
+                            {/* Darkened background around the frame (optional, tough with pure CSS, simpler to just have a frame) */}
+
+                            {/* Frame */}
+                            <div className="w-72 h-72 relative">
+                                <div className="absolute top-0 left-0 w-8 h-8 border-l-4 border-t-4 border-primary rounded-tl-lg"></div>
+                                <div className="absolute top-0 right-0 w-8 h-8 border-r-4 border-t-4 border-primary rounded-tr-lg"></div>
+                                <div className="absolute bottom-0 left-0 w-8 h-8 border-l-4 border-b-4 border-primary rounded-bl-lg"></div>
+                                <div className="absolute bottom-0 right-0 w-8 h-8 border-r-4 border-b-4 border-primary rounded-br-lg"></div>
+
+                                {/* Scanning Line Animation */}
+                                <div className="absolute top-0 left-0 w-full h-1 bg-primary/50 shadow-[0_0_10px_rgba(0,199,230,0.5)] animate-[scan_2s_infinite_ease-in-out]"></div>
+                            </div>
+
+                            <p className="mt-8 text-white font-medium bg-black/60 px-6 py-2 rounded-full backdrop-blur-sm">
+                                Align Master Test QR Code
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}

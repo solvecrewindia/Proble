@@ -24,8 +24,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
             navigate('/student/dashboard');
         } else if (user?.role === 'faculty') {
             navigate('/faculty/dashboard');
-        } else if (user?.role === 'admin') {
-            navigate('/admin');
+
         }
     };
 

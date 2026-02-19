@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './shared/context/AuthContext'
+import { useAntiCheat } from './shared/hooks/useAntiCheat';
 import { ThemeProvider } from './shared/context/ThemeContext';
 import Header from './shared/components/Header';
 import RegistrationNumberModal from './shared/components/RegistrationNumberModal';
@@ -15,7 +16,7 @@ const Login = lazyRetry(() => import('./login/pages/Login'), 'Login');
 const HomepageApp = lazyRetry(() => import('./homepage/App'), 'HomepageApp');
 const QuizDetails = lazyRetry(() => import('./student/pages/QuizDetails'), 'QuizDetails');
 const ModuleDetails = lazyRetry(() => import('./homepage/ModuleDetails'), 'ModuleDetails');
-const AdminApp = lazyRetry(() => import('./admin/App'), 'AdminApp');
+
 const AboutUs = lazyRetry(() => import('./homepage/AboutUs'), 'AboutUs');
 const StudentApp = lazyRetry(() => import('./student/App'), 'StudentApp');
 const ForgotPassword = lazyRetry(() => import('./login/pages/ForgotPassword'), 'ForgotPassword');
@@ -97,9 +98,7 @@ const RootRedirect = ({ searchQuery }) => {
         if (role === 'faculty' || role === 'teacher') {
             return <Navigate to="/faculty/dashboard" replace />;
         }
-        if (role === 'admin') {
-            return <Navigate to="/admin" replace />;
-        }
+
     }
 
     // Default for Guests and Students
@@ -107,6 +106,7 @@ const RootRedirect = ({ searchQuery }) => {
 };
 
 function AppContent() {
+    useAntiCheat();
 
     const [searchQuery, setSearchQuery] = useState('');
     const location = useLocation();
@@ -114,7 +114,7 @@ function AppContent() {
     const isHeaderHidden = location.pathname === '/login' ||
         location.pathname === '/forgot-password' ||
         location.pathname.startsWith('/faculty') ||
-        location.pathname.startsWith('/admin') ||
+
         location.pathname.includes('/practice/test') ||
         location.pathname.includes('/practice/mcq') ||
         location.pathname.includes('/student/test');
@@ -157,14 +157,7 @@ function AppContent() {
                             </ProtectedRoute>
                         }
                     />
-                    <Route
-                        path="/admin/*"
-                        element={
-                            <ProtectedRoute allowedRoles={['admin']}>
-                                <AdminApp />
-                            </ProtectedRoute>
-                        }
-                    />
+
                     <Route
                         path="/student/*"
                         element={

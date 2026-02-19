@@ -242,11 +242,7 @@ const UserProfileDropdown: React.FC = () => {
                                 onClick={() => {
                                     let role = user.role.toLowerCase();
                                     if (role === 'teacher') role = 'faculty';
-                                    else if (role === 'admin') {
-                                        navigate('/admin');
-                                        setIsOpen(false);
-                                        return;
-                                    }
+
                                     navigate(`/${role}/dashboard`);
                                     setIsOpen(false);
                                 }}

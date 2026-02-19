@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn, BookOpen, BrainCircuit, Target, ListChecks, Calculator as CalculatorIcon, RotateCcw, Play, Code2 } from 'lucide-react';
@@ -941,7 +942,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                                     ) : (
                                         <div className="space-y-4">
                                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 prose dark:prose-invert prose-sm max-w-none text-muted leading-relaxed">
-                                                <div dangerouslySetInnerHTML={{ __html: q.explanation }} />
+                                                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(q.explanation) }} />
                                             </div>
 
                                             {/* Generate Button */}
