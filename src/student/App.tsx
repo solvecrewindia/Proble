@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import StudentLayout from './components/layout/Layout';
 import StudentDashboard from './pages/Dashboard';
 import PracticeList from './pages/PracticeList';
-import QuizDetails from './pages/QuizDetails';
+import CourseDetails from "./pages/courses/CourseDetails";
 import MCQTest from './pages/MCQTest';
 import PracticeTest from './pages/PracticeTest';
 import TestSetup from './pages/TestSetup';
@@ -53,7 +53,7 @@ const StudentApp = () => {
             </Route>
 
             <Route element={<FullScreenLayout />}>
-                <Route path="practice/:id" element={<QuizDetails />} />
+                <Route path="/quiz/:id" element={<CourseDetails />} />
                 <Route path="practice/setup/:id" element={<TestSetup />} />
             </Route>
 
