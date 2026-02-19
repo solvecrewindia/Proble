@@ -11,6 +11,7 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab }) => {
         { id: 'nptel', label: 'NPTEL' },
         { id: 'gate', label: 'GATE' },
         { id: 'srm', label: 'SRMIST' },
+        { id: 'course', label: 'COURSE' },
         { id: 'placement', label: 'PLACEMENT' },
         { id: 'global', label: 'GLOBAL' },
     ];

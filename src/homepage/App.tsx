@@ -41,6 +41,9 @@ function App({ searchQuery = '' }: AppProps) {
         } else if (activeTab === 'global') {
           dbType = 'global';
           moduleCategory = 'Global';
+        } else if (activeTab === 'course') {
+          dbType = 'course';
+          moduleCategory = 'COURSE';
         }
 
         // Optimized Select: Only fetch necessary fields
@@ -163,6 +166,7 @@ function App({ searchQuery = '' }: AppProps) {
       case 'srm': return 'SRMIST';
       case 'placement': return 'Placement Preparation';
       case 'global': return 'Global Challenges';
+      case 'course': return 'Course Modules';
       default: return 'NPTEL';
     }
   };
