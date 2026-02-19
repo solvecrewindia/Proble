@@ -1,4 +1,3 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
 import { Shield, Globe, ArrowRight, ArrowLeft } from 'lucide-react';

@@ -1,9 +1,9 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '../../shared/components/Button';
+import { Button } from '../../../shared/components/Button';
 import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2, Layers, Trophy } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../shared/context/AuthContext';
+import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../shared/context/AuthContext';
 
 const QuizDetails = () => {
     const { id } = useParams();

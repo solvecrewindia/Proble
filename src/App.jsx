@@ -14,7 +14,8 @@ import { lazyRetry } from './shared/utils/lazyRetry';
 const FacultyApp = lazyRetry(() => import('./faculty/App'), 'FacultyApp');
 const Login = lazyRetry(() => import('./login/pages/Login'), 'Login');
 const HomepageApp = lazyRetry(() => import('./homepage/App'), 'HomepageApp');
-const QuizDetails = lazyRetry(() => import('./student/pages/QuizDetails'), 'QuizDetails');
+const QuizDetails = lazyRetry(() => import('./student/pages/courses/CourseDetails'), 'CourseDetails');
+const CourseList = lazyRetry(() => import('./student/pages/courses/CourseList'), 'CourseList');
 const ModuleDetails = lazyRetry(() => import('./homepage/ModuleDetails'), 'ModuleDetails');
 
 const AboutUs = lazyRetry(() => import('./homepage/AboutUs'), 'AboutUs');
@@ -133,8 +134,8 @@ function AppContent() {
                     <Route path="/about" element={<AboutUs />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/course/:id" element={<QuizDetails />} />
-                    <Route path="/module/:id" element={<ModuleDetails />} />
+                    <Route path="/course/:module" element={<CourseList />} />
+                    <Route path="/course/details/:id" element={<QuizDetails />} />
                     <Route path="/module/:id" element={<ModuleDetails />} />
                     <Route path="/quiz/:code" element={<SharedQuizHandler />} />
 

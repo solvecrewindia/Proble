@@ -52,7 +52,7 @@ create table public.quizzes (
   id uuid default gen_random_uuid() primary key,
   title text not null,
   description text,
-  type text check (type in ('master', 'global')),
+  type text check (type in ('master', 'global', 'placement', 'srmist', 'nptel', 'course')),
   code text unique, -- For Master quizzes
   status text default 'active' check (status in ('draft', 'active', 'paused', 'completed')),
   settings jsonb default '{}'::jsonb,

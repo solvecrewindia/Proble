@@ -1,11 +1,12 @@
-﻿import React, { useEffect, useState } from 'react';
-import { Card } from '../../shared/components/Card';
-import { Trophy, CheckCircle, Clock, Flame, Activity as ActivityIcon } from 'lucide-react';
+﻿import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Trophy, CheckCircle, Clock, Flame, Activity as ActivityIcon, Building2, GraduationCap, MonitorPlay } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../shared/context/AuthContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const StudentDashboard = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -151,6 +152,54 @@ const StudentDashboard = () => {
                         </div>
                     </div>
                 ))}
+            </div>
+
+            {/* Learning Modules Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 fill-mode-both">
+                {/* Placement Module */}
+                <div
+                    onClick={() => navigate('/course/placement')}
+                    className="group relative bg-surface border border-neutral-200 dark:border-neutral-700 hover:border-orange-500/50 rounded-2xl p-6 cursor-pointer transition-all hover:shadow-lg hover:shadow-orange-500/10 hover:-translate-y-1 overflow-hidden"
+                >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-opacity opacity-50 group-hover:opacity-100" />
+                    <div className="relative z-10">
+                        <div className="mb-4 p-3 w-fit rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
+                            <Building2 className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-lg font-bold mb-2 group-hover:text-orange-500 transition-colors">Placement</h3>
+                        <p className="text-sm text-muted">Aptitude, reasoning, and technical interview prep.</p>
+                    </div>
+                </div>
+
+                {/* SRMIST Module */}
+                <div
+                    onClick={() => navigate('/course/srmist')}
+                    className="group relative bg-surface border border-neutral-200 dark:border-neutral-700 hover:border-blue-500/50 rounded-2xl p-6 cursor-pointer transition-all hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 overflow-hidden"
+                >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-opacity opacity-50 group-hover:opacity-100" />
+                    <div className="relative z-10">
+                        <div className="mb-4 p-3 w-fit rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                            <GraduationCap className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-lg font-bold mb-2 group-hover:text-blue-500 transition-colors">SRMIST</h3>
+                        <p className="text-sm text-muted">University specific courses and materials.</p>
+                    </div>
+                </div>
+
+                {/* NPTEL Module */}
+                <div
+                    onClick={() => navigate('/course/nptel')}
+                    className="group relative bg-surface border border-neutral-200 dark:border-neutral-700 hover:border-green-500/50 rounded-2xl p-6 cursor-pointer transition-all hover:shadow-lg hover:shadow-green-500/10 hover:-translate-y-1 overflow-hidden"
+                >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-opacity opacity-50 group-hover:opacity-100" />
+                    <div className="relative z-10">
+                        <div className="mb-4 p-3 w-fit rounded-xl bg-green-500/10 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
+                            <MonitorPlay className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-lg font-bold mb-2 group-hover:text-green-500 transition-colors">NPTEL</h3>
+                        <p className="text-sm text-muted">Online certification courses and assignments.</p>
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
