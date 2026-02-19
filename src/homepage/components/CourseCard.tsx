@@ -19,7 +19,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, showDate }) => {
                     navigate(`/course/${course.id}`);
                 }
             }}
-            className="bg-surface rounded-xl shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none overflow-hidden transition-transform duration-200 hover:-translate-y-1 border border-neutral-300 dark:border-neutral-600 cursor-pointer w-full max-w-[280px]"
+            className="bg-surface rounded-xl shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none overflow-hidden transition-transform duration-200 hover:-translate-y-1 border border-neutral-300 dark:border-neutral-600 cursor-pointer"
         >
             <img
                 src={course.image}
