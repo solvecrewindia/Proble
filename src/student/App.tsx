@@ -48,7 +48,6 @@ const StudentApp = () => {
                 <Route path="game/puzzle" element={<PuzzleGame />} />
                 <Route path="game/debugger" element={<DebuggerGame />} />
                 <Route path="game/rapid-fire" element={<RapidFireGame />} />
-                <Route path="game/debugger" element={<DebuggerGame />} />
                 <Route path="profile-settings" element={<ProfileSettings />} />
             </Route>
 
