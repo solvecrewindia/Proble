@@ -81,37 +81,35 @@ const AboutUs = () => {
                     </div>
                 </div>
 
-                {/* Founders Section */}
+                {/* Team Section */}
                 <div className="space-y-12">
                     <div className="text-center">
-                        <h3 className="text-3xl font-bold mb-4">Meet the Founders</h3>
-                        <p className="text-muted">The visionaries behind Proble.</p>
+                        <h3 className="text-3xl font-bold mb-4">Meet the Team</h3>
+                        <p className="text-muted">The visionaries and builders behind Proble.</p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
-                        {/* Founder 1 */}
-                        <div className="bg-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-lg transition-all">
-                            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shrink-0 mb-4 text-white font-bold text-2xl shadow-lg shadow-blue-500/20">
-                                E
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[
+                            { name: 'Dr. Hariharan R', role: 'Faculty Mentor', color: 'from-slate-600 to-slate-900' },
+                            { name: 'Esakkimadan M', role: 'Team Lead', color: 'from-blue-500 to-indigo-600' },
+                            { name: 'Tharun', role: 'Lead Developer', color: 'from-purple-500 to-pink-600' },
+                            { name: 'Nithil', role: 'Developer', color: 'from-green-500 to-emerald-600' },
+                            { name: 'Surjith', role: 'Developer', color: 'from-orange-500 to-amber-600' },
+                            { name: 'Sundar', role: 'Developer', color: 'from-red-500 to-rose-600' },
+                            { name: 'Harix', role: 'Contributor', color: 'from-teal-500 to-cyan-600' },
+                            { name: 'Bharth', role: 'Contributor', color: 'from-indigo-500 to-blue-600' },
+                            { name: 'Aarya', role: 'Contributor', color: 'from-pink-500 to-rose-600' },
+                            { name: 'Pugal', role: 'Contributor', color: 'from-amber-500 to-orange-600' },
+                            { name: 'Santhosh', role: 'Contributor', color: 'from-indigo-400 to-cyan-500' },
+                        ].map((member, index) => (
+                            <div key={index} className="bg-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-lg transition-all">
+                                <div className={`w-20 h-20 bg-gradient-to-br ${member.color} rounded-full flex items-center justify-center shrink-0 mb-4 text-white font-bold text-2xl shadow-lg shadow-black/10`}>
+                                    {member.name.charAt(0)}
+                                </div>
+                                <h4 className="text-xl font-bold">{member.name}</h4>
+                                <p className="text-primary font-medium text-sm mt-1">{member.role}</p>
                             </div>
-                            <h4 className="text-xl font-bold">ESAKKIMADAN</h4>
-                            <p className="text-primary font-medium text-sm mb-3">Founder</p>
-                            <p className="text-sm text-muted leading-relaxed">
-                                Visionary leader driving the mission to accessible education tech.
-                            </p>
-                        </div>
-
-                        {/* Founder 2 */}
-                        <div className="bg-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-lg transition-all">
-                            <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center shrink-0 mb-4 text-white font-bold text-2xl shadow-lg shadow-purple-500/20">
-                                T
-                            </div>
-                            <h4 className="text-xl font-bold">THARUN</h4>
-                            <p className="text-primary font-medium text-sm mb-3">Founder</p>
-                            <p className="text-sm text-muted leading-relaxed">
-                                Tech innovator architecting the future of smart learning platforms.
-                            </p>
-                        </div>
+                        ))}
                     </div>
                 </div>
             </main>
