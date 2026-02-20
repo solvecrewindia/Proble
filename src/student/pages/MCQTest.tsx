@@ -128,70 +128,88 @@ const MCQTest = () => {
     }, [id, testActive]);
 
     const calculateAndShowResults = useCallback(async () => {
-        let calculatedScore = 0;
-        questions.forEach((q) => {
-            const userAnswer = answers[q.id];
-
-            if (q.type === 'msq') {
-                const correctArr = Array.isArray(q.correct) ? q.correct : [];
-                const userArr = Array.isArray(userAnswer) ? userAnswer : [];
-                if (userArr.length === correctArr.length &&
-                    userArr.every((val: any) => correctArr.includes(val))) {
-                    calculatedScore++;
-                }
-            } else if (q.type === 'range') {
-                const userVal = Number(userAnswer);
-                if (!isNaN(userVal)) {
-                    try {
-                        const range = q.correct;
-                        if (userVal >= range.min && userVal <= range.max) {
-                            calculatedScore++;
-                        }
-                    } catch (e) { console.error(e); }
-                }
-            } else if (q.type === 'code') {
-                if (codeExecutionStatus[q.id]) {
-                    calculatedScore++;
-                }
-            } else {
-                if (userAnswer === q.correct) {
-                    calculatedScore++;
-                }
-            }
-        });
-        setScore(calculatedScore);
-        setShowResults(true);
         setTestActive(false);
-
         if (document.fullscreenElement) {
             document.exitFullscreen().catch(err => console.log(err));
         }
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user && id && id !== 'combined') {
-                // 1. Save to quiz_results (Legacy/Dashboard support)
-                await supabase.from('quiz_results').insert({
-                    quiz_id: id,
-                    student_id: user.id,
-                    score: calculatedScore,
-                    total_questions: questions.length,
-                    percentage: (calculatedScore / questions.length) * 100
-                });
-
-                // 2. Mark Attempt as Completed
-                await supabase.from('attempts').update({
-                    status: 'completed',
-                    score: calculatedScore,
-                    completed_at: new Date().toISOString(),
-                    answers: answers // Final save
-                }).eq('quiz_id', id).eq('student_id', user.id);
-
-                // Clear Local Storage on Successful Submit
-                localStorage.removeItem(`quiz_progress_${user.id}_${id}`);
+            if (!user || !id || id === 'combined') {
+                setShowResults(true);
+                return;
             }
+
+            // ZERO-TRUST SECURE GRADING
+            // 1. Prepare answers mapping (DB ID -> User Answer)
+            const answerPayload: Record<string, any> = {};
+            questions.forEach(q => {
+                if (answers[q.id] !== undefined) {
+                    answerPayload[q.dbId] = answers[q.id];
+                }
+            });
+
+            // 2. Call Secure RPC
+            const { data: secureResult, error: rpcError } = await supabase.rpc('evaluate_quiz_answers', {
+                p_quiz_id: id,
+                p_student_answers: answerPayload
+            });
+
+            let calculatedScore = 0;
+
+            if (rpcError) {
+                console.error("RPC Grading failed, falling back to local (if data exists):", rpcError);
+                // Fallback local grading (only works if user is faculty/admin and actually received correct_answers)
+                questions.forEach((q) => {
+                    const userAnswer = answers[q.id];
+                    if (q.type === 'msq') {
+                        const correctArr = Array.isArray(q.correct) ? q.correct : [];
+                        const userArr = Array.isArray(userAnswer) ? userAnswer : [];
+                        if (userArr.length === correctArr.length &&
+                            userArr.every((val: any) => correctArr.includes(val))) {
+                            calculatedScore++;
+                        }
+                    } else if (q.type === 'range') {
+                        const userVal = Number(userAnswer);
+                        if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
+                            calculatedScore++;
+                        }
+                    } else if (q.type === 'code') {
+                        if (codeExecutionStatus[q.id]) calculatedScore++;
+                    } else {
+                        if (userAnswer === q.correct) calculatedScore++;
+                    }
+                });
+            } else if (secureResult) {
+                calculatedScore = secureResult.score;
+            }
+
+            setScore(calculatedScore);
+            setShowResults(true);
+
+            // 3. Save to quiz_results (Legacy/Dashboard support)
+            await supabase.from('quiz_results').upsert({
+                quiz_id: id,
+                student_id: user.id,
+                score: calculatedScore,
+                total_questions: questions.length,
+                percentage: (calculatedScore / questions.length) * 100
+            }, { onConflict: 'quiz_id, student_id' });
+
+            // 4. Mark Attempt as Completed
+            await supabase.from('attempts').update({
+                status: 'completed',
+                score: calculatedScore,
+                completed_at: new Date().toISOString(),
+                answers: answers // Final save
+            }).eq('quiz_id', id).eq('student_id', user.id);
+
+            // Clear Local Storage on Successful Submit
+            localStorage.removeItem(`quiz_progress_${user.id}_${id}`);
+
         } catch (err) {
             console.error("Error saving results:", err);
+            setShowResults(true);
         }
     }, [answers, questions, id, codeExecutionStatus]);
 
@@ -600,10 +618,19 @@ const MCQTest = () => {
                                             <span className="text-muted block mb-1">Your Answer:</span>
                                             <div className="font-medium text-text">{formatAns(userAnswer, q.type)}</div>
                                         </div>
-                                        <div>
-                                            <span className="text-muted block mb-1">Correct Answer:</span>
-                                            <div className="font-medium text-text">{formatAns(q.correct, q.type)}</div>
-                                        </div>
+                                        {q.correct !== undefined && q.correct !== null && (
+                                            <div>
+                                                <span className="text-muted block mb-1">Correct Answer:</span>
+                                                <div className="font-medium text-text">{formatAns(q.correct, q.type)}</div>
+                                            </div>
+                                        )}
+                                        {q.correct === undefined && (
+                                            <div>
+                                                <span className="text-muted block mb-1 hover:text-primary transition-colors italic cursor-help" title="To prevent cheating, answers are not stored in your browser.">
+                                                    Correct Answer: Hidden (Server-Graded)
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );

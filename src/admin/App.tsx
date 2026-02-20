@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../shared/context/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
@@ -11,15 +12,32 @@ import Settings from './pages/Settings';
 import ProfileSettings from '../shared/pages/ProfileSettings';
 import AdminSelectType from './pages/AdminSelectType';
 import { ThemeProvider } from './context/ThemeContext';
+import Login from './pages/Login';
 import './index.css';
+
+const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
 
 function AdminApp() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <Routes>
-        <Route path="profile-settings" element={<ProfileSettings />} />
-        <Route path="/" element={<Layout />}>
+        <Route path="login" element={<Login />} />
+
+        {/* Protected Admin Routes */}
+        <Route path="/" element={<AdminProtectedRoute><Layout /></AdminProtectedRoute>}>
           <Route index element={<Dashboard />} />
+          <Route path="profile-settings" element={<ProfileSettings />} />
           <Route path="create" element={<AdminSelectType />} />
           <Route path="users" element={<Users />} />
           <Route path="quizzes" element={<Quizzes />} />

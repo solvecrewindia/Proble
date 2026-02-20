@@ -23,6 +23,7 @@ const StudentApp = lazyRetry(() => import('./student/App'), 'StudentApp');
 const ForgotPassword = lazyRetry(() => import('./login/pages/ForgotPassword'), 'ForgotPassword');
 const SharedQuizHandler = lazyRetry(() => import('./shared/components/SharedQuizHandler'), 'SharedQuizHandler');
 const Onboarding = lazyRetry(() => import('./login/pages/Onboarding'), 'Onboarding');
+const AdminApp = lazyRetry(() => import('./admin/App'), 'AdminApp');
 
 // Loading Screen Component
 const FullScreenLoader = () => (
@@ -96,6 +97,9 @@ const RootRedirect = ({ searchQuery }) => {
         }
 
         const role = user.role?.toLowerCase();
+        if (role === 'admin') {
+            return <Navigate to="/admin" replace />;
+        }
         if (role === 'faculty' || role === 'teacher') {
             return <Navigate to="/faculty/dashboard" replace />;
         }
@@ -115,7 +119,7 @@ function AppContent() {
     const isHeaderHidden = location.pathname === '/login' ||
         location.pathname === '/forgot-password' ||
         location.pathname.startsWith('/faculty') ||
-
+        location.pathname.startsWith('/admin') ||
         location.pathname.includes('/practice/test') ||
         location.pathname.includes('/practice/mcq') ||
         location.pathname.includes('/student/test');
@@ -150,6 +154,12 @@ function AppContent() {
                     />
 
                     {/* Protected Routes */}
+                    {/* Admin Routes - Handles its own auth/login internally */}
+                    <Route
+                        path="/admin/*"
+                        element={<AdminApp />}
+                    />
+
                     <Route
                         path="/faculty/*"
                         element={

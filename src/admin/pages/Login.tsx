@@ -1,109 +1,92 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../shared/context/AuthContext';
 
 export default function Login() {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const targetEmails = ['solvecrewindia@gmail.com', 'solvecrew@gmail.com'];
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
-        try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
+        const normalizedEmail = email.trim().toLowerCase();
 
-            if (!res.ok) throw new Error('Invalid credentials');
-
-            const data = await res.json();
-            localStorage.setItem('token', data.accessToken);
-            localStorage.setItem('role', data.role);
-            navigate('/');
-        } catch (err) {
-            setError('Login failed. Please check your credentials.');
-        } finally {
+        // 1. Strict Target Email Check Before Database call
+        if (!targetEmails.includes(normalizedEmail)) {
+            setError('Unauthorized Email. Only SolveCrew admins allowed.');
             setLoading(false);
+            return;
         }
-    };
 
-    const handleDevLogin = async (role: string) => {
-        setLoading(true);
+        // 2. Authenticate
         try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role }),
-            });
-            const data = await res.json();
-            localStorage.setItem('token', data.accessToken);
-            localStorage.setItem('role', data.role);
-            navigate('/');
-        } catch (err) {
-            setError('Dev login failed');
+            const user = await login(normalizedEmail, password);
+            if (user && user.role === 'admin') {
+                navigate('/admin');
+            } else if (user) {
+                // Should never happen due to email lock, but just in case
+                setError('Unauthorized Role. You are not an admin.');
+            }
+        } catch (err: any) {
+            setError(err.message || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-100">
-            <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 border border-neutral-800">
+            <div className="bg-slate-800 p-8 rounded-xl shadow-2xl shadow-blue-500/10 w-full max-w-md border border-slate-700">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-[#00C7E6] mb-2">Proble</h1>
-                    <p className="text-slate-500">Admin Console Login</p>
+                    <h1 className="text-3xl font-bold font-space text-[#00C7E6] mb-2 tracking-wider">PROBLE.</h1>
+                    <p className="text-slate-400 font-mono text-sm tracking-widest uppercase">Admin Terminal</p>
                 </div>
 
                 {error && (
-                    <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
+                    <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-6 text-sm text-center">
                         {error}
                     </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-5">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                        <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Secure Email</label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#00C7E6] focus:border-[#00C7E6] outline-none"
-                            placeholder="admin@proble.io"
+                            className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-[#00C7E6] focus:border-[#00C7E6] outline-none text-white transition-all"
+                            placeholder="admin@solvecrew.com"
+                            required
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                        <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Access Node (Password)</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#00C7E6] focus:border-[#00C7E6] outline-none"
+                            className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-[#00C7E6] focus:border-[#00C7E6] outline-none text-white transition-all"
                             placeholder="••••••••"
+                            required
                         />
                     </div>
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-[#00C7E6] hover:bg-[#00A4B8] text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+                        className="w-full mt-4 bg-[#00C7E6] hover:bg-[#00A4B8] text-slate-900 font-bold py-3 rounded-lg transition-colors disabled:opacity-50 tracking-wide uppercase text-sm"
                     >
-                        {loading ? 'Signing in...' : 'Sign In'}
+                        {loading ? 'Authenticating...' : 'Override Protocol'}
                     </button>
                 </form>
-
-                <div className="mt-8 pt-6 border-t border-slate-100">
-                    <p className="text-xs text-slate-400 text-center mb-4 uppercase tracking-wider font-semibold">Dev Tools</p>
-                    <div className="grid grid-cols-3 gap-2">
-                        <button onClick={() => handleDevLogin('superadmin')} className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200">Superadmin</button>
-                        <button onClick={() => handleDevLogin('admin')} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">Admin</button>
-                        <button onClick={() => handleDevLogin('auditor')} className="px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded hover:bg-amber-200">Auditor</button>
-                    </div>
-                </div>
             </div>
         </div>
     );
