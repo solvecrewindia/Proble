@@ -76,14 +76,9 @@ const AboutUs = () => {
                             ]
                         },
                         {
-                            title: 'Lead Developer',
-                            members: [
-                                { name: 'Tharun', role: 'Lead Developer', color: 'from-purple-500 to-pink-600' }
-                            ]
-                        },
-                        {
                             title: 'Developers',
                             members: [
+                                { name: 'Tharun', role: 'Lead Developer', color: 'from-purple-500 to-pink-600' },
                                 { name: 'Nithil', role: 'Developer', color: 'from-green-500 to-emerald-600' },
                                 { name: 'Surjith', role: 'Developer', color: 'from-orange-500 to-amber-600' },
                                 { name: 'Sundar', role: 'Developer', color: 'from-red-500 to-rose-600' }
