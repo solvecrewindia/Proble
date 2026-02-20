@@ -17,9 +17,9 @@ import RapidFireGame from './pages/games/RapidFireGame';
 import FlashCards from './pages/FlashCards';
 import StudentLiveQuiz from './pages/StudentLiveQuiz';
 const NoSidebarLayout = () => (
-    <div className="min-h-screen bg-background">
-        <main className="transition-all duration-300 ease-in-out">
-            <div className="container mx-auto p-6 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="min-h-screen flex bg-background">
+        <main className="flex-1 flex justify-center transition-all duration-300 ease-in-out">
+            <div className="w-full max-w-6xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <Outlet />
             </div>
         </main>

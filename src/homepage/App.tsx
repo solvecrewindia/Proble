@@ -176,7 +176,7 @@ function App({ searchQuery = '' }: AppProps) {
 
       {/* Join Code Section */}
       <div className="bg-gradient-to-r from-primary to-primary-600 py-8 px-5 text-white">
-        <div className="max-w-[95%] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="max-w-7xl px-5 lg:px-8 mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="text-center md:text-left">
             <h2 className="text-2xl font-bold mb-2">Have a Quiz Code?</h2>
             <p className="text-blue-100">Enter the code shared by your faculty to access private assessments.</p>
@@ -202,7 +202,7 @@ function App({ searchQuery = '' }: AppProps) {
 
       <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="max-w-[95%] mx-auto my-5 px-5">
+      <main className="max-w-7xl mx-auto my-5 px-5 lg:px-8">
         <div className="flex justify-between mb-4 items-center">
           <h2 className="text-xl font-bold m-0">{getTabLabel(activeTab)}</h2>
           <span className="text-sm text-muted">Showing {filteredCourses.length} results</span>

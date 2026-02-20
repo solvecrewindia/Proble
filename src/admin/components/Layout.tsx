@@ -11,8 +11,8 @@ const Layout = () => {
             <TopBar onMenuClick={() => setSidebarOpen(!isSidebarOpen)} />
             <div className="flex pt-16 h-screen overflow-hidden">
                 <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
-                <main className="flex-1 overflow-y-auto p-6 md:pl-64 transition-all duration-300">
-                    <div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ zoom: '90%' }}>
+                <main className="flex-1 flex justify-center overflow-y-auto p-6 md:pl-64 transition-all duration-300">
+                    <div className="w-full max-w-6xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ zoom: '90%' }}>
                         <Outlet />
                     </div>
                 </main>

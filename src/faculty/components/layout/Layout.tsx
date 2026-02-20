@@ -16,8 +16,8 @@ export function Layout() {
         <div className="min-h-screen bg-background">
             <Topbar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
             <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
-            <main className={`transition-all duration-200 min-h-screen ${isMobileMenuOpen ? 'md:ml-64' : 'ml-0 md:ml-64'}`}>
-                <div className="p-4 md:p-6 max-w-7xl mx-auto">
+            <main className={`flex justify-center transition-all duration-200 min-h-screen ${isMobileMenuOpen ? 'md:ml-64' : 'ml-0 md:ml-64'}`}>
+                <div className="w-full max-w-6xl p-4 md:p-6">
                     <Outlet />
                 </div>
             </main>

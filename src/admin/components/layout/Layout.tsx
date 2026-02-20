@@ -69,8 +69,10 @@ export default function Layout() {
                         </div>
                     </div>
                 </header>
-                <main className="p-8">
-                    <Outlet />
+                <main className="p-8 flex justify-center">
+                    <div className="w-full max-w-6xl">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
         </div>

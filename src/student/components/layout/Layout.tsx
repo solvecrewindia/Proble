@@ -18,8 +18,8 @@ export default function StudentLayout() {
 
             <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-            <main className={`transition-all duration-300 ease-in-out ${isSidebarOpen ? 'ml-0' : 'ml-0 md:ml-64'}`}>
-                <div className="container mx-auto p-4 md:p-6 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500 pt-16 md:pt-6">
+            <main className={`flex-1 flex justify-center transition-all duration-300 ease-in-out ${isSidebarOpen ? 'ml-0' : 'ml-0 md:ml-64'}`}>
+                <div className="w-full max-w-6xl px-4 md:px-6 pt-16 md:pt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <Outlet />
                 </div>
             </main>
