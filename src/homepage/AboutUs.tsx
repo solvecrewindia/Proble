@@ -146,7 +146,7 @@ const AboutUs = () => {
             </main>
 
             <footer className="border-t border-neutral-200 dark:border-neutral-800 py-12 text-center text-muted">
-                <p>&copy; {new Date().getFullYear()} Proble. Built with ❤️ for Education.</p>
+                <p>&copy; {new Date().getFullYear()} Proble.</p>
             </footer>
         </div>
     );
