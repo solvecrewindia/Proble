@@ -99,17 +99,44 @@ const AboutUs = () => {
                             <h4 className="text-2xl font-semibold text-center text-neutral-800 dark:text-neutral-200 border-b border-neutral-200 dark:border-neutral-800 pb-2 max-w-sm mx-auto">
                                 {group.title}
                             </h4>
-                            <div className="flex flex-wrap justify-center gap-6">
-                                {group.members.map((member, index) => (
-                                    <div key={index} className="w-64 bg-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-lg transition-all">
-                                        <div className={`w-20 h-20 bg-gradient-to-br ${member.color} rounded-full flex items-center justify-center shrink-0 mb-4 text-white font-bold text-2xl shadow-lg shadow-black/10`}>
-                                            {member.name.charAt(0)}
+                            {group.title === 'Developers' ? (
+                                <div className="space-y-6">
+                                    {/* First Row: Lead Developer */}
+                                    <div className="flex justify-center">
+                                        <div className="w-64 bg-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-lg transition-all">
+                                            <div className={`w-20 h-20 bg-gradient-to-br ${group.members[0].color} rounded-full flex items-center justify-center shrink-0 mb-4 text-white font-bold text-2xl shadow-lg shadow-black/10`}>
+                                                {group.members[0].name.charAt(0)}
+                                            </div>
+                                            <h4 className="text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis w-full">{group.members[0].name}</h4>
+                                            <p className="text-primary font-medium text-sm mt-1">{group.members[0].role}</p>
                                         </div>
-                                        <h4 className="text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis w-full">{member.name}</h4>
-                                        <p className="text-primary font-medium text-sm mt-1">{member.role}</p>
                                     </div>
-                                ))}
-                            </div>
+                                    {/* Second Row: Other Developers */}
+                                    <div className="flex flex-wrap justify-center gap-6">
+                                        {group.members.slice(1).map((member, index) => (
+                                            <div key={index} className="w-64 bg-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-lg transition-all">
+                                                <div className={`w-20 h-20 bg-gradient-to-br ${member.color} rounded-full flex items-center justify-center shrink-0 mb-4 text-white font-bold text-2xl shadow-lg shadow-black/10`}>
+                                                    {member.name.charAt(0)}
+                                                </div>
+                                                <h4 className="text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis w-full">{member.name}</h4>
+                                                <p className="text-primary font-medium text-sm mt-1">{member.role}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-wrap justify-center gap-6">
+                                    {group.members.map((member, index) => (
+                                        <div key={index} className="w-64 bg-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-lg transition-all">
+                                            <div className={`w-20 h-20 bg-gradient-to-br ${member.color} rounded-full flex items-center justify-center shrink-0 mb-4 text-white font-bold text-2xl shadow-lg shadow-black/10`}>
+                                                {member.name.charAt(0)}
+                                            </div>
+                                            <h4 className="text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis w-full">{member.name}</h4>
+                                            <p className="text-primary font-medium text-sm mt-1">{member.role}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
