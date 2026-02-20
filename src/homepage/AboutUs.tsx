@@ -16,9 +16,7 @@ const AboutUs = () => {
                         <ArrowLeft className="w-5 h-5" />
                         Back to Home
                     </button>
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-                        Proble
-                    </h1>
+
                 </div>
             </div>
 
