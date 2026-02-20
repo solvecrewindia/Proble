@@ -112,6 +112,36 @@ const AboutUs = () => {
                         ))}
                     </div>
                 </div>
+
+                {/* Startup Section */}
+                <div className="bg-neutral-900 rounded-3xl p-12 text-white relative overflow-hidden mt-20">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
+                        <div className="flex-1 space-y-6 text-center md:text-left">
+                            <h3 className="text-sm font-bold tracking-widest text-primary uppercase">Proudly Built By</h3>
+                            <h2 className="text-4xl font-extrabold">Solvecrew<span className="text-primary">{ }</span></h2>
+                            <p className="text-neutral-400 text-lg leading-relaxed max-w-xl">
+                                Proble is the flagship product of Solvecrew, a forward-thinking startup founded by Esakkimadan M and Tharun.
+                                We are dedicated to building innovative software solutions that solve real-world problems and empower the next generation.
+                            </p>
+                        </div>
+                        <div className="shrink-0">
+                            <div className="bg-white p-6 rounded-2xl shadow-xl hover:scale-105 transition-transform duration-300">
+                                <img
+                                    src="/solvecrew-logo.jpg"
+                                    alt="Solvecrew Logo"
+                                    className="w-48 h-auto object-contain"
+                                    onError={(e) => {
+                                        // Fallback if the logo fails to load
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </main>
 
             <footer className="border-t border-neutral-200 dark:border-neutral-800 py-12 text-center text-muted">
