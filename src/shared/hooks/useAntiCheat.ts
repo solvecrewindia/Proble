@@ -7,12 +7,14 @@ export const useAntiCheat = () => {
             e.preventDefault();
         };
 
-        // Disable Keyboard Shortcuts (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U)
+        // Disable Keyboard Shortcuts (F12, Ctrl+Shift+I/J/C, Ctrl+U, Mac equivalents)
         const handleKeyDown = (e: KeyboardEvent) => {
             if (
                 e.key === 'F12' ||
                 (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
-                (e.ctrlKey && e.key === 'U')
+                (e.metaKey && e.altKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || // Mac Cmd+Option+I/J/C
+                (e.ctrlKey && e.key === 'U') ||
+                (e.metaKey && e.key === 'U') // Mac Cmd+U
             ) {
                 e.preventDefault();
             }
@@ -40,23 +42,50 @@ export const useAntiCheat = () => {
         document.addEventListener('contextmenu', handleContextMenu);
         document.addEventListener('keydown', handleKeyDown);
 
-        // Debugger Loop (Optional - uncomment if strict mode desired)
-        /*
-        const interval = setInterval(() => {
+        // Debugger Loop - Freezes DevTools
+        const debuggerInterval = setInterval(() => {
             const before = new Date().getTime();
+            // eslint-disable-next-line no-debugger
             debugger;
             const after = new Date().getTime();
+
+            // If the debugger triggered and paused execution, 'after' will be significantly later
             if (after - before > 100) {
-                // DevTools is likely open
+                // If DevTools is open, we can optionally clear body or redirect.
+                // For now, the debugger stopping the user is the main protection.
             }
-        }, 1000);
-        */
+        }, 100); // Aggressive 100ms interval
+
+        // Console clear loop
+        const consoleInterval = setInterval(() => {
+            console.clear();
+        }, 500);
+
+        // Detect Devtools by window vs outer sizes
+        const detectDevTools = () => {
+            const threshold = 160;
+            const widthDiff = window.outerWidth - window.innerWidth > threshold;
+            const heightDiff = window.outerHeight - window.innerHeight > threshold;
+
+            if (widthDiff || heightDiff) {
+                // We're actively blocking
+                document.body.style.display = 'none';
+            } else {
+                document.body.style.display = '';
+            }
+        };
+
+        window.addEventListener('resize', detectDevTools);
+        detectDevTools(); // Initial check
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
             document.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('resize', detectDevTools);
             document.head.removeChild(style);
-            // clearInterval(interval);
+            clearInterval(debuggerInterval);
+            clearInterval(consoleInterval);
+            document.body.style.display = ''; // Reset display
         };
     }, []);
 };
