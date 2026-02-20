@@ -70,9 +70,14 @@ const AboutUs = () => {
                             members: [{ name: 'Dr. Hariharan R', role: 'Faculty Mentor', color: 'from-slate-600 to-slate-900' }]
                         },
                         {
-                            title: 'Leadership',
+                            title: 'Team Lead',
                             members: [
-                                { name: 'Esakkimadan M', role: 'Team Lead', color: 'from-blue-500 to-indigo-600' },
+                                { name: 'Esakkimadan M', role: 'Team Lead', color: 'from-blue-500 to-indigo-600' }
+                            ]
+                        },
+                        {
+                            title: 'Lead Developer',
+                            members: [
                                 { name: 'Tharun', role: 'Lead Developer', color: 'from-purple-500 to-pink-600' }
                             ]
                         },
