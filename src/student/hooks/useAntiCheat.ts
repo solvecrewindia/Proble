@@ -143,12 +143,33 @@ export const useAntiCheat = ({
 
         window.addEventListener('keydown', handleKeyDown);
 
+        // 4. Disable Text Selection via CSS
+        const style = document.createElement('style');
+        style.innerHTML = `
+            body {
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            input, textarea, [contenteditable] {
+                -webkit-user-select: text;
+                -moz-user-select: text;
+                -ms-user-select: text;
+                user-select: text;
+            }
+        `;
+        document.head.appendChild(style);
+
         return () => {
             document.removeEventListener('contextmenu', preventDefault);
             document.removeEventListener('copy', preventDefault);
             document.removeEventListener('paste', preventDefault);
             document.removeEventListener('cut', preventDefault);
             window.removeEventListener('keydown', handleKeyDown);
+            if (document.head.contains(style)) {
+                document.head.removeChild(style);
+            }
         };
     }, [enabled, triggerViolation]);
 

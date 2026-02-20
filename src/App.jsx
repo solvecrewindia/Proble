@@ -5,7 +5,9 @@ import { ThemeProvider } from './shared/context/ThemeContext';
 import Header from './shared/components/Header';
 import RegistrationNumberModal from './shared/components/RegistrationNumberModal';
 import InstallPwaPopup from './shared/components/InstallPwaPopup';
-import { useState, Suspense } from 'react';
+import Maintenance from './shared/components/Maintenance';
+import { useState, Suspense, useEffect } from 'react';
+import { supabase } from './lib/supabase';
 
 // Lazy Load Components
 import { lazyRetry } from './shared/utils/lazyRetry';
@@ -113,8 +115,42 @@ const RootRedirect = ({ searchQuery }) => {
 function AppContent() {
     useAntiCheat();
 
+    const { user } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
+    const [maintenanceMode, setMaintenanceMode] = useState(false);
+    const [isCheckingMaintenance, setIsCheckingMaintenance] = useState(true);
     const location = useLocation();
+
+    useEffect(() => {
+        const checkMaintenance = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('platform_settings')
+                    .select('maintenance_mode')
+                    .eq('id', 1)
+                    .single();
+
+                if (data && data.maintenance_mode) {
+                    setMaintenanceMode(true);
+                }
+            } catch (err) {
+                console.error("Error checking maintenance mod:", err);
+            } finally {
+                setIsCheckingMaintenance(false);
+            }
+        };
+        checkMaintenance();
+    }, []);
+
+    // If still checking, we show nothing or a loader
+    if (isCheckingMaintenance) return <FullScreenLoader />;
+
+    // If maintenance mode is ON, ONLY let Admins bypass it
+    const isAdminMode = user?.role === 'admin' || location.pathname.startsWith('/admin') || location.pathname === '/login';
+
+    if (maintenanceMode && !isAdminMode) {
+        return <Maintenance />;
+    }
 
     const isHeaderHidden = location.pathname === '/login' ||
         location.pathname === '/forgot-password' ||

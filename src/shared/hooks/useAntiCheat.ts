@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 
-export const useAntiCheat = () => {
+export interface AntiCheatOptions {
+    disableSelection?: boolean;
+}
+
+export const useAntiCheat = (options: AntiCheatOptions = { disableSelection: false }) => {
     useEffect(() => {
         // Disable Right Click
         const handleContextMenu = (e: MouseEvent) => {
@@ -20,24 +24,27 @@ export const useAntiCheat = () => {
             }
         };
 
-        // Disable Text Selection globally
-        const style = document.createElement('style');
-        style.innerHTML = `
-            body {
-                -webkit-user-select: none;
-                -moz-user-select: none;
-                -ms-user-select: none;
-                user-select: none;
-            }
-            /* Allow select in inputs */
-            input, textarea, [contenteditable] {
-                -webkit-user-select: text;
-                -moz-user-select: text;
-                -ms-user-select: text;
-                user-select: text;
-            }
-        `;
-        document.head.appendChild(style);
+        // Disable Text Selection conditionally
+        let style: HTMLStyleElement | null = null;
+        if (options.disableSelection) {
+            style = document.createElement('style');
+            style.innerHTML = `
+                body {
+                    -webkit-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
+                    user-select: none;
+                }
+                /* Allow select in inputs */
+                input, textarea, [contenteditable] {
+                    -webkit-user-select: text;
+                    -moz-user-select: text;
+                    -ms-user-select: text;
+                    user-select: text;
+                }
+            `;
+            document.head.appendChild(style);
+        }
 
         document.addEventListener('contextmenu', handleContextMenu);
         document.addEventListener('keydown', handleKeyDown);
@@ -82,7 +89,9 @@ export const useAntiCheat = () => {
             document.removeEventListener('contextmenu', handleContextMenu);
             document.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('resize', detectDevTools);
-            document.head.removeChild(style);
+            if (style && document.head.contains(style)) {
+                document.head.removeChild(style);
+            }
             clearInterval(debuggerInterval);
             clearInterval(consoleInterval);
             document.body.style.display = ''; // Reset display

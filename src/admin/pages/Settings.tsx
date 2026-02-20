@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import { Save, Lock, Shield, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, Lock, Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const Settings = () => {
     const [showApiKey, setShowApiKey] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [settings, setSettings] = useState({
         maintenanceMode: false,
         newSignups: true,
@@ -11,9 +14,71 @@ const Settings = () => {
         marketingEmails: false,
     });
 
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('platform_settings')
+                    .select('*')
+                    .eq('id', 1)
+                    .single();
+
+                if (error) throw error;
+                if (data) {
+                    setSettings({
+                        maintenanceMode: data.maintenance_mode,
+                        newSignups: data.new_signups,
+                        strictAntiCheat: data.strict_anti_cheat,
+                        emailNotifications: data.email_notifications,
+                        marketingEmails: data.marketing_emails
+                    });
+                }
+            } catch (err) {
+                console.error("Error fetching settings:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchSettings();
+    }, []);
+
     const handleToggle = (key: keyof typeof settings) => {
         setSettings(prev => ({ ...prev, [key]: !prev[key] }));
     };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const { error } = await supabase
+                .from('platform_settings')
+                .update({
+                    maintenance_mode: settings.maintenanceMode,
+                    new_signups: settings.newSignups,
+                    strict_anti_cheat: settings.strictAntiCheat,
+                    email_notifications: settings.emailNotifications,
+                    marketing_emails: settings.marketingEmails,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', 1);
+
+            if (error) throw error;
+            alert("Settings saved successfully!");
+        } catch (err) {
+            console.error("Error saving settings:", err);
+            alert("Failed to save settings. Make sure you have admin rights.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex h-[50vh] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 max-w-4xl">
@@ -108,9 +173,13 @@ const Settings = () => {
                     </div>
 
                     <div className="flex justify-end pt-4">
-                        <button className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-background hover:bg-primary/90 transition-colors">
-                            <Save className="h-4 w-4" />
-                            Save Changes
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-background hover:bg-primary/90 transition-colors disabled:opacity-50"
+                        >
+                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {isSaving ? "Saving..." : "Save Changes"}
                         </button>
                     </div>
                 </div>
