@@ -138,7 +138,7 @@ function App({ searchQuery = '' }: AppProps) {
         .single();
 
       if (data) {
-        navigate(`/course/${data.id}`);
+        navigate(`/course/details/${data.id}`);
       } else {
         alert('Invalid code or quiz not found.');
       }

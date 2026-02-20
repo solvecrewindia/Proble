@@ -87,7 +87,7 @@ const CourseList = () => {
                             {courses.map((course) => (
                                 <div
                                     key={course.id}
-                                    onClick={() => navigate(`/course/${course.id}`)}
+                                    onClick={() => navigate(`/course/details/${course.id}`)}
                                     className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 hover:shadow-lg transition-all cursor-pointer group hover:-translate-y-1"
                                 >
                                     <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{course.title}</h3>

@@ -313,7 +313,7 @@ const ModuleDetails = () => {
                             {quizzes.map((quiz, index) => (
                                 <div
                                     key={quiz.id}
-                                    onClick={() => isSelectionMode ? toggleQuizSelection(quiz.id) : navigate(`/course/${quiz.id}`)}
+                                    onClick={() => isSelectionMode ? toggleQuizSelection(quiz.id) : navigate(`/course/details/${quiz.id}`)}
                                     className="group cursor-pointer"
                                     style={{ animationDelay: `${index * 100}ms` }}
                                 >
