@@ -58,28 +58,6 @@ const AboutUs = () => {
                     </div>
                 </div>
 
-                {/* Stats Section */}
-                <div className="bg-neutral-900 rounded-3xl p-12 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                    <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                        <div>
-                            <div className="text-4xl font-bold mb-2">10k+</div>
-                            <div className="text-white/60 text-sm font-medium uppercase tracking-wider">Students</div>
-                        </div>
-                        <div>
-                            <div className="text-4xl font-bold mb-2">500+</div>
-                            <div className="text-white/60 text-sm font-medium uppercase tracking-wider">Quizzes</div>
-                        </div>
-                        <div>
-                            <div className="text-4xl font-bold mb-2">50+</div>
-                            <div className="text-white/60 text-sm font-medium uppercase tracking-wider">Institutions</div>
-                        </div>
-                        <div>
-                            <div className="text-4xl font-bold mb-2">4.9</div>
-                            <div className="text-white/60 text-sm font-medium uppercase tracking-wider">Rating</div>
-                        </div>
-                    </div>
-                </div>
 
                 {/* Team Section */}
                 <div className="space-y-16">
