@@ -82,35 +82,60 @@ const AboutUs = () => {
                 </div>
 
                 {/* Team Section */}
-                <div className="space-y-12">
+                <div className="space-y-16">
                     <div className="text-center">
                         <h3 className="text-3xl font-bold mb-4">Meet the Team</h3>
                         <p className="text-muted">The visionaries and builders behind Proble.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[
-                            { name: 'Dr. Hariharan R', role: 'Faculty Mentor', color: 'from-slate-600 to-slate-900' },
-                            { name: 'Esakkimadan M', role: 'Team Lead', color: 'from-blue-500 to-indigo-600' },
-                            { name: 'Tharun', role: 'Lead Developer', color: 'from-purple-500 to-pink-600' },
-                            { name: 'Nithil', role: 'Developer', color: 'from-green-500 to-emerald-600' },
-                            { name: 'Surjith', role: 'Developer', color: 'from-orange-500 to-amber-600' },
-                            { name: 'Sundar', role: 'Developer', color: 'from-red-500 to-rose-600' },
-                            { name: 'Harix', role: 'Contributor', color: 'from-teal-500 to-cyan-600' },
-                            { name: 'Bharth', role: 'Contributor', color: 'from-indigo-500 to-blue-600' },
-                            { name: 'Aarya', role: 'Contributor', color: 'from-pink-500 to-rose-600' },
-                            { name: 'Pugal', role: 'Contributor', color: 'from-amber-500 to-orange-600' },
-                            { name: 'Santhosh', role: 'Contributor', color: 'from-indigo-400 to-cyan-500' },
-                        ].map((member, index) => (
-                            <div key={index} className="bg-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-lg transition-all">
-                                <div className={`w-20 h-20 bg-gradient-to-br ${member.color} rounded-full flex items-center justify-center shrink-0 mb-4 text-white font-bold text-2xl shadow-lg shadow-black/10`}>
-                                    {member.name.charAt(0)}
-                                </div>
-                                <h4 className="text-xl font-bold">{member.name}</h4>
-                                <p className="text-primary font-medium text-sm mt-1">{member.role}</p>
+                    {[
+                        {
+                            title: 'Faculty Mentor',
+                            members: [{ name: 'Dr. Hariharan R', role: 'Faculty Mentor', color: 'from-slate-600 to-slate-900' }]
+                        },
+                        {
+                            title: 'Leadership',
+                            members: [
+                                { name: 'Esakkimadan M', role: 'Team Lead', color: 'from-blue-500 to-indigo-600' },
+                                { name: 'Tharun', role: 'Lead Developer', color: 'from-purple-500 to-pink-600' }
+                            ]
+                        },
+                        {
+                            title: 'Developers',
+                            members: [
+                                { name: 'Nithil', role: 'Developer', color: 'from-green-500 to-emerald-600' },
+                                { name: 'Surjith', role: 'Developer', color: 'from-orange-500 to-amber-600' },
+                                { name: 'Sundar', role: 'Developer', color: 'from-red-500 to-rose-600' }
+                            ]
+                        },
+                        {
+                            title: 'Contributors',
+                            members: [
+                                { name: 'Harix', role: 'Contributor', color: 'from-teal-500 to-cyan-600' },
+                                { name: 'Bharth', role: 'Contributor', color: 'from-indigo-500 to-blue-600' },
+                                { name: 'Aarya', role: 'Contributor', color: 'from-pink-500 to-rose-600' },
+                                { name: 'Pugal', role: 'Contributor', color: 'from-amber-500 to-orange-600' },
+                                { name: 'Santhosh', role: 'Contributor', color: 'from-indigo-400 to-cyan-500' }
+                            ]
+                        }
+                    ].map((group, groupIdx) => (
+                        <div key={groupIdx} className="space-y-6">
+                            <h4 className="text-2xl font-semibold text-center text-neutral-800 dark:text-neutral-200 border-b border-neutral-200 dark:border-neutral-800 pb-2 max-w-sm mx-auto">
+                                {group.title}
+                            </h4>
+                            <div className="flex flex-wrap justify-center gap-6">
+                                {group.members.map((member, index) => (
+                                    <div key={index} className="w-64 bg-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-lg transition-all">
+                                        <div className={`w-20 h-20 bg-gradient-to-br ${member.color} rounded-full flex items-center justify-center shrink-0 mb-4 text-white font-bold text-2xl shadow-lg shadow-black/10`}>
+                                            {member.name.charAt(0)}
+                                        </div>
+                                        <h4 className="text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis w-full">{member.name}</h4>
+                                        <p className="text-primary font-medium text-sm mt-1">{member.role}</p>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Startup Section */}
