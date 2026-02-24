@@ -272,28 +272,30 @@ const QuizDetails = () => {
                 <h2 className="text-xl font-bold mb-6 text-text">Choose your mode</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Flashcards Card (Hero - Full Width) */}
-                    <div
-                        onClick={() => navigate(`/student/practice/flashcards/${id}`)}
-                        className="group relative md:col-span-2 bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-indigo-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both"
-                    >
-                        {/* Subtle Glow Effect */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-opacity group-hover:opacity-100" />
+                    {quiz.type !== 'master' && (
+                        <div
+                            onClick={() => navigate(`/student/practice/flashcards/${id}`)}
+                            className="group relative md:col-span-2 bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-indigo-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both"
+                        >
+                            {/* Subtle Glow Effect */}
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-opacity group-hover:opacity-100" />
 
-                        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                            <div className="p-5 rounded-2xl bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
-                                <Layers className="w-10 h-10" />
-                            </div>
-                            <div className="flex-1 space-y-2">
-                                <h3 className="text-2xl font-bold text-text group-hover:text-indigo-400 transition-colors">Flashcards Mode</h3>
-                                <p className="text-muted text-base leading-relaxed max-w-2xl">
-                                    Master concepts in record time. Swipe through smart flashcards designed for quick recall and active retention.
-                                </p>
-                            </div>
-                            <div className="mt-4 md:mt-0 px-6 py-3 rounded-xl font-bold text-sm bg-[#61dafbaa] text-black border border-[#61dafbaa]/20 hover:bg-[#61dafbaa] hover:text-black transition-all flex items-center gap-2 shadow-sm">
-                                Open Deck <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                                <div className="p-5 rounded-2xl bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                                    <Layers className="w-10 h-10" />
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                    <h3 className="text-2xl font-bold text-text group-hover:text-indigo-400 transition-colors">Flashcards Mode</h3>
+                                    <p className="text-muted text-base leading-relaxed max-w-2xl">
+                                        Master concepts in record time. Swipe through smart flashcards designed for quick recall and active retention.
+                                    </p>
+                                </div>
+                                <div className="mt-4 md:mt-0 px-6 py-3 rounded-xl font-bold text-sm bg-[#61dafbaa] text-black border border-[#61dafbaa]/20 hover:bg-[#61dafbaa] hover:text-black transition-all flex items-center gap-2 shadow-sm">
+                                    Open Deck <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Practice Mode Card */}
                     {quiz.type !== 'master' && (
