@@ -12,6 +12,7 @@ const Quizzes = () => {
         { id: 'gate', title: 'GATE', description: 'Graduate Aptitude Test in Engineering', icon: GraduationCap, color: 'text-green-500', bg: 'bg-green-500/10', count: 0 },
         { id: 'srmist', title: 'SRMIST', description: 'SRM Institute of Science and Technology', icon: Server, color: 'text-purple-500', bg: 'bg-purple-500/10', count: 0 },
         { id: 'placement', title: 'Placement', description: 'Campus Placement Preparation & Tests', icon: Briefcase, color: 'text-pink-500', bg: 'bg-pink-500/10', count: 0 },
+        { id: 'course', title: 'Course', description: 'General Subject Courses & Topics', icon: BookOpen, color: 'text-cyan-500', bg: 'bg-cyan-500/10', count: 0 },
         { id: 'global', title: 'Global', description: 'General Knowledge & Open Quizzes', icon: Globe, color: 'text-orange-500', bg: 'bg-orange-500/10', count: 0 },
     ]);
 
@@ -41,6 +42,12 @@ const Quizzes = () => {
                 .select('*', { count: 'exact', head: true })
                 .or('type.eq.placement,settings->>category.eq.PLACEMENT,settings->>category.eq.Placement');
 
+            // COURSE
+            const { count: courseCount } = await supabase
+                .from('quizzes')
+                .select('*', { count: 'exact', head: true })
+                .or('type.eq.course,settings->>category.eq.COURSE,settings->>category.eq.Course');
+
             // GLOBAL - Assuming global type or settings category
             // Checks for type='global' OR category='Global'
             const { count: globalCount } = await supabase
@@ -53,6 +60,7 @@ const Quizzes = () => {
                 if (m.title === 'GATE') return { ...m, count: gateCount || 0 };
                 if (m.title === 'SRMIST') return { ...m, count: srmistCount || 0 };
                 if (m.title === 'Placement') return { ...m, count: placementCount || 0 };
+                if (m.title === 'Course') return { ...m, count: courseCount || 0 };
                 if (m.title === 'Global') return { ...m, count: globalCount || 0 };
                 return m;
             }));

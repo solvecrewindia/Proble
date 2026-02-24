@@ -48,9 +48,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         return <Navigate to="/login" replace state={{ from: location }} />;
     }
 
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
-        console.warn(`ProtectedRoute: Access denied to ${location.pathname}. Role mismatch. User: ${user.role}, Allowed: ${allowedRoles}`);
-        return <Navigate to="/" replace />;
+    if (allowedRoles && user.role) {
+        const normalizedRole = user.role.toLowerCase();
+        const normalizedAllowed = allowedRoles.map(r => r.toLowerCase());
+
+        if (!normalizedAllowed.includes(normalizedRole)) {
+            console.warn(`ProtectedRoute: Access denied to ${location.pathname}. Role mismatch. User: ${user.role}, Allowed: ${allowedRoles}`);
+            return <Navigate to="/" replace />;
+        }
     }
 
     return children;

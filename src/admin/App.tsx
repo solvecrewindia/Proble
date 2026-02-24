@@ -22,7 +22,7 @@ const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   if (!user || user.role !== 'admin') {
-    return <Navigate to="/admin/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return children;

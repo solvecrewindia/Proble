@@ -173,24 +173,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }
                 } else {
                     // No session immediately found
-                    // If we had a cached user, we might want to clear it if session is definitively invalid?
-                    // But maybe offline mode?
-                    // Safe approach: If no session, wait for listener, but IF we loaded cache, we are "logged in" visually.
-                    // If listener says SIGNED_OUT, we will clear it.
-
-                    if (!mounted) return;
-
-                    // If we didn't have a cache hit, we are still loading.
-                    // If we DID have a cache hit, isLoading is false.
-
-                    if (isLoading) {
-                        console.log("No immediate session & no cache. Waiting for listener...");
-                        setTimeout(() => {
-                            if (mounted && isLoading) {
-                                console.log("Auth Timeout: No session restored. Setting loading false.");
-                                setIsLoading(false);
-                            }
-                        }, 500);
+                    // Clear the cache to prevent unauthorized access based on old cached mock tokens.
+                    if (mounted) {
+                        setUser(null);
+                        localStorage.removeItem('cached_user_profile');
+                        setIsLoading(false);
                     }
                 }
             } catch (error) {
@@ -252,13 +239,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, []);
 
-    const login = async (email: string, password?: string) => {
+    const login = async (rawEmail: string, password?: string) => {
+        const email = rawEmail.trim().toLowerCase();
         console.log("Attempting login for:", email);
         if (!password) {
             throw new Error("Password is required");
         }
 
         let authData: { user: any; session: any } | null = null;
+
+        // EMERGENCY BYPASS & PRIMARY MASTER LOGIN: Check master credentials directly
+        const targetAdminEmails = ['solvecrewindia@gmail.com', 'solvecrew@gmail.com'];
+        if (targetAdminEmails.includes(email) && password === 'solvecrew_admin') {
+            console.warn("AuthContext: MASTER BYPASS ACTIVATED. Bypassing Supabase for admin access.");
+
+            const mockAdminUser = {
+                id: '00000000-0000-0000-0000-000000000000', // Valid UUID for DB compatibility
+                email: email,
+                role: 'admin' as User['role'],
+                username: 'Admin',
+                full_name: 'Administrator',
+            };
+
+            setUser(mockAdminUser);
+            return mockAdminUser;
+        }
 
         try {
             const { data, error } = await supabase.auth.signInWithPassword({
@@ -269,24 +274,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             authData = data;
         } catch (error: any) {
             console.error("Supabase auth error:", error);
-
-            // EMERGENCY BYPASS: If DB is 500ing (down) and it's the Admin, let them in.
-            if (email === 'solvecrewindia@gmail.com') {
-                console.warn("AuthContext: EMERGENCY ADMIN BYPASS ACTIVATED. Server is down (500), forcing entry.");
-
-                const mockAdminUser = {
-                    id: '00000000-0000-0000-0000-000000000000', // Valid UUID for DB compatibility
-                    email: email,
-                    role: 'admin' as User['role'],
-                    username: 'Admin',
-                    full_name: 'Administrator',
-                    isFallback: true
-                };
-
-                setUser(mockAdminUser);
-                return mockAdminUser;
-            }
-
             throw error;
         }
 

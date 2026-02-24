@@ -14,7 +14,7 @@ const QuizList = () => {
     const [currentModule, setCurrentModule] = useState<Module | null>(null);
 
     const categoryTitle = category ? category.toUpperCase() : (currentModule?.category || 'Global');
-    const isModuleSupported = ['NPTEL', 'GATE', 'SRMIST', 'PLACEMENT'].includes(categoryTitle);
+    const isModuleSupported = ['NPTEL', 'GATE', 'SRMIST', 'PLACEMENT', 'COURSE'].includes(categoryTitle);
 
     useEffect(() => {
         fetchData();

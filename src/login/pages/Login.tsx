@@ -141,8 +141,10 @@ export default function Login() {
 
                 // Determine path based on role
                 let path = '/';
-                if (user.role === 'admin') path = '/admin';
-                else if (user.role === 'faculty' || user.role === 'teacher') path = '/faculty';
+                const normalizedRole = user.role?.toLowerCase();
+
+                if (normalizedRole === 'admin') path = '/admin';
+                else if (normalizedRole === 'faculty' || normalizedRole === 'teacher') path = '/faculty';
 
                 navigate(path);
             } else {

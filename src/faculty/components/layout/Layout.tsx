@@ -9,7 +9,7 @@ export function Layout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     if (!isAuthenticated) {
-        return <Navigate to="/faculty/login" replace />;
+        return <Navigate to="/login" replace />;
     }
 
     return (
