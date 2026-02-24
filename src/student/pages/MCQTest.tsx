@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { useAuth } from '../../shared/context/AuthContext';
-import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2 } from 'lucide-react';
+import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2, WifiOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 import { QuizTimer } from '../components/QuizTimer';
@@ -38,6 +38,21 @@ const MCQTest = () => {
 
     // Security State
     const [isWindowFocused, setIsWindowFocused] = useState(true);
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+    // Network Status Listener
+    useEffect(() => {
+        const handleOnline = () => setIsOffline(false);
+        const handleOffline = () => setIsOffline(true);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     // --- PERSISTENCE LOGIC START ---
     // 1. Restore Progress on Mount
@@ -667,13 +682,25 @@ const MCQTest = () => {
             {/* Watermark removed by user request (Visual Noise) */}
 
             {/* --- BLUR PROTECTION OVERLAY --- */}
-            {!isWindowFocused && testActive && !showResults && (
+            {!isWindowFocused && testActive && !showResults && !isOffline && (
                 <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-75">
                     <ShieldAlert className="w-24 h-24 text-red-500 mb-6 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
                     <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight">Exam Terminated</h2>
                     <p className="text-xl text-white/80 max-w-xl leading-relaxed">
                         Security Violation Detected (Focus Lost).
                         <br />Your exam is being submitted...
+                    </p>
+                </div>
+            )}
+
+            {/* --- OFFLINE PROTECTION OVERLAY --- */}
+            {isOffline && testActive && !showResults && (
+                <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
+                    <WifiOff className="w-24 h-24 text-yellow-500 mb-6 animate-pulse" />
+                    <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight">Connection Lost</h2>
+                    <p className="text-xl text-white/80 max-w-xl leading-relaxed">
+                        Please check your internet connection.
+                        <br />Your progress is saved locally. The exam will resume once reconnected.
                     </p>
                 </div>
             )}

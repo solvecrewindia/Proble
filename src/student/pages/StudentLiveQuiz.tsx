@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../shared/context/AuthContext';
 import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
-import { Loader2, CheckCircle, Clock } from 'lucide-react';
+import { Loader2, CheckCircle, Clock, WifiOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
 
@@ -30,6 +30,21 @@ export default function StudentLiveQuiz() {
 
     // Realtime Status
     const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+    // Network Status Listener
+    useEffect(() => {
+        const handleOnline = () => setIsOffline(false);
+        const handleOffline = () => setIsOffline(true);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     const fetchQuizState = async () => {
         if (!id || !user) return;
@@ -347,6 +362,18 @@ export default function StudentLiveQuiz() {
 
     return (
         <div className="min-h-screen bg-background text-text font-sans flex flex-col">
+            {/* --- OFFLINE PROTECTION OVERLAY --- */}
+            {isOffline && status === 'active' && (
+                <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
+                    <WifiOff className="w-24 h-24 text-yellow-500 mb-6 animate-pulse" />
+                    <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight">Connection Lost</h2>
+                    <p className="text-xl text-white/80 max-w-xl leading-relaxed">
+                        Please check your internet connection.
+                        <br />Your progress is saved locally. The quiz will resume once reconnected.
+                    </p>
+                </div>
+            )}
+
             {/* Header */}
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 px-6 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-4">
