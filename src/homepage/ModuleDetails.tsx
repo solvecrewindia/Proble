@@ -41,7 +41,15 @@ const ModuleDetails = () => {
                     .eq('status', 'active'); // Only show active quizzes
 
                 if (quizError) throw quizError;
-                setQuizzes(quizList || []);
+
+                // Sort quizzes numerically by title (e.g. Week 1, Week 2, ..., Week 10)
+                const sortedQuizzes = (quizList || []).sort((a, b) => {
+                    const titleA = a.title || '';
+                    const titleB = b.title || '';
+                    return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
+                });
+
+                setQuizzes(sortedQuizzes);
 
                 // 3. Check if added to practice
                 if (user) {
