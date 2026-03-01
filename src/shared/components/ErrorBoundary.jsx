@@ -44,22 +44,50 @@ class ErrorBoundary extends React.Component {
     render() {
         if (this.state.hasError) {
             return (
-                <div className="p-8 bg-red-50 min-h-screen text-red-900 font-mono">
-                    <h1 className="text-3xl font-bold mb-4">Something went wrong.</h1>
-                    <p className="mb-4">The application crashed with the following error:</p>
-                    <div className="bg-white p-4 rounded border border-red-200 overflow-auto whitespace-pre-wrap">
-                        <h2 className="font-bold text-red-600 mb-2">{this.state.error && this.state.error.toString()}</h2>
-                        <details>
-                            <summary className="cursor-pointer text-sm text-gray-500">Stack Trace</summary>
-                            <pre className="text-xs mt-2 text-gray-700">{this.state.errorInfo && this.state.errorInfo.componentStack}</pre>
-                        </details>
+                <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-text">
+                    <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-2xl p-8 max-w-2xl w-full shadow-lg text-center">
+                        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <span className="text-4xl">⚠️</span>
+                        </div>
+                        <h1 className="text-3xl font-bold mb-4">Oops! An unexpected error occurred.</h1>
+                        <p className="text-muted mb-6">
+                            We're sorry for the inconvenience. The application encountered a problem and couldn't recover.
+                            Please try refreshing the page or going back to the home screen.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors"
+                            >
+                                Refresh Page
+                            </button>
+                            <button
+                                onClick={() => { window.location.href = '/'; }}
+                                className="px-6 py-3 bg-neutral-200 dark:bg-neutral-800 text-text rounded-xl font-bold hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                            >
+                                Go to Home
+                            </button>
+                        </div>
+
+                        {/* Error Details Section for Debugging */}
+                        <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700 text-left">
+                            <details className="group">
+                                <summary className="cursor-pointer text-sm font-medium text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 flex items-center">
+                                    <span className="mr-2">View Error Details (For Developers)</span>
+                                    <span className="group-open:rotate-180 transition-transform text-xs">▼</span>
+                                </summary>
+                                <div className="mt-4 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg overflow-x-auto border border-red-500/20">
+                                    <h2 className="font-mono text-sm text-red-600 dark:text-red-400 mb-2 font-bold whitespace-pre-wrap">
+                                        {this.state.error && this.state.error.toString()}
+                                    </h2>
+                                    <pre className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">
+                                        {this.state.errorInfo && this.state.errorInfo.componentStack}
+                                    </pre>
+                                </div>
+                            </details>
+                        </div>
                     </div>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="mt-6 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
-                    >
-                        Reload Application
-                    </button>
                 </div>
             );
         }

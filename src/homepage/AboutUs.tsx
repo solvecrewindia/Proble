@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Target, Globe } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 const AboutUs = () => {
     const navigate = useNavigate();
@@ -33,31 +33,7 @@ const AboutUs = () => {
                     </p>
                 </div>
 
-                {/* Mission & Vision Grid */}
-                <div className="grid md:grid-cols-2 gap-8">
-                    <div className="bg-surface p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6">
-                            <Target className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <h3 className="text-2xl font-bold mb-4">Our Mission</h3>
-                        <p className="text-muted leading-relaxed">
-                            To democratize quality education by providing accessible, intelligent, and personalized learning experiences for students across the globe. We believe that practice is the key to mastery.
-                        </p>
-                    </div>
 
-                    <div className="bg-surface p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-6">
-                            <Globe className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                        </div>
-                        <h3 className="text-2xl font-bold mb-4">Our Vision</h3>
-                        <p className="text-muted leading-relaxed">
-                            A world where every student has access to the tools they need to succeed. We envision a future where technology acts as a catalyst for human potential, not a replacement.
-                        </p>
-                    </div>
-                </div>
-
-
-                {/* Team Section */}
                 <div className="space-y-16">
                     <div className="text-center">
                         <h3 className="text-3xl font-bold mb-4">Meet the Team</h3>
