@@ -1,6 +1,7 @@
-﻿import { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Star, Clock, BookOpen, ArrowLeft, Check, Plus, Loader2 } from 'lucide-react';
+import { Button } from '../../../shared/components/Button';
+import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2, Layers, Trophy } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../shared/context/AuthContext';
 
@@ -14,6 +15,7 @@ const QuizDetails = () => {
     const location = useLocation();
 
     // Rating State
+    const [userRating, setUserRating] = useState(0);
     const [averageRating, setAverageRating] = useState(0);
     const [totalRatings, setTotalRatings] = useState(0);
 
@@ -106,13 +108,51 @@ const QuizDetails = () => {
                 setTotalRatings(ratings.length);
             }
 
-
+            // Fetch User Rating
+            if (user) {
+                const { data: myRating } = await supabase
+                    .from('quiz_ratings')
+                    .select('rating')
+                    .eq('quiz_id', quizId)
+                    .eq('user_id', user.id)
+                    .single();
+                if (myRating) setUserRating(myRating.rating);
+            }
         };
 
         fetchQuiz();
     }, [id, user]);
 
+    const handleRating = async (rating: number) => {
+        if (!user || !quiz) return;
 
+        // Optimistic UI
+        setUserRating(rating);
+
+        const { error } = await supabase
+            .from('quiz_ratings')
+            .upsert({
+                user_id: user.id,
+                quiz_id: quiz.id,
+                rating: rating
+            }, { onConflict: 'user_id, quiz_id' });
+
+        if (error) {
+            console.error('Error submitting rating:', error);
+            // Revert on error? For now just log
+        } else {
+            // Refetch average to keep it sync
+            const { data: ratings } = await supabase
+                .from('quiz_ratings')
+                .select('rating')
+                .eq('quiz_id', quiz.id);
+            if (ratings && ratings.length > 0) {
+                const avg = ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length;
+                setAverageRating(Math.round(avg * 10) / 10);
+                setTotalRatings(ratings.length);
+            }
+        }
+    };
 
     const togglePractice = async () => {
         if (!user) {
@@ -228,7 +268,79 @@ const QuizDetails = () => {
                     )}
                 </div>
 
+                {/* Action Cards Grid */}
+                <h2 className="text-xl font-bold mb-6 text-text">Choose your mode</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Flashcards Card (Hero - Full Width) */}
+                    {quiz.type !== 'master' && (
+                        <div
+                            onClick={() => navigate(`/student/practice/flashcards/${id}`)}
+                            className="group relative md:col-span-2 bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-indigo-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both"
+                        >
+                            {/* Subtle Glow Effect */}
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-opacity group-hover:opacity-100" />
 
+                            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                                <div className="p-5 rounded-2xl bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                                    <Layers className="w-10 h-10" />
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                    <h3 className="text-2xl font-bold text-text group-hover:text-indigo-400 transition-colors">Flashcards Mode</h3>
+                                    <p className="text-muted text-base leading-relaxed max-w-2xl">
+                                        Master concepts in record time. Swipe through smart flashcards designed for quick recall and active retention.
+                                    </p>
+                                </div>
+                                <div className="mt-4 md:mt-0 px-6 py-3 rounded-xl font-bold text-sm bg-[#61dafbaa] text-black border border-[#61dafbaa]/20 hover:bg-[#61dafbaa] hover:text-black transition-all flex items-center gap-2 shadow-sm">
+                                    Open Deck <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Practice Mode Card */}
+                    {quiz.type !== 'master' && (
+                        <div
+                            onClick={() => navigate(`/student/practice/setup/${id}`)}
+                            className="group relative bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-blue-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both"
+                        >
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+
+                            <div className="relative z-10 flex flex-col h-full">
+                                <div className="mb-6 p-4 w-fit rounded-2xl bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+                                    <BookOpen className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-bold text-text mb-2 group-hover:text-blue-400 transition-colors">Practice Test</h3>
+                                <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
+                                    Untimed learning environment with instant feedback and AI-powered explanations.
+                                </p>
+                                <div className="flex items-center text-sm font-bold text-[#61dafbaa] group-hover:translate-x-1 transition-transform">
+                                    Start Practice <ArrowRight className="w-4 h-4 ml-2" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Mock Test Card */}
+                    <div
+                        onClick={() => navigate(`/student/test/${id}`)}
+                        className={`group relative bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-cyan-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${quiz.type === 'master' ? 'md:col-span-2' : ''}`}
+                    >
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+
+                        <div className="relative z-10 flex flex-col h-full">
+                            <div className="mb-6 p-4 w-fit rounded-2xl bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                                <Trophy className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-xl font-bold text-text mb-2 group-hover:text-cyan-400 transition-colors">Mock Test</h3>
+                            <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
+                                Full exam simulation under strict timed conditions. Get detailed analytics and global ranking.
+                            </p>
+                            <div className="flex items-center text-sm font-bold text-[#61dafbaa] group-hover:translate-x-1 transition-transform">
+                                Begin Exam <ArrowRight className="w-4 h-4 ml-2" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
