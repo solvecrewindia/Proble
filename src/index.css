@@ -37,6 +37,11 @@
             radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.08) 0%, transparent 25%);
         background-attachment: fixed;
     }
+
+    /* Prevent iOS Safari Auto-Zoom on form inputs */
+    input, textarea, select {
+        font-size: 16px !important;
+    }
 }
 
 @layer components {
