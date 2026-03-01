@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Clock, AlertCircle, ArrowRight, Activity, Calendar, Star, Check, CheckCircle, Circle } from 'lucide-react';
+import { ArrowLeft, BookOpen, Clock, AlertCircle, ArrowRight, Activity, Star, Check, CheckCircle, Circle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Card } from '../shared/components/Card';
 import { useAuth } from '../shared/context/AuthContext';
 
 const ModuleDetails = () => {
@@ -336,10 +335,7 @@ const ModuleDetails = () => {
                                         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                                         <div className="relative z-10 flex flex-col h-full">
-                                            <div className="flex justify-between items-start mb-6">
-                                                <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm">
-                                                    <BookOpen className="w-6 h-6" />
-                                                </div>
+                                            <div className="flex justify-end items-start mb-6">
                                                 {quiz.settings?.duration && (
                                                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background border border-white/5 text-xs font-medium text-muted">
                                                         <Clock className="w-3.5 h-3.5" />
