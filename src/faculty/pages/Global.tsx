@@ -1,9 +1,10 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { BarChart2, Share2, Plus, Check, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import type { Quiz } from '../types';
 
 function ShareButton({ quizCode, quizId }: { quizCode?: string; quizId: string }) {
@@ -48,15 +49,17 @@ export default function Global() {
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const { user: contextUser } = useAuth();
+
     useEffect(() => {
         const fetchQuizzes = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            const userId = contextUser?.id;
+            if (!userId) return;
 
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('quizzes')
                 .select('*')
-                .eq('created_by', user.id)
+                .eq('created_by', userId)
                 .eq('type', 'global')
                 .order('created_at', { ascending: false });
 

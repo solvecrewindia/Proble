@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Bar, Line } from 'react-chartjs-2';
@@ -13,7 +13,8 @@ import {
     Tooltip,
     Legend,
 } from 'chart.js';
-import { TrendingUp, Users, Star, Award } from 'lucide-react';
+import { TrendingUp, Users, Star } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 ChartJS.register(
     CategoryScale,
@@ -38,10 +39,12 @@ export default function Analytics() {
         engagement: { labels: [], datasets: [] }
     });
 
+    const { user: contextUser } = useAuth();
+
     useEffect(() => {
         const fetchData = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            const userId = contextUser?.id;
+            if (!userId) return;
 
             // Fetch all results for quizzes created by this faculty (RLS handles the filtering)
             const { data: results, error } = await supabase

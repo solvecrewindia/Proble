@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
@@ -182,16 +182,18 @@ export default function AdminQuizCreate() {
             // Check for emergency bypass first
             let userId = contextUser?.id;
 
-            if ((contextUser as any)?.isFallback) {
-                console.log("AdminQuizCreate: Using fallback user", userId);
+            // TRUST the context user if they are an ADMIN or FALLBACK (Bypass)
+            // Only perform strict server-side check for standard users
+            const isBypassUser = contextUser?.isFallback || contextUser?.role === 'admin';
+
+            if (isBypassUser && userId) {
+                console.log("AdminQuizCreate: Using bypass/admin user", userId);
             } else {
                 console.log("AdminQuizCreate: Verifying standard auth...");
-                // Verify with server if not in bypass mode
                 try {
                     const { data: { user } } = await supabase.auth.getUser();
                     if (user) {
                         userId = user.id;
-                        console.log("AdminQuizCreate: Standard auth verified", userId);
                     } else {
                         console.warn("AdminQuizCreate: Standard auth getUser returned no user");
                         throw new Error("Not authenticated (getUser failed)");

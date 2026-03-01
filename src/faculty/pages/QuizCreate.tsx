@@ -116,8 +116,15 @@ export default function QuizCreate() {
     const saveMutation = useMutation({
         mutationFn: async (data: any) => {
             // Ensure user is authenticated
-            const { data: { user: currentUser } } = await supabase.auth.getUser();
-            const userId = currentUser?.id || user?.id;
+            let userId = user?.id;
+
+            // If it's a bypass admin or fallback, don't force server check
+            const isBypass = (user as any)?.isFallback || user?.role === 'admin';
+
+            if (!isBypass) {
+                const { data: { user: currentUser } } = await supabase.auth.getUser();
+                if (currentUser) userId = currentUser.id;
+            }
 
             if (!userId) throw new Error("Not authenticated");
 
