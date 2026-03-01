@@ -1,7 +1,6 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '../../../shared/components/Button';
-import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2, Layers, Trophy } from 'lucide-react';
+import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../shared/context/AuthContext';
 
@@ -281,9 +280,7 @@ const QuizDetails = () => {
                             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-opacity group-hover:opacity-100" />
 
                             <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                                <div className="p-5 rounded-2xl bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
-                                    <Layers className="w-10 h-10" />
-                                </div>
+
                                 <div className="flex-1 space-y-2">
                                     <h3 className="text-2xl font-bold text-text group-hover:text-indigo-400 transition-colors">Flashcards Mode</h3>
                                     <p className="text-muted text-base leading-relaxed max-w-2xl">
@@ -306,9 +303,7 @@ const QuizDetails = () => {
                             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
 
                             <div className="relative z-10 flex flex-col h-full">
-                                <div className="mb-6 p-4 w-fit rounded-2xl bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
-                                    <BookOpen className="w-8 h-8" />
-                                </div>
+
                                 <h3 className="text-xl font-bold text-text mb-2 group-hover:text-blue-400 transition-colors">Practice Test</h3>
                                 <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
                                     Untimed learning environment with instant feedback and AI-powered explanations.
@@ -328,9 +323,7 @@ const QuizDetails = () => {
                         <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
 
                         <div className="relative z-10 flex flex-col h-full">
-                            <div className="mb-6 p-4 w-fit rounded-2xl bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                                <Trophy className="w-8 h-8" />
-                            </div>
+
                             <h3 className="text-xl font-bold text-text mb-2 group-hover:text-cyan-400 transition-colors">Mock Test</h3>
                             <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
                                 Full exam simulation under strict timed conditions. Get detailed analytics and global ranking.
