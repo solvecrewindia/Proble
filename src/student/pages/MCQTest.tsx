@@ -553,107 +553,136 @@ const MCQTest = () => {
     if (loading) return <div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>;
 
     if (showResults) {
+        const showScore = quizSettings?.showPercentage !== false; // Default true
+        const showAnswers = quizSettings?.showAnswers !== false;   // Default true
+
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 animate-in fade-in zoom-in duration-300">
-                <div className="bg-surface border border-neutral-300 dark:border-neutral-600 p-8 rounded-2xl shadow-xl max-w-4xl w-full text-center">
-                    <h1 className="text-3xl font-bold mb-4 text-text">Test Completed</h1>
-                    <div className="mb-8">
-                        <div className="text-6xl font-bold text-primary mb-2">
-                            {Math.round((score / questions.length) * 100)}%
+            <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden bg-background">
+                {/* Background Decorative Elements */}
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/10 rounded-full blur-[120px] animate-pulse" />
+
+                <div className="glass-card p-8 md:p-12 max-w-4xl w-full text-center relative z-10 border-white/10 shadow-2xl">
+                    <div className="mb-8 relative inline-block">
+                        <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+                        <div className="relative bg-primary text-white p-4 rounded-full shadow-lg shadow-primary/50 flex items-center justify-center animate-in zoom-in duration-500">
+                            <CheckCircle2 className="w-12 h-12" />
                         </div>
-                        <p className="text-muted">You scored {score} out of {questions.length}</p>
                     </div>
+
+                    <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
+                        <span className="text-gradient">Excellent Work!</span>
+                    </h1>
+
+                    {!showScore && !showAnswers ? (
+                        <p className="text-xl text-text font-medium mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            Test completed successfully!
+                        </p>
+                    ) : (
+                        <p className="text-muted mb-8 text-lg font-medium">Your assessment has been recorded.</p>
+                    )}
+
+                    {showScore && (
+                        <div className="mb-12 py-10 bg-surface/50 rounded-2xl border border-white/5 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both">
+                            <div className="text-7xl font-black text-primary mb-2 drop-shadow-sm">
+                                {Math.round((score / questions.length) * 100)}%
+                            </div>
+                            <p className="text-xs font-bold text-muted uppercase tracking-widest">Global Performance Score</p>
+                            <p className="text-sm font-medium text-text mt-4">You scored {score} out of {questions.length}</p>
+                        </div>
+                    )}
 
                     {/* Detailed Question Review */}
-                    <div className="text-left mb-8 space-y-4">
-                        {questions.map((q, index) => {
-                            const userAnswer = answers[q.id];
+                    {showAnswers ? (
+                        <div className="text-left mb-12 space-y-6 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
+                            {questions.map((q, index) => {
+                                const userAnswer = answers[q.id];
 
-                            // Determine correctness (Using same logic as calculateAndShowResults)
-                            let isCorrect = false;
-                            if (q.type === 'msq') {
-                                const correctArr = Array.isArray(q.correct) ? q.correct : [];
-                                const userArr = Array.isArray(userAnswer) ? userAnswer : [];
-                                if (userArr.length === correctArr.length &&
-                                    userArr.every((val: any) => correctArr.includes(val))) {
-                                    isCorrect = true;
-                                }
-                            } else if (q.type === 'range') {
-                                const userVal = Number(userAnswer);
-                                if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
-                                    isCorrect = true;
-                                }
-                            } else if (q.type === 'code') {
-                                isCorrect = codeExecutionStatus[q.id] || false;
-                            } else {
-                                if (userAnswer === q.correct) isCorrect = true;
-                            }
-
-                            // Format Helper
-                            const formatAns = (ans: any, type: string) => {
-                                if (ans === undefined || ans === null || ans === '') return <span className="text-muted italic">Skipped</span>;
-                                if (type === 'mcq' || type === 'true_false') {
-                                    if (q.options && q.options[ans]) return q.options[ans].text || q.options[ans];
-                                    return `Option ${Number(ans) + 1} `;
-                                }
-                                if (type === 'msq') {
-                                    if (Array.isArray(ans)) {
-                                        return ans.map((a: any) => q.options[a]?.text || q.options[a] || `Option ${Number(a) + 1} `).join(', ');
+                                // Determine correctness
+                                let isCorrect = false;
+                                if (q.type === 'msq') {
+                                    const correctArr = Array.isArray(q.correct) ? q.correct : [];
+                                    const userArr = Array.isArray(userAnswer) ? userAnswer : [];
+                                    if (userArr.length === correctArr.length &&
+                                        userArr.every((val: any) => correctArr.includes(val))) {
+                                        isCorrect = true;
                                     }
+                                } else if (q.type === 'range') {
+                                    const userVal = Number(userAnswer);
+                                    if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
+                                        isCorrect = true;
+                                    }
+                                } else if (q.type === 'code') {
+                                    isCorrect = codeExecutionStatus[q.id] || false;
+                                } else {
+                                    if (userAnswer === q.correct) isCorrect = true;
                                 }
-                                if (type === 'code') {
-                                    // For code, q.correct is an object.
-                                    // We can just say "See Test Cases" or "hidden" or rendering the starter code?
-                                    // Or simply return "Code Solution".
-                                    // Screenshot showed "0", so we want to avoid that.
-                                    return <span className="font-mono text-xs">Code Solution</span>;
-                                }
-                                return ans;
-                            };
 
-                            return (
-                                <div key={q.id} className={cn("p-4 rounded-lg border", isCorrect ? "border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-900/10" : "border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-900/10")}>
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-medium text-text text-sm">Question {index + 1}</h3>
-                                        <div className={cn("px-2 py-0.5 rounded-full text-xs font-bold", isCorrect ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
-                                            {isCorrect ? "Correct" : "Incorrect"}
+                                // Format Helper
+                                const formatAns = (ans: any, type: string) => {
+                                    if (ans === undefined || ans === null || ans === '') return <span className="text-muted italic">Skipped</span>;
+                                    if (type === 'mcq' || type === 'true_false') {
+                                        if (q.options && q.options[ans]) return q.options[ans].text || q.options[ans];
+                                        return `Option ${Number(ans) + 1}`;
+                                    }
+                                    if (type === 'msq' && Array.isArray(ans)) {
+                                        return ans.map((a: any) => q.options[a]?.text || q.options[a] || `Option ${Number(a) + 1}`).join(', ');
+                                    }
+                                    if (type === 'code') return <span className="font-mono text-xs">Code Solution</span>;
+                                    return ans;
+                                };
+
+                                return (
+                                    <div key={q.id} className={cn(
+                                        "p-6 rounded-2xl border transition-all duration-300",
+                                        isCorrect
+                                            ? "border-green-500/20 bg-green-500/5"
+                                            : "border-red-500/20 bg-red-500/5 shadow-inner"
+                                    )}>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-xs font-bold uppercase tracking-widest text-muted">Question {index + 1}</span>
+                                            <div className={cn(
+                                                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter",
+                                                isCorrect ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
+                                            )}>
+                                                {isCorrect ? "Mastered" : "Revision Needed"}
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-text font-semibold mb-6 leading-relaxed">{q.question}</p>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface/30 p-4 rounded-xl border border-white/5">
+                                            <div>
+                                                <span className="text-[10px] font-bold text-muted uppercase block mb-1">Your Submission</span>
+                                                <div className="text-sm font-medium text-text">{formatAns(userAnswer, q.type)}</div>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] font-bold text-muted uppercase block mb-1">Correct Key</span>
+                                                <div className="text-sm font-medium text-primary">{formatAns(q.correct, q.type)}</div>
+                                            </div>
                                         </div>
                                     </div>
-                                    {q.imageUrl && (
-                                        <img
-                                            src={q.imageUrl}
-                                            alt={`Question ${index + 1} `}
-                                            className="max-h-48 rounded-lg border border-neutral-300 dark:border-neutral-600 mb-3 object-contain mx-auto"
-                                        />
-                                    )}
-                                    <p className="text-sm text-text mb-3 font-semibold">{q.question}</p>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        showScore && (
+                            <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 mb-12 animate-in fade-in duration-700">
+                                <p className="text-sm font-medium text-text italic">
+                                    To maintain assessment integrity, detailed answers are not shown for this test.
+                                </p>
+                            </div>
+                        )
+                    )}
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                                        <div>
-                                            <span className="text-muted block mb-1">Your Answer:</span>
-                                            <div className="font-medium text-text">{formatAns(userAnswer, q.type)}</div>
-                                        </div>
-                                        {q.correct !== undefined && q.correct !== null && (
-                                            <div>
-                                                <span className="text-muted block mb-1">Correct Answer:</span>
-                                                <div className="font-medium text-text">{formatAns(q.correct, q.type)}</div>
-                                            </div>
-                                        )}
-                                        {q.correct === undefined && (
-                                            <div>
-                                                <span className="text-muted block mb-1 hover:text-primary transition-colors italic cursor-help" title="To prevent cheating, answers are not stored in your browser.">
-                                                    Correct Answer: Hidden (Server-Graded)
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                    <div className="flex flex-col items-center gap-4">
+                        <p className="text-xs font-bold text-muted uppercase tracking-widest mb-2">Violations Recorded: {violations}</p>
+                        <button
+                            onClick={() => navigate(`/student/practice/${id}`)}
+                            className="btn-primary w-full py-4 text-lg rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all"
+                        >
+                            Return to Dashboard
+                        </button>
                     </div>
-
-                    <p className="text-sm text-gray-400 mb-8">Violations Recorded: {violations}</p>
-                    <button onClick={() => navigate(`/ student / practice / ${id} `)} className="w-full btn-primary py-3 rounded-xl font-bold shadow-lg shadow-primary/20">Return to Test Details</button>
                 </div>
             </div>
         );

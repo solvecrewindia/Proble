@@ -143,15 +143,37 @@ export function AdminStepMetadata({ data, update }: any) {
                         </select>
                     </div>
 
-                    <div className="flex items-center space-x-2 pt-8">
-                        <input
-                            type="checkbox"
-                            id="allowRetake"
-                            className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary accent-primary"
-                            checked={data.settings?.allowRetake || false}
-                            onChange={(e) => update({ settings: { ...data.settings, allowRetake: e.target.checked } })}
-                        />
-                        <label htmlFor="allowRetake" className="text-sm font-medium text-text select-none cursor-pointer">Allow Retakes</label>
+                    <div className="grid grid-cols-1 gap-2 pt-6">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="allowRetake"
+                                className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary accent-primary"
+                                checked={data.settings?.allowRetake || false}
+                                onChange={(e) => update({ settings: { ...data.settings, allowRetake: e.target.checked } })}
+                            />
+                            <label htmlFor="allowRetake" className="text-sm font-medium text-text select-none cursor-pointer">Allow Retakes</label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="showPercentage"
+                                className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary accent-primary"
+                                checked={data.settings?.showPercentage ?? true}
+                                onChange={(e) => update({ settings: { ...data.settings, showPercentage: e.target.checked } })}
+                            />
+                            <label htmlFor="showPercentage" className="text-sm font-medium text-text select-none cursor-pointer">Show Score/Percentage</label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="showAnswers"
+                                className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary accent-primary"
+                                checked={data.settings?.showAnswers ?? true}
+                                onChange={(e) => update({ settings: { ...data.settings, showAnswers: e.target.checked } })}
+                            />
+                            <label htmlFor="showAnswers" className="text-sm font-medium text-text select-none cursor-pointer">Show Correct Answers</label>
+                        </div>
                     </div>
                 </div>
             </div>

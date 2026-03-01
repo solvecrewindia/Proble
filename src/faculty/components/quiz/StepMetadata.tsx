@@ -1,6 +1,4 @@
-﻿import React from 'react';
-import { Input } from '../ui/Input';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+﻿import { Input } from '../ui/Input';
 
 export function StepMetadata({ data, update }: any) {
     return (
@@ -28,8 +26,8 @@ export function StepMetadata({ data, update }: any) {
                     />
                 </div>
 
-                {/* Anti-Cheat & Retakes configuration */}
-                <div className="flex items-center space-x-4">
+                {/* Toggles configuration */}
+                <div className="flex flex-wrap gap-6 items-center">
                     {/* Allow Retakes - Only for Global Tests */}
                     {data.type !== 'master' && (
                         <label className="flex items-center space-x-2 cursor-pointer">
@@ -44,6 +42,30 @@ export function StepMetadata({ data, update }: any) {
                             <span className="text-sm font-medium text-text">Allow Retakes</span>
                         </label>
                     )}
+
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={data.settings?.showPercentage ?? true}
+                            onChange={(e) => update({
+                                settings: { ...data.settings, showPercentage: e.target.checked }
+                            })}
+                            className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 bg-background text-primary focus:ring-primary"
+                        />
+                        <span className="text-sm font-medium text-text">Show Score/Percentage</span>
+                    </label>
+
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={data.settings?.showAnswers ?? true}
+                            onChange={(e) => update({
+                                settings: { ...data.settings, showAnswers: e.target.checked }
+                            })}
+                            className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 bg-background text-primary focus:ring-primary"
+                        />
+                        <span className="text-sm font-medium text-text">Show Correct Answers</span>
+                    </label>
 
                     {/* Organization Restriction */}
                     <div className="space-y-2">
