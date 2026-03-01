@@ -79,38 +79,38 @@ const parseTimestampToSeconds = (timestamp: string): { timestamp: string, second
 };
 
 // Start of dynamic mock generation helper
-const generateMockVideos = (query: string): VideoResult[] => {
+const generateMockVideos = (): VideoResult[] => {
     return [
         {
             id: 'RBSGKlAvoiM',
-            title: `Learn ${query} in 10 Minutes`,
-            description: `A quick introduction to ${query}.`,
+            title: "Data Structures & Algorithms - Full Course",
+            description: "A comprehensive guide to fundamental data structures and algorithms.",
             thumbnail: 'https://img.youtube.com/vi/RBSGKlAvoiM/hqdefault.jpg',
             channelTitle: 'Education Hub',
             publishTime: '2023-01-01',
             viewCount: '1.2M views',
             duration: '10:05',
-            relevantSegment: `${query} Basics`,
+            relevantSegment: "Core Concepts",
             relevantTimestamp: '1:30',
             relevantTimestampSeconds: 90
         },
         {
             id: '8hly31xKli0',
-            title: `Mastering ${query} - Full Course`,
-            description: `Deep dive into ${query} with examples.`,
+            title: "Operating Systems & Networking Basics",
+            description: "Deep dive into OS architecture and networking principles.",
             thumbnail: 'https://img.youtube.com/vi/8hly31xKli0/hqdefault.jpg',
             channelTitle: 'Tech Academy',
             publishTime: '2023-05-20',
             viewCount: '850K views',
             duration: '45:00',
-            relevantSegment: `${query} Advanced`,
+            relevantSegment: "Advanced Architecture",
             relevantTimestamp: '5:15',
             relevantTimestampSeconds: 315
         },
         {
             id: 'bUHFg8CZFws',
-            title: `${query} Interview Questions`,
-            description: `Top questions asked about ${query}.`,
+            title: "Software Engineering & SDLC Guide",
+            description: "Master the Software Development Life Cycle and engineering best practices.",
             thumbnail: 'https://img.youtube.com/vi/bUHFg8CZFws/hqdefault.jpg',
             channelTitle: 'Career Prep',
             publishTime: '2023-08-15',
@@ -119,14 +119,14 @@ const generateMockVideos = (query: string): VideoResult[] => {
         },
         {
             id: 'bMknfKXIFA8',
-            title: `Why ${query} Matters`,
-            description: `Real world applications of ${query}.`,
+            title: "Full Stack Web Development with React",
+            description: "Build modern web applications using React and contemporary tools.",
             thumbnail: 'https://img.youtube.com/vi/bMknfKXIFA8/hqdefault.jpg',
             channelTitle: 'Concept Explainers',
             publishTime: '2023-11-10',
             viewCount: '500K views',
             duration: '15:20',
-            relevantSegment: 'Applications',
+            relevantSegment: 'Frontend Implementation',
             relevantTimestamp: '3:00',
             relevantTimestampSeconds: 180
         }
@@ -140,7 +140,7 @@ export const searchVideos = async (query: string): Promise<{ videos: VideoResult
     if (!apiKey) {
         console.warn("No VITE_YOUTUBE_API_KEY found. using mock data.");
         await new Promise(resolve => setTimeout(resolve, 800));
-        return { videos: generateMockVideos(query), error: null };
+        return { videos: generateMockVideos(), error: null };
     }
 
     try {
@@ -153,7 +153,7 @@ export const searchVideos = async (query: string): Promise<{ videos: VideoResult
 
         const searchData = await searchResponse.json();
         // Fallback to dynamic mocks if real search returns empty
-        if (!searchData.items?.length) return { videos: generateMockVideos(query), error: null };
+        if (!searchData.items?.length) return { videos: generateMockVideos(), error: null };
 
         const videoIds = searchData.items.map((item: any) => item.id.videoId).join(',');
 
@@ -164,7 +164,7 @@ export const searchVideos = async (query: string): Promise<{ videos: VideoResult
         const detailsData = await detailsResponse.json();
 
         // Defensive check for detailsData items
-        if (!detailsData.items) return { videos: generateMockVideos(query), error: null };
+        if (!detailsData.items) return { videos: generateMockVideos(), error: null };
 
         const videos = detailsData.items.map((item: any) => {
             // Defensive coding for missing fields
@@ -205,6 +205,6 @@ export const searchVideos = async (query: string): Promise<{ videos: VideoResult
         }
 
         // Fallback to dynamic mocks on any API error (quota, network, etc.)
-        return { videos: generateMockVideos(query), error: errorMessage };
+        return { videos: generateMockVideos(), error: errorMessage };
     }
 };

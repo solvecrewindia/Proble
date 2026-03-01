@@ -2,7 +2,7 @@
 import DOMPurify from 'dompurify';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn, BookOpen, BrainCircuit, Target, ListChecks, Calculator as CalculatorIcon, RotateCcw, Play, Code2 } from 'lucide-react';
+import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn, BookOpen, BrainCircuit, Target, ListChecks, Calculator as CalculatorIcon, RotateCcw, Play, Code2, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { searchVideos, VideoResult } from '../services/videoSearchService';
@@ -788,8 +788,11 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                             {videoError && (
                                 <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-400 flex flex-col gap-2">
                                     <div className="flex gap-2 items-start">
-                                        <span className="font-bold shrink-0">Note:</span>
-                                        <span>Video search issue: {videoError}. Showing examples.</span>
+                                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                                        <span>
+                                            <strong>YouTube Search Error:</strong> {videoError}. <br />
+                                            Showing standard study examples instead of topic-specific results.
+                                        </span>
                                     </div>
                                     <button
                                         onClick={() => {
