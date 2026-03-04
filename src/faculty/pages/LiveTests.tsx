@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Play, Save, CheckCircle, Clock, Copy, QrCode, Link as LinkIcon, Trash2 } from 'lucide-react';
+import { Play, Save, CheckCircle, Clock, Copy, QrCode, Link as LinkIcon, Trash2, Download, RotateCw, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase'; // Import supabase
 import { Card, CardContent } from '../components/ui/Card'; // Import UI components
@@ -19,6 +20,114 @@ export default function LiveTests() {
 
     // QR Code State
     const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
+
+    // Results Modal State
+    const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+    const [results, setResults] = useState<any[]>([]);
+    const [viewingResults, setViewingResults] = useState(false);
+
+    const fetchResults = async (quizId: string) => {
+        console.log(`[DEBUG] LiveTests: fetchResults called for quizId: ${quizId}`);
+        setSelectedQuizId(quizId);
+        setViewingResults(true);
+        setResults([]); // Clear previous
+
+        try {
+            const { data, error } = await supabase
+                .from('quiz_results')
+                .select(`
+                    *,
+                    profiles:student_id (username, email, registration_number)
+                `)
+                .eq('quiz_id', quizId)
+                .order('percentage', { ascending: false });
+
+            if (error) {
+                console.error("Error fetching live results:", error);
+                return;
+            }
+
+            console.log(`[DEBUG] LiveTests: Fetched ${data?.length || 0} results`);
+            if (data) setResults(data);
+        } catch (err) {
+            console.error("Unexpected error in fetchResults:", err);
+        }
+    };
+
+    const downloadResultsAsCSV = () => {
+        if (results.length === 0) return;
+
+        const csvContent = [
+            ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Date'],
+            ...results.map(res => [
+                res.profiles?.username || 'Unknown',
+                res.profiles?.registration_number || 'N/A',
+                res.profiles?.email || 'N/A',
+                res.score,
+                res.total_questions,
+                `${res.percentage.toFixed(2)}%`,
+                new Date(res.created_at).toLocaleDateString()
+            ])
+        ].map(e => e.join(",")).join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "quiz_results.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const downloadStudentResult = (result: any) => {
+        if (!selectedQuizId) return;
+        const quiz = quizzes.find(q => q.id === selectedQuizId);
+        if (!quiz || !quiz.questions) {
+            alert("Quiz data not found for generating report.");
+            return;
+        }
+
+        const reportData = quiz.questions.map((q, index) => {
+            const userAnswer = result.answers ? result.answers[q.id] : null;
+            const formatAnswer = (ans: any, type: string) => {
+                if (ans === null || ans === undefined) return "Skipped";
+                if (type === 'mcq' || type === 'true_false') {
+                    if (q.options && q.options[ans]) return `${String.fromCharCode(65 + Number(ans))}. ${q.options[ans]}`;
+                    return String.fromCharCode(65 + Number(ans));
+                }
+                if (type === 'msq' && Array.isArray(ans)) {
+                    return ans.map(a => String.fromCharCode(65 + Number(a))).join(', ');
+                }
+                return ans;
+            };
+
+            const isCorrect = JSON.stringify(userAnswer) === JSON.stringify(q.correct);
+
+            return {
+                "Question No": `Q${index + 1}`,
+                "Question": q.stem,
+                "Given Answer": formatAnswer(userAnswer, q.type),
+                "Correct Answer": formatAnswer(q.correct, q.type),
+                "Status": isCorrect ? "Correct" : "Incorrect",
+                "Points": isCorrect ? q.weight : 0
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(reportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Result Report");
+        const studentName = result.profiles?.registration_number || result.profiles?.username || "Student";
+        XLSX.writeFile(wb, `${studentName.replace(/[^a-z0-9]/gi, '_')}_Report.xlsx`);
+    };
+
+    const handleRetest = async (resultId: string, studentName: string) => {
+        if (confirm(`Allow ${studentName} to retake? This deletes the current result.`)) {
+            const { error } = await supabase.from('quiz_results').delete().eq('id', resultId);
+            if (!error && selectedQuizId) fetchResults(selectedQuizId);
+        }
+    };
 
     const tabs = [
         { id: 'saved', label: 'Saved Tests', icon: Save },
@@ -204,6 +313,9 @@ export default function LiveTests() {
                                     >
                                         <Play className="w-4 h-4 mr-2" /> Start Now
                                     </Button>
+                                    <Button variant="outline" size="sm" onClick={() => fetchResults(quiz.id)}>
+                                        Results
+                                    </Button>
                                     <Button variant="outline" size="sm" onClick={() => navigate(`/faculty/quizzes/${quiz.id}/edit`)}>
                                         Edit
                                     </Button>
@@ -220,6 +332,97 @@ export default function LiveTests() {
                             </CardContent>
                         </Card>
                     ))}
+                </div>
+            {/* Results Modal */}
+            {viewingResults && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-surface border border-neutral-300 dark:border-neutral-600 rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col scale-in-center">
+                        <div className="p-6 border-b border-neutral-300 dark:border-neutral-600 flex justify-between items-center">
+                            <h2 className="text-xl font-bold text-text flex items-center gap-2">
+                                <CheckCircle className="text-primary w-5 h-5" />
+                                Student Assessment Results
+                            </h2>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={downloadResultsAsCSV}>
+                                    <Download className="mr-2 h-4 w-4" /> Download CSV
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => setViewingResults(false)}>Close</Button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-auto p-6">
+                            {results.length === 0 ? (
+                                <div className="text-center py-20">
+                                    <p className="text-muted text-lg">No students have taken this test yet.</p>
+                                    <p className="text-xs text-muted/60 mt-2 italic">Results will appear here in real-time as students submit.</p>
+                                </div>
+                            ) : (
+                                <div className="border rounded-lg overflow-hidden border-neutral-200 dark:border-neutral-800">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-neutral-50 dark:bg-neutral-900/50 text-muted text-xs uppercase tracking-wider">
+                                                <th className="px-6 py-4 font-bold border-b border-neutral-200 dark:border-neutral-800">Student Profile</th>
+                                                <th className="px-6 py-4 font-bold border-b border-neutral-200 dark:border-neutral-800 text-center">Final Score</th>
+                                                <th className="px-6 py-4 font-bold border-b border-neutral-200 dark:border-neutral-800 text-center">Status</th>
+                                                <th className="px-6 py-4 font-bold border-b border-neutral-200 dark:border-neutral-800 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-text divide-y divide-neutral-200 dark:divide-neutral-800">
+                                            {results.map((res: any) => (
+                                                <tr key={res.id} className="hover:bg-background/50 transition-colors group">
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-bold group-hover:text-primary transition-colors cursor-default">
+                                                            {res.profiles?.username || 'Anonymous Candidate'}
+                                                        </div>
+                                                        <div className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                                                            {res.profiles?.registration_number || res.profiles?.email || 'No identifier'}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center font-mono font-bold text-sm">
+                                                        {res.score} <span className="text-muted/50">/</span> {res.total_questions}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <div className={cn(
+                                                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tight shadow-sm",
+                                                            res.percentage >= 80 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                                                                res.percentage >= 40 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                                                                    "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                                        )}>
+                                                            {res.percentage.toFixed(1)}%
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                                                onClick={() => handleRetest(res.id, res.profiles?.username)}
+                                                                title="Reset Attempt"
+                                                            >
+                                                                <RotateCw className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0 text-primary hover:bg-primary/10"
+                                                                onClick={() => downloadStudentResult(res)}
+                                                                title="Download Report"
+                                                            >
+                                                                <FileSpreadsheet className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-4 border-t border-neutral-300 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-900/50 rounded-b-xl">
+                            <p className="text-[10px] text-center text-muted uppercase tracking-widest font-bold">Assessment Integrity Monitored • Proble Analytics</p>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

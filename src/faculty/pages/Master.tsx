@@ -2,7 +2,7 @@
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Copy, Plus, Edit, Download, RotateCw, Link as LinkIcon, FileSpreadsheet, QrCode, Play } from 'lucide-react';
+import { Copy, Plus, Edit, Download, RotateCw, Link as LinkIcon, FileSpreadsheet, QrCode } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -26,7 +26,7 @@ export default function Master() {
             return;
         }
         setLoading(true);
-        
+
         try {
             const { data, error } = await supabase
                 .from('quizzes')
@@ -84,21 +84,33 @@ export default function Master() {
     const [viewingResults, setViewingResults] = useState(false);
 
     const fetchResults = async (quizId: string) => {
+        console.log(`[DEBUG] fetchResults called for quizId: ${quizId}`);
         setSelectedQuizId(quizId);
         setViewingResults(true);
         setResults([]); // Clear previous
 
-        const { data, error } = await supabase
-            .from('quiz_results')
-            .select(`
-                *,
-                profiles:student_id (username, email, registration_number)
-            `)
-            .eq('quiz_id', quizId)
-            .order('percentage', { ascending: false });
+        try {
+            // Use a simpler query first to see if data exists
+            const { data, error } = await supabase
+                .from('quiz_results')
+                .select(`
+                    *,
+                    profiles:student_id (username, email, registration_number)
+                `)
+                .eq('quiz_id', quizId)
+                .order('percentage', { ascending: false });
 
-        if (data) setResults(data);
-        if (error) console.error("Error fetching results:", error);
+            if (error) {
+                console.error("Error fetching results:", error);
+                alert("Failed to fetch results: " + error.message);
+                return;
+            }
+
+            console.log(`[DEBUG] Fetched ${data?.length || 0} results for quiz ${quizId}`);
+            if (data) setResults(data);
+        } catch (err) {
+            console.error("Unexpected error in fetchResults:", err);
+        }
     };
 
     const downloadResultsAsCSV = () => {
