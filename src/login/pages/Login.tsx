@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Lock, Mail, User as UserIcon, ArrowRight, Eye, EyeOff, Home, GraduationCap, School } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, Home, GraduationCap, School } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../../shared/context/AuthContext';
@@ -452,8 +452,8 @@ export default function Login() {
                                             <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Email</label>
                                             <Input
                                                 type="email"
-                                                {...registerSignUp('email', { required: 'Email is required', pattern: { value: /^[a-zA-Z0-9._%+-]+@(gmail\.com|srmist\.edu\.in)$/, message: "Please enter a valid Gmail or SRMIST email address" } })}
-                                                placeholder="yourname@gmail.com"
+                                                {...registerSignUp('email', { required: 'Email is required', pattern: { value: /^[a-zA-Z0-9._%+-]+@srmist\.edu\.in$/, message: "Please enter a valid SRMIST email address" } })}
+                                                placeholder="yourname@srmist.edu.in"
                                                 className="h-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                                                 error={errorsSignUp.email?.message as string}
                                             />

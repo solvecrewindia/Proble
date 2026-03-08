@@ -86,16 +86,11 @@ export function StepMetadata({ data, update }: any) {
                         </label>
 
                         {data.settings?.allowedDomain && (
-                            <div className="ml-6 animate-in slide-in-from-top-2 duration-200">
-                                <Input
-                                    label="Allowed Email Domain"
-                                    placeholder="e.g. srmist.edu.in, company.com"
-                                    value={data.settings.allowedDomain}
-                                    onChange={(e) => update({
-                                        settings: { ...data.settings, allowedDomain: e.target.value }
-                                    })}
-                                />
-                                <p className="text-xs text-muted mt-1">Users must have an email ending with this domain to join.</p>
+                            <div className="ml-6 py-2 px-3 bg-blue-500/10 border border-blue-500/20 rounded-lg animate-in slide-in-from-top-2 duration-200">
+                                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                                    Restricted to: <span className="font-bold">srmist.edu.in</span>
+                                </p>
+                                <p className="text-xs text-muted mt-1">Only students with an institutional SRMIST email can join.</p>
                             </div>
                         )}
                     </div>
