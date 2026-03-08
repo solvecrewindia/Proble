@@ -7,6 +7,7 @@ import CourseDetails from "./pages/courses/CourseDetails";
 import MCQTest from './pages/MCQTest';
 import PracticeTest from './pages/PracticeTest';
 import TestSetup from './pages/TestSetup';
+import JoinTest from './pages/JoinTest';
 import ProfileSettings from '../shared/pages/ProfileSettings';
 import StudentGame from './pages/StudentGame';
 import FlashCardGame from './pages/games/FlashCardGame';
@@ -40,6 +41,7 @@ const StudentApp = () => {
                 <Route path="/" element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<StudentDashboard />} />
                 <Route path="practice" element={<PracticeList />} />
+                <Route path="join" element={<JoinTest />} />
                 <Route path="game" element={<StudentGame />} />
                 <Route path="game/daily" element={<DailyGame />} />
                 <Route path="game/flashcards" element={<FlashCardGame />} />
