@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState } from 'react'; // v2 build trigger
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, Eye, EyeOff, Home, GraduationCap, School } from 'lucide-react';
