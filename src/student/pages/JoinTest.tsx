@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
 import { Key, Clock, FileText, AlertCircle, Play, QrCode, X } from 'lucide-react';
@@ -20,11 +20,8 @@ const JoinTest = () => {
     const [scanning, setScanning] = useState(false);
     const scannerRef = useRef<Html5Qrcode | null>(null);
 
-    // ... (existing urlCode effect)
-
     useEffect(() => {
         if (scanning) {
-            // Include a small delay to ensure the DOM element exists
             const timer = setTimeout(() => {
                 if (!scannerRef.current) {
                     const html5QrCode = new Html5Qrcode("reader");
@@ -32,7 +29,6 @@ const JoinTest = () => {
 
                     const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
 
-                    // Start with environment camera (Back Camera)
                     html5QrCode.start(
                         { facingMode: "environment" },
                         config,
@@ -40,7 +36,6 @@ const JoinTest = () => {
                         onScanFailure
                     ).catch(err => {
                         console.error("Error starting scanner", err);
-                        // If environment fails, try user facing or default
                         html5QrCode.start(
                             { facingMode: "user" },
                             config,
@@ -68,12 +63,32 @@ const JoinTest = () => {
         }
     }, [scanning]);
 
+    useEffect(() => {
+        if (urlCode) {
+            handleVerifyCode(urlCode);
+        }
+    }, []);
+
+    const extractCode = (text: string) => {
+        try {
+            if (text.includes('://') || text.includes('vercel.app')) {
+                const parts = text.split('/');
+                const lastPart = parts[parts.length - 1];
+                const code = lastPart || parts[parts.length - 2];
+                return (code || '').toUpperCase();
+            }
+            return text.toUpperCase();
+        } catch (e) {
+            return text.toUpperCase();
+        }
+    };
+
     const onScanSuccess = (decodedText: string, decodedResult: any) => {
         console.log(`Scan result: ${decodedText}`, decodedResult);
+        const extracted = extractCode(decodedText);
         setScanning(false);
-        // Cleanup is handled by the useEffect return when scanning becomes false
-        setCode(decodedText);
-        handleVerifyCode(decodedText);
+        setCode(extracted);
+        handleVerifyCode(extracted);
     };
 
     const onScanFailure = (error: any) => {
@@ -85,11 +100,9 @@ const JoinTest = () => {
         setError('');
 
         try {
-            // 1. Get User
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Please login to continue");
 
-            // 2. Fetch Quiz
             const { data: quizDataList, error: quizError } = await supabase
                 .from('quizzes')
                 .select('*')
@@ -100,7 +113,6 @@ const JoinTest = () => {
             const quizData = quizDataList?.[0];
             if (!quizData) throw new Error('Quiz not found');
 
-            // 3. Fetch Question Count
             const { count } = await supabase
                 .from('questions')
                 .select('*', { count: 'exact', head: true })
@@ -108,7 +120,6 @@ const JoinTest = () => {
 
             quizData.question_count = count || 0;
 
-            // 4. Check for existing attempts - ONLY for Master Tests
             if (quizData.type === 'master') {
                 const { data: existingAttempts, error: attemptError } = await supabase
                     .from('quiz_results')
@@ -127,7 +138,6 @@ const JoinTest = () => {
                 }
             }
 
-            // 5. Check for Domain Restriction
             if (quizData.settings?.allowedDomain) {
                 const userEmail = user.email || '';
                 if (!userEmail.endsWith(quizData.settings.allowedDomain)) {
@@ -157,6 +167,16 @@ const JoinTest = () => {
             } else {
                 navigate(`/student/test/${quiz.id}`);
             }
+        }
+    };
+
+    const handlePaste = (e: React.ClipboardEvent) => {
+        const pastedText = e.clipboardData.getData('text');
+        if (pastedText) {
+            const extracted = extractCode(pastedText);
+            setTimeout(() => {
+                setCode(extracted);
+            }, 0);
         }
     };
 
@@ -221,96 +241,119 @@ const JoinTest = () => {
     }
 
     return (
-        <div className="max-w-md mx-auto mt-20 relative">
-            {/* Scanner Overlay - Full Screen Custom UI */}
-            {scanning && (
-                <div className="fixed inset-0 z-50 bg-black flex flex-col">
-                    {/* Close Button */}
-                    <button
-                        onClick={() => {
-                            setScanning(false);
-                            // Cleanup handled in useEffect
-                        }}
-                        className="absolute top-6 right-6 p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors z-[60]"
-                    >
-                        <X className="w-8 h-8" />
-                    </button>
+        <div className="min-h-screen bg-background relative overflow-hidden selection:bg-primary/20">
+            {/* Premium Background Elements */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-primary/5 rounded-full blur-[100px]" />
 
-                    {/* Camera Viewport */}
-                    <div className="relative w-full h-full flex items-center justify-center bg-black">
-                        <div id="reader" className="w-full h-full" style={{ objectFit: 'cover' }}></div>
+            <div className="max-w-md mx-auto pt-24 pb-12 px-4 relative z-10">
+                {/* Scanner Overlay - Full Screen Custom UI */}
+                {scanning && (
+                    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setScanning(false)}
+                            className="absolute top-6 right-6 p-3 bg-black/40 text-white rounded-full hover:bg-black/60 transition-all z-[60] backdrop-blur-md border border-white/10"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
 
-                        {/* Custom Scanning Frame Overlay */}
-                        <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-50">
-                            {/* Darkened background around the frame (optional, tough with pure CSS, simpler to just have a frame) */}
+                        {/* Camera Viewport */}
+                        <div className="relative w-full h-full flex items-center justify-center bg-black">
+                            <div id="reader" className="w-full h-full" style={{ objectFit: 'cover' }}></div>
 
-                            {/* Frame */}
-                            <div className="w-72 h-72 relative">
-                                <div className="absolute top-0 left-0 w-8 h-8 border-l-4 border-t-4 border-primary rounded-tl-lg"></div>
-                                <div className="absolute top-0 right-0 w-8 h-8 border-r-4 border-t-4 border-primary rounded-tr-lg"></div>
-                                <div className="absolute bottom-0 left-0 w-8 h-8 border-l-4 border-b-4 border-primary rounded-bl-lg"></div>
-                                <div className="absolute bottom-0 right-0 w-8 h-8 border-r-4 border-b-4 border-primary rounded-br-lg"></div>
+                            {/* Custom Scanning Frame Overlay */}
+                            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-50 p-6">
+                                <div className="w-full max-w-sm aspect-square relative">
+                                    <div className="absolute top-0 left-0 w-12 h-12 border-l-4 border-t-4 border-primary rounded-tl-2xl"></div>
+                                    <div className="absolute top-0 right-0 w-12 h-12 border-r-4 border-t-4 border-primary rounded-tr-2xl"></div>
+                                    <div className="absolute bottom-0 left-0 w-12 h-12 border-l-4 border-b-4 border-primary rounded-bl-2xl"></div>
+                                    <div className="absolute bottom-0 right-0 w-12 h-12 border-r-4 border-b-4 border-primary rounded-br-2xl"></div>
 
-                                {/* Scanning Line Animation */}
-                                <div className="absolute top-0 left-0 w-full h-1 bg-primary/50 shadow-[0_0_10px_rgba(0,199,230,0.5)] animate-[scan_2s_infinite_ease-in-out]"></div>
+                                    {/* Scanning Line Animation */}
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_rgba(0,199,230,0.8)] animate-[scan_2s_infinite_ease-in-out]"></div>
+                                </div>
+
+                                <div className="mt-12 text-center">
+                                    <p className="text-white font-bold text-lg bg-black/40 px-8 py-3 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl">
+                                        Align Quiz QR Code
+                                    </p>
+                                    <p className="text-white/60 text-sm mt-4">Position the code within the frame to join</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="glass-card p-10 rounded-[2.5rem] border-white/10 shadow-2xl text-center space-y-10 animate-in zoom-in-95 fade-in duration-500">
+                    <div className="relative inline-block">
+                        <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+                        <div className="relative w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto text-primary border border-primary/20 rotate-3 hover:rotate-0 transition-transform duration-500">
+                            <Key className="w-10 h-10" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <h1 className="text-4xl font-black text-text tracking-tight">Join Quiz</h1>
+                        <p className="text-muted font-medium leading-relaxed">
+                            Ready to test your knowledge? <br />
+                            Scan or enter your code below.
+                        </p>
+                    </div>
+
+                    <div className="space-y-6">
+                        <Button
+                            type="button"
+                            onClick={() => setScanning(true)}
+                            className="w-full h-16 text-xl font-bold bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 text-text border border-white/10 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] group"
+                        >
+                            <QrCode className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform text-primary" />
+                            Scan QR Code
+                        </Button>
+
+                        <div className="relative py-2">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-white/5" />
+                            </div>
+                            <div className="relative flex justify-center text-[10px] uppercase font-black tracking-[0.2em]">
+                                <span className="bg-[#0c0c0c] px-4 text-muted/60">Secure Entry</span>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleManualJoin} className="space-y-6">
+                            <div className="relative group">
+                                <input
+                                    type="text"
+                                    placeholder="ACCESS CODE"
+                                    value={code}
+                                    onPaste={handlePaste}
+                                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                                    className="w-full h-20 text-center text-3xl font-black tracking-[0.15em] uppercase rounded-2xl border border-white/5 bg-white/5 text-text focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted/30 placeholder:tracking-normal placeholder:font-bold placeholder:text-lg"
+                                    maxLength={30}
+                                />
                             </div>
 
-                            <p className="mt-8 text-white font-medium bg-black/60 px-6 py-2 rounded-full backdrop-blur-sm">
-                                Align Master Test QR Code
-                            </p>
-                        </div>
+                            {error && (
+                                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-2">
+                                    <AlertCircle className="w-5 h-5" /> {error}
+                                </div>
+                            )}
+
+                            <Button
+                                type="submit"
+                                className="w-full h-16 text-xl font-black rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-1 active:translate-y-0"
+                                disabled={!code}
+                            >
+                                Verify & Join
+                            </Button>
+                        </form>
                     </div>
                 </div>
-            )}
 
-            <div className="bg-surface p-8 rounded-2xl border border-neutral-300 dark:border-neutral-600 shadow-sm text-center space-y-6">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
-                    <Key className="w-8 h-8" />
-                </div>
-
-                <div>
-                    <h1 className="text-2xl font-bold text-text">Join Quiz</h1>
-                    <p className="text-muted mt-2">Enter the access code provided by your instructor to join the test.</p>
-                </div>
-
-                <div className="space-y-4">
-                    {/* Mobile Camera Button - Visible mainly on mobile but useful generally */}
-                    <Button
-                        type="button"
-                        onClick={() => setScanning(true)}
-                        className="w-full h-12 text-lg bg-neutral-100 dark:bg-neutral-800 text-text hover:bg-neutral-200 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-600"
-                    >
-                        <QrCode className="w-5 h-5 mr-2" /> Scan QR Code
-                    </Button>
-
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-neutral-300 dark:border-neutral-700" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-surface px-2 text-muted-foreground">Or enter code</span>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleManualJoin} className="space-y-4">
-                        <input
-                            type="text"
-                            placeholder="ENTER CODE"
-                            value={code}
-                            onChange={(e) => setCode(e.target.value.toUpperCase())}
-                            className="w-full h-12 text-center text-xl font-mono tracking-widest uppercase rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                            maxLength={8}
-                        />
-                        {error && (
-                            <p className="text-sm text-red-500 flex items-center justify-center gap-1">
-                                <AlertCircle className="w-4 h-4" /> {error}
-                            </p>
-                        )}
-                        <Button type="submit" className="w-full h-12 text-lg" disabled={!code}>
-                            Verify & Join
-                        </Button>
-                    </form>
-                </div>
+                <p className="mt-12 text-center text-muted/40 text-xs font-bold uppercase tracking-[0.3em]">
+                    Proble Learning System
+                </p>
             </div>
         </div>
     );
