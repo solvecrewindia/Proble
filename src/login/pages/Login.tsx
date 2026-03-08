@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, Eye, EyeOff, Home, GraduationCap, School } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -18,6 +18,7 @@ export default function Login() {
     const [isQuizMode, setIsQuizMode] = useState(false);
 
     const navigate = useNavigate();
+    const location = useLocation();
     const { login, signup, signInWithGoogle } = useAuth();
     const { theme } = useTheme();
 

@@ -333,6 +333,7 @@ export default function LiveTests() {
                         </Card>
                     ))}
                 </div>
+            )}
             {/* Results Modal */}
             {viewingResults && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
