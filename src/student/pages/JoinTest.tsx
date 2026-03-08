@@ -5,10 +5,12 @@ import { Key, Clock, FileText, AlertCircle, Play, QrCode, X } from 'lucide-react
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../shared/components/Card';
 import { Html5Qrcode } from 'html5-qrcode';
+import { useAuth } from '../../shared/context/AuthContext';
 
 const JoinTest = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const urlCode = searchParams.get('code');
 
     const [code, setCode] = useState(urlCode || '');
@@ -91,7 +93,7 @@ const JoinTest = () => {
         handleVerifyCode(extracted);
     };
 
-    const onScanFailure = (error: any) => {
+    const onScanFailure = () => {
         // console.warn(`Code scan error = ${error}`);
     };
 
@@ -100,9 +102,6 @@ const JoinTest = () => {
         setError('');
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Please login to continue");
-
             const { data: quizDataList, error: quizError } = await supabase
                 .from('quizzes')
                 .select('*')
@@ -120,7 +119,7 @@ const JoinTest = () => {
 
             quizData.question_count = count || 0;
 
-            if (quizData.type === 'master') {
+            if (user && quizData.type === 'master') {
                 const { data: existingAttempts, error: attemptError } = await supabase
                     .from('quiz_results')
                     .select('id')
@@ -130,15 +129,12 @@ const JoinTest = () => {
 
                 if (attemptError) {
                     console.error("Error checking attempts:", attemptError);
-                    throw new Error("Failed to verify attempt status");
-                }
-
-                if (existingAttempts && existingAttempts.length > 0) {
+                } else if (existingAttempts && existingAttempts.length > 0) {
                     throw new Error("You have already attempted this assessment. Retakes are not allowed.");
                 }
             }
 
-            if (quizData.settings?.allowedDomain) {
+            if (user && quizData.settings?.allowedDomain) {
                 const userEmail = user.email || '';
                 if (!userEmail.endsWith(quizData.settings.allowedDomain)) {
                     throw new Error(`This quiz is restricted to users from ${quizData.settings.allowedDomain} only.`);
@@ -161,12 +157,19 @@ const JoinTest = () => {
     };
 
     const handleStartTest = () => {
-        if (quiz) {
-            if (quiz.type === 'live') {
-                navigate(`/student/live/${quiz.id}`);
-            } else {
-                navigate(`/student/test/${quiz.id}`);
-            }
+        if (!quiz) return;
+
+        if (!user) {
+            // Save intent and redirect to login
+            localStorage.setItem('quiz_join_intent', quiz.code);
+            navigate('/login', { state: { from: `/student/join?code=${quiz.code}` } });
+            return;
+        }
+
+        if (quiz.type === 'live') {
+            navigate(`/student/live/${quiz.id}`);
+        } else {
+            navigate(`/student/test/${quiz.id}`);
         }
     };
 
@@ -221,7 +224,7 @@ const JoinTest = () => {
                             className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
                             onClick={handleStartTest}
                         >
-                            <Play className="w-5 h-5 mr-2" /> Start Test
+                            <Play className="w-5 h-5 mr-2" /> {user ? 'Start Test' : 'Login to Start'}
                         </Button>
                         <Button
                             variant="ghost"

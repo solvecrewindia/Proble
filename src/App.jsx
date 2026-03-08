@@ -26,6 +26,7 @@ const ForgotPassword = lazyRetry(() => import('./login/pages/ForgotPassword'), '
 const SharedQuizHandler = lazyRetry(() => import('./shared/components/SharedQuizHandler'), 'SharedQuizHandler');
 const Onboarding = lazyRetry(() => import('./login/pages/Onboarding'), 'Onboarding');
 const AdminApp = lazyRetry(() => import('./admin/App'), 'AdminApp');
+const JoinTest = lazyRetry(() => import('./student/pages/JoinTest'), 'JoinTest');
 
 // Loading Screen Component
 const FullScreenLoader = () => (
@@ -183,6 +184,7 @@ function AppContent() {
                     <Route path="/course/details/:id" element={<QuizDetails />} />
                     <Route path="/module/:id" element={<ModuleDetails />} />
                     <Route path="/quiz/:code" element={<SharedQuizHandler />} />
+                    <Route path="/student/join" element={<JoinTest />} />
 
                     {/* Onboarding Route */}
                     <Route
