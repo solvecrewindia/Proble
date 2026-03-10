@@ -49,25 +49,33 @@ export default function Login() {
 
     const handleVerifyOTP = async () => {
         if (!otpValue || otpValue.length < 6) {
-            setOtpError('Enter 6-digit OTP');
+            setOtpError('Please enter the full verification code');
             return;
         }
         setOtpLoading(true);
         setOtpError('');
         try {
+            // This call ONLY returns a user if the token/code matches exactly on the server
             const { user, error } = await verifyOtp(otpEmail, otpValue);
-            if (error) throw error;
+
+            if (error) {
+                setOtpError(error.message || 'Incorrect or expired code. Please check your email.');
+                return;
+            }
+
             if (user) {
-                // Check if profile exists
+                // Success - only now can we proceed to the next stage
                 const exists = await checkProfileExists(user.id);
                 if (exists) {
                     setOtpStage('password');
                 } else {
                     setOtpStage('signup');
                 }
+            } else {
+                setOtpError('Verification failed. Please try sending the code again.');
             }
         } catch (err: any) {
-            setOtpError(err.message || 'Invalid OTP');
+            setOtpError(err.message || 'Verification error. Please try again.');
         } finally {
             setOtpLoading(false);
         }
@@ -409,9 +417,9 @@ export default function Login() {
                                         <Input
                                             value={otpValue}
                                             onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
-                                            placeholder="81ef-36"
-                                            maxLength={6}
-                                            className="h-12 text-center text-2xl tracking-[0.5em] bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                            placeholder="8854-53"
+                                            maxLength={10}
+                                            className="h-12 text-center text-2xl tracking-[0.2em] bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
                                         />
                                         <p className="text-[10px] text-neutral-400 text-center">Enter the code sent to {otpEmail}</p>
                                     </div>
