@@ -19,7 +19,7 @@ export default function Login() {
 
     const navigate = useNavigate();
     const location = useLocation();
-    const { login, signup, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists } = useAuth();
+    const { login, signup, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup } = useAuth();
     const { theme } = useTheme();
 
     // OTP Flow State for Quiz Mode
@@ -28,6 +28,7 @@ export default function Login() {
     const [otpValue, setOtpValue] = useState('');
     const [otpLoading, setOtpLoading] = useState(false);
     const [otpError, setOtpError] = useState('');
+    const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
 
     const handleSendOTP = async () => {
         if (!otpEmail || !otpEmail.includes('@')) {
@@ -64,6 +65,7 @@ export default function Login() {
             }
 
             if (user) {
+                setVerifiedUserId(user.id);
                 // Success - only now can we proceed to the next stage
                 const exists = await checkProfileExists(user.id);
                 if (exists) {
@@ -96,15 +98,26 @@ export default function Login() {
     };
 
     const onOtpSignupSubmit = async (data: any) => {
+        if (!verifiedUserId) {
+            setOtpError('Authentication session lost. Please restart verification.');
+            return;
+        }
         try {
             setIsLoading(true);
-            const { user, error } = await signup(otpEmail, data.password, otpEmail.split('@')[0], 'student');
+            const { user, error } = await finalizeSignup(
+                verifiedUserId,
+                otpEmail,
+                data.password,
+                otpEmail.split('@')[0],
+                'student'
+            );
+
             if (error) throw error;
             if (user) {
                 finishQuizLogin();
             }
         } catch (error: any) {
-            setOtpError(error.message || 'Signup failed');
+            setOtpError(error.message || 'Account setup failed');
         } finally {
             setIsLoading(false);
         }

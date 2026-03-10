@@ -13,6 +13,7 @@ interface AuthContextType {
     signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
     verifyOtp: (email: string, token: string) => Promise<{ user: any; error: Error | null }>;
     checkProfileExists: (userId: string) => Promise<boolean>;
+    finalizeSignup: (userId: string, email: string, password: string, username: string, role: User['role']) => Promise<{ user: User | null; error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -426,8 +427,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
 
+    const finalizeSignup = async (userId: string, email: string, password: string, username: string, role: User['role']) => {
+        try {
+            // 1. Update password
+            const { error: updateError } = await supabase.auth.updateUser({ password });
+            if (updateError) throw updateError;
+
+            // 2. Create profile
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .insert([
+                    {
+                        id: userId,
+                        username,
+                        role,
+                        email
+                    }
+                ]);
+
+            if (profileError) {
+                console.error("Profile creation error in finalizeSignup:", profileError.message);
+                return { user: null, error: profileError };
+            }
+
+            const newUser: User = {
+                id: userId,
+                email,
+                role,
+                username
+            };
+
+            setUser(newUser);
+            return { user: newUser, error: null };
+        } catch (error: any) {
+            console.error("finalizeSignup error:", error);
+            return { user: null, error };
+        }
+    };
+
+
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup }}>
             {children}
         </AuthContext.Provider>
     );
