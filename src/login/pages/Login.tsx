@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react'; // v2 build trigger
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, Eye, EyeOff, Home, GraduationCap, School } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, Home, GraduationCap, School, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../../shared/context/AuthContext';
@@ -19,8 +19,98 @@ export default function Login() {
 
     const navigate = useNavigate();
     const location = useLocation();
-    const { login, signup, signInWithGoogle } = useAuth();
+    const { login, signup, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists } = useAuth();
     const { theme } = useTheme();
+
+    // OTP Flow State for Quiz Mode
+    const [otpStage, setOtpStage] = useState<'email' | 'otp' | 'password' | 'signup'>('email');
+    const [otpEmail, setOtpEmail] = useState('');
+    const [otpValue, setOtpValue] = useState('');
+    const [otpLoading, setOtpLoading] = useState(false);
+    const [otpError, setOtpError] = useState('');
+
+    const handleSendOTP = async () => {
+        if (!otpEmail || !otpEmail.includes('@')) {
+            setOtpError('Please enter a valid email');
+            return;
+        }
+        setOtpLoading(true);
+        setOtpError('');
+        try {
+            const { error } = await signInWithOtp(otpEmail);
+            if (error) throw error;
+            setOtpStage('otp');
+        } catch (err: any) {
+            setOtpError(err.message || 'Failed to send OTP');
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const handleVerifyOTP = async () => {
+        if (!otpValue || otpValue.length < 6) {
+            setOtpError('Enter 6-digit OTP');
+            return;
+        }
+        setOtpLoading(true);
+        setOtpError('');
+        try {
+            const { user, error } = await verifyOtp(otpEmail, otpValue);
+            if (error) throw error;
+            if (user) {
+                // Check if profile exists
+                const exists = await checkProfileExists(user.id);
+                if (exists) {
+                    setOtpStage('password');
+                } else {
+                    setOtpStage('signup');
+                }
+            }
+        } catch (err: any) {
+            setOtpError(err.message || 'Invalid OTP');
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const onOtpPasswordSubmit = async (data: any) => {
+        try {
+            setIsLoading(true);
+            const user = await login(otpEmail, data.password);
+            if (user) {
+                finishQuizLogin();
+            }
+        } catch (error: any) {
+            setOtpError(error.message || 'Login failed');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const onOtpSignupSubmit = async (data: any) => {
+        try {
+            setIsLoading(true);
+            const { user, error } = await signup(otpEmail, data.password, otpEmail.split('@')[0], 'student');
+            if (error) throw error;
+            if (user) {
+                finishQuizLogin();
+            }
+        } catch (error: any) {
+            setOtpError(error.message || 'Signup failed');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const finishQuizLogin = () => {
+        const searchParams = new URLSearchParams(location.search);
+        const returnTo = searchParams.get('returnTo');
+        if (returnTo) {
+            navigate(decodeURIComponent(returnTo), { replace: true });
+        } else {
+            navigate('/');
+        }
+    };
 
     // Check for Quiz Intent on Mount
     React.useEffect(() => {
@@ -39,6 +129,18 @@ export default function Login() {
         handleSubmit: handleSubmitSignIn,
         setValue: setSignInValue,
         formState: { errors: errorsSignIn }
+    } = useForm();
+
+    const {
+        register: registerOtpPass,
+        handleSubmit: handleSubmitOtpPass,
+        formState: { errors: errorsOtpPass }
+    } = useForm();
+
+    const {
+        register: registerOtpSignup,
+        handleSubmit: handleSubmitOtpSignup,
+        formState: { errors: errorsOtpSignup }
     } = useForm();
 
     const [rememberMe, setRememberMe] = useState(false);
@@ -227,35 +329,184 @@ export default function Login() {
 
                     {/* QUIZ MODE UI */}
                     {isQuizMode && (
-                        <div className="animate-in fade-in zoom-in-95 duration-500 text-center">
-                            <div className="mb-8">
+                        <div className="animate-in fade-in zoom-in-95 duration-500">
+                            <div className="text-center mb-8">
                                 <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6 animate-pulse">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 16h5v5" /></svg>
                                 </div>
-                                <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">Join Quiz</h2>
-                                <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-2">Sign in to start your assessment immediately.</p>
+                                <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">Join Assessment</h2>
+                                <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-2">Verify your email to continue to your test.</p>
                             </div>
 
-                            <Button
-                                type="button"
-                                onClick={signInWithGoogle}
-                                className="w-full h-14 text-sm font-semibold rounded-2xl bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 mb-6 flex items-center justify-center gap-3 transition-colors shadow-sm"
-                            >
-                                <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
-                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                    <path d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.11s.13-1.45.35-2.11V7.05H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.95l3.66-2.84z" fill="#FBBC05" />
-                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                                </svg>
-                                Sign in with Google
-                            </Button>
+                            {otpError && (
+                                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-xs rounded-xl flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4" /> {otpError}
+                                </div>
+                            )}
 
-                            <button
-                                onClick={() => setIsQuizMode(false)}
-                                className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 underline"
-                            >
-                                Use regular login options
-                            </button>
+                            {/* Stage 1: Email Input */}
+                            {otpStage === 'email' && (
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Email</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Mail className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            </div>
+                                            <Input
+                                                type="email"
+                                                value={otpEmail}
+                                                onChange={(e) => setOtpEmail(e.target.value)}
+                                                placeholder="Enter your email"
+                                                className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={handleSendOTP}
+                                        disabled={otpLoading}
+                                        className="w-full h-12 font-bold rounded-xl bg-primary text-white"
+                                    >
+                                        {otpLoading ? 'Sending...' : 'Verify Email'}
+                                    </Button>
+
+                                    <div className="relative my-6">
+                                        <div className="absolute inset-0 flex items-center">
+                                            <div className="w-full border-t border-neutral-200 dark:border-neutral-800"></div>
+                                        </div>
+                                        <div className="relative flex justify-center text-sm">
+                                            <span className="px-2 bg-gray-50 dark:bg-surface text-neutral-500">Or use Google</span>
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        type="button"
+                                        onClick={signInWithGoogle}
+                                        className="w-full h-12 text-sm font-semibold rounded-xl bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 flex items-center justify-center gap-3 transition-colors shadow-sm"
+                                    >
+                                        <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
+                                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                                            <path d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.11s.13-1.45.35-2.11V7.05H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.95l3.66-2.84z" fill="#FBBC05" />
+                                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                                        </svg>
+                                        Sign in with Google
+                                    </Button>
+                                    <button
+                                        onClick={() => setIsQuizMode(false)}
+                                        className="w-full text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 underline mt-4"
+                                    >
+                                        Use regular login options
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Stage 2: OTP Input */}
+                            {otpStage === 'otp' && (
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Verification Code</label>
+                                        <Input
+                                            value={otpValue}
+                                            onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
+                                            placeholder="81ef-36"
+                                            maxLength={6}
+                                            className="h-12 text-center text-2xl tracking-[0.5em] bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                        />
+                                        <p className="text-[10px] text-neutral-400 text-center">Enter the code sent to {otpEmail}</p>
+                                    </div>
+                                    <Button
+                                        onClick={handleVerifyOTP}
+                                        disabled={otpLoading}
+                                        className="w-full h-12 font-bold rounded-xl bg-primary text-white"
+                                    >
+                                        {otpLoading ? 'Verifying...' : 'Verify Code'}
+                                    </Button>
+                                    <button
+                                        onClick={() => setOtpStage('email')}
+                                        className="w-full text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                    >
+                                        Change email address
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Stage 3: Password for Registered User */}
+                            {otpStage === 'password' && (
+                                <form onSubmit={handleSubmitOtpPass(onOtpPasswordSubmit)} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Enter Password</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Lock className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            </div>
+                                            <Input
+                                                type={showPassword ? "text" : "password"}
+                                                {...registerOtpPass('password', { required: 'Password is required' })}
+                                                placeholder="••••••••"
+                                                className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                                error={errorsOtpPass.password?.message as string}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={togglePasswordVisibility}
+                                                className="absolute right-4 top-3.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 focus:outline-none transition-colors"
+                                            >
+                                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-primary to-blue-500 text-white shadow-lg"
+                                    >
+                                        {isLoading ? 'Logging in...' : 'Login & Join'}
+                                    </Button>
+                                </form>
+                            )}
+
+                            {/* Stage 3: Signup for New User */}
+                            {otpStage === 'signup' && (
+                                <form onSubmit={handleSubmitOtpSignup(onOtpSignupSubmit)} className="space-y-4">
+                                    <div className="text-center mb-4">
+                                        <p className="text-sm font-medium text-primary">New account detected!</p>
+                                        <p className="text-xs text-neutral-500">Create a password to secure your results.</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Create Password</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Lock className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            </div>
+                                            <Input
+                                                type={showPassword ? "text" : "password"}
+                                                {...registerOtpSignup('password', {
+                                                    required: 'Password is required',
+                                                    minLength: { value: 6, message: 'Minimum 6 characters' }
+                                                })}
+                                                placeholder="••••••••"
+                                                className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                                error={errorsOtpSignup.password?.message as string}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={togglePasswordVisibility}
+                                                className="absolute right-4 top-3.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 focus:outline-none transition-colors"
+                                            >
+                                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg"
+                                    >
+                                        {isLoading ? 'Creating Account...' : 'Create & Join'}
+                                    </Button>
+                                </form>
+                            )}
                         </div>
                     )}
 

@@ -10,6 +10,9 @@ interface AuthContextType {
     isLoading: boolean;
     refreshUser: () => Promise<void>;
     signInWithGoogle: () => Promise<void>;
+    signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
+    verifyOtp: (email: string, token: string) => Promise<{ user: any; error: Error | null }>;
+    checkProfileExists: (userId: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -358,6 +361,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const checkProfileExists = async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', userId)
+                .single();
+            if (error) return false;
+            return !!data;
+        } catch (err) {
+            return false;
+        }
+    };
+
     const signInWithGoogle = async () => {
         try {
             const { error } = await supabase.auth.signInWithOAuth({
@@ -370,8 +387,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const signInWithOtp = async (email: string) => {
+        try {
+            const { error } = await supabase.auth.signInWithOtp({
+                email,
+                options: {
+                    emailRedirectTo: window.location.origin
+                }
+            });
+            return { error };
+        } catch (error: any) {
+            return { error };
+        }
+    };
+
+    const verifyOtp = async (email: string, token: string) => {
+        try {
+            const { data, error } = await supabase.auth.verifyOtp({
+                email,
+                token,
+                type: 'signup' // or 'magiclink'? Supabase docs say 'signup' for OTP
+            });
+
+            // If signup fails, try magiclink/signin
+            if (error) {
+                const { data: data2, error: error2 } = await supabase.auth.verifyOtp({
+                    email,
+                    token,
+                    type: 'magiclink'
+                });
+                return { user: data2?.user, error: error2 };
+            }
+
+            return { user: data?.user, error: null };
+        } catch (error: any) {
+            return { user: null, error };
+        }
+    };
+
+
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, signInWithGoogle }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists }}>
             {children}
         </AuthContext.Provider>
     );
