@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'; // v2 build trigger
+import React, { useState } from 'react'; // v2 build trigger
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, Eye, EyeOff, Home, GraduationCap, School, AlertCircle } from 'lucide-react';
@@ -20,7 +20,7 @@ export default function Login() {
 
     const navigate = useNavigate();
     const location = useLocation();
-    const { login, signup, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup } = useAuth();
+    const { login, signup, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup, updateRegistrationNumber } = useAuth();
     const { theme } = useTheme();
 
     // OTP Flow State for Quiz Mode
@@ -30,6 +30,7 @@ export default function Login() {
     const [otpLoading, setOtpLoading] = useState(false);
     const [otpError, setOtpError] = useState('');
     const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
+    const [needsRegNo, setNeedsRegNo] = useState(false);
 
     const handleSendOTP = async () => {
         if (!otpEmail || !otpEmail.includes('@')) {
@@ -92,10 +93,12 @@ export default function Login() {
             if (user) {
                 setVerifiedUserId(user.id);
                 // Success - only now can we proceed to the next stage
-                const exists = await checkProfileExists(user.id);
-                if (exists) {
+                const existsInfo = await checkProfileExists(user.id);
+                if (existsInfo.exists) {
+                    setNeedsRegNo(!existsInfo.hasRegNo);
                     setOtpStage('password');
                 } else {
+                    setNeedsRegNo(true);
                     setOtpStage('signup');
                 }
             } else {
@@ -111,6 +114,16 @@ export default function Login() {
     const onOtpPasswordSubmit = async (data: any) => {
         try {
             setIsLoading(true);
+
+            if (needsRegNo && data.registrationNumber) {
+                const { error: regError } = await updateRegistrationNumber(verifiedUserId!, data.registrationNumber);
+                if (regError) {
+                     setOtpError(regError.message || 'Failed to save registration number');
+                     setIsLoading(false);
+                     return;
+                }
+            }
+
             const user = await login(otpEmail, data.password);
             if (user) {
                 finishQuizLogin();
@@ -134,7 +147,8 @@ export default function Login() {
                 otpEmail,
                 data.password,
                 otpEmail.split('@')[0],
-                'student'
+                'student',
+                data.registrationNumber
             );
 
             if (error) throw error;
@@ -452,6 +466,22 @@ export default function Login() {
                             {/* Stage 3: Password for Registered User */}
                             {otpStage === 'password' && (
                                 <form onSubmit={handleSubmitOtpPass(onOtpPasswordSubmit)} className="space-y-4">
+                                    {needsRegNo && (
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Registration Number</label>
+                                            <div className="relative group">
+                                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                    <School className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                                </div>
+                                                <Input
+                                                    {...registerOtpPass('registrationNumber', { required: 'Registration number is required' })}
+                                                    placeholder="e.g. RA2111026010001"
+                                                    className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                                    error={errorsOtpPass.registrationNumber?.message as string}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="space-y-2">
                                         <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Enter Password</label>
                                         <div className="relative group">
@@ -490,6 +520,20 @@ export default function Login() {
                                     <div className="text-center mb-4">
                                         <p className="text-sm font-medium text-primary">New account detected!</p>
                                         <p className="text-xs text-neutral-500">Create a password to secure your results.</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Registration Number</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <School className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            </div>
+                                            <Input
+                                                {...registerOtpSignup('registrationNumber', { required: 'Registration number is required' })}
+                                                placeholder="e.g. RA2111026010001"
+                                                className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                                error={errorsOtpSignup.registrationNumber?.message as string}
+                                            />
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Create Password</label>

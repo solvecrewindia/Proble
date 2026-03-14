@@ -12,8 +12,9 @@ interface AuthContextType {
     signInWithGoogle: () => Promise<void>;
     signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
     verifyOtp: (email: string, token: string) => Promise<{ user: any; error: Error | null }>;
-    checkProfileExists: (userId: string) => Promise<boolean>;
-    finalizeSignup: (userId: string, email: string, password: string, username: string, role: User['role']) => Promise<{ user: User | null; error: Error | null }>;
+    checkProfileExists: (userId: string) => Promise<{ exists: boolean; hasRegNo: boolean }>;
+    finalizeSignup: (userId: string, email: string, password: string, username: string, role: User['role'], registrationNumber?: string) => Promise<{ user: User | null; error: Error | null }>;
+    updateRegistrationNumber: (userId: string, registrationNumber: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -366,13 +367,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id')
+                .select('id, registration_number')
                 .eq('id', userId)
                 .single();
-            if (error) return false;
-            return !!data;
+            if (error) return { exists: false, hasRegNo: false };
+            return { exists: !!data, hasRegNo: !!data?.registration_number };
         } catch (err) {
-            return false;
+            return { exists: false, hasRegNo: false };
+        }
+    };
+
+    const updateRegistrationNumber = async (userId: string, registrationNumber: string) => {
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ registration_number: registrationNumber })
+                .eq('id', userId);
+            
+            if (error) return { error };
+            
+            return { error: null };
+        } catch (error: any) {
+            return { error };
         }
     };
 
@@ -427,7 +443,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
 
-    const finalizeSignup = async (userId: string, email: string, password: string, username: string, role: User['role']) => {
+    const finalizeSignup = async (userId: string, email: string, password: string, username: string, role: User['role'], registrationNumber?: string) => {
         try {
             // 1. Update password
             const { error: updateError } = await supabase.auth.updateUser({ password });
@@ -441,7 +457,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         id: userId,
                         username,
                         role,
-                        email
+                        email,
+                        registration_number: registrationNumber || null
                     }
                 ]);
 
@@ -467,7 +484,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup, updateRegistrationNumber }}>
             {children}
         </AuthContext.Provider>
     );
