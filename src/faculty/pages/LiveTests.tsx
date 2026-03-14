@@ -80,10 +80,27 @@ export default function LiveTests() {
         document.body.removeChild(link);
     };
 
-    const handleRetest = async (resultId: string, studentName: string) => {
+    const handleRetest = async (result: any, studentName: string) => {
         if (confirm(`Allow ${studentName} to retake? This deletes the current result.`)) {
-            const { error } = await supabase.from('quiz_results').delete().eq('id', resultId);
-            if (!error && selectedQuizId) fetchResults(selectedQuizId);
+            // 1. Delete from quiz_results
+            const { error: resultsError } = await supabase
+                .from('quiz_results')
+                .delete()
+                .eq('id', result.id);
+
+            if (resultsError) {
+                console.error("Error deleting live result:", resultsError);
+                return;
+            }
+
+            // 2. Delete from attempts
+            await supabase
+                .from('attempts')
+                .delete()
+                .eq('quiz_id', result.quiz_id)
+                .eq('student_id', result.student_id);
+
+            if (selectedQuizId) fetchResults(selectedQuizId);
         }
     };
 
@@ -355,7 +372,7 @@ export default function LiveTests() {
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                                                onClick={() => handleRetest(res.id, res.profiles?.username)}
+                                                                onClick={() => handleRetest(res, res.profiles?.username)}
                                                                 title="Reset Attempt"
                                                             >
                                                                 <RotateCw className="h-4 w-4" />

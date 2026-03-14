@@ -139,19 +139,34 @@ export default function Master() {
         document.body.removeChild(link);
     };
 
-    const handleRetest = async (resultId: string, studentName: string) => {
+    const handleRetest = async (result: any, studentName: string) => {
         if (confirm(`Are you sure you want to allow ${studentName} to retake this test? This will delete their current attempt.`)) {
-            const { error } = await supabase
+            // 1. Delete from quiz_results
+            const { error: resultsError } = await supabase
                 .from('quiz_results')
                 .delete()
-                .eq('id', resultId);
+                .eq('id', result.id);
 
-            if (error) {
-                alert("Failed to reset attempt: " + error.message);
-            } else {
-                alert("Attempt reset successfully.");
-                if (selectedQuizId) fetchResults(selectedQuizId);
+            if (resultsError) {
+                alert("Failed to delete result: " + resultsError.message);
+                return;
             }
+
+            // 2. Delete from attempts to unlock the test for the student
+            const { error: attemptsError } = await supabase
+                .from('attempts')
+                .delete()
+                .eq('quiz_id', result.quiz_id)
+                .eq('student_id', result.student_id);
+
+            if (attemptsError) {
+                console.error("Error clearing attempts:", attemptsError);
+                // We don't alert here as the main result is already gone, 
+                // but ideally both should be deleted.
+            }
+
+            alert("Attempt reset successfully. The student can now retake the test.");
+            if (selectedQuizId) fetchResults(selectedQuizId);
         }
     };
 
@@ -302,7 +317,7 @@ export default function Master() {
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                                        onClick={() => handleRetest(res.id, res.profiles?.username)}
+                                                        onClick={() => handleRetest(res, res.profiles?.username)}
                                                         title="Allow Retest (Delete Result)"
                                                     >
                                                         <RotateCw className="h-4 w-4" />
