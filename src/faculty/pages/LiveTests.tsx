@@ -37,7 +37,7 @@ export default function LiveTests() {
                 .from('quiz_results')
                 .select(`
                     *,
-                    profiles:student_id (username, email, registration_number)
+                    profiles (username, email, registration_number)
                 `)
                 .eq('quiz_id', quizId)
                 .order('percentage', { ascending: false });

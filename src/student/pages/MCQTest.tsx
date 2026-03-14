@@ -208,7 +208,8 @@ const MCQTest = () => {
                 student_id: user.id,
                 score: calculatedScore,
                 total_questions: questions.length,
-                percentage: (calculatedScore / questions.length) * 100
+                percentage: (calculatedScore / questions.length) * 100,
+                answers: answers // Store answers for detailed Excel report
             }, { onConflict: 'quiz_id, student_id' });
 
             // 4. Mark Attempt as Completed
