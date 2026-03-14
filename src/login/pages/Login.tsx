@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../../shared/context/AuthContext';
 import { useTheme } from '../../shared/context/ThemeContext';
+import { supabase } from '../../lib/supabase';
 
 type Tab = 'signin' | 'signup';
 type Role = 'student' | 'teacher' | null;
@@ -35,6 +36,30 @@ export default function Login() {
             setOtpError('Please enter a valid email');
             return;
         }
+
+        const quizIntent = localStorage.getItem('quiz_join_intent');
+        if (quizIntent) {
+            try {
+                const { data: quizDataList, error: quizError } = await supabase
+                    .from('quizzes')
+                    .select('settings')
+                    .eq('code', quizIntent)
+                    .limit(1);
+
+                if (!quizError && quizDataList?.[0]) {
+                    const quizData = quizDataList[0];
+                    if (quizData.settings?.allowedDomain) {
+                        if (!otpEmail.endsWith(quizData.settings.allowedDomain)) {
+                            setOtpError(`This quiz is restricted to users from ${quizData.settings.allowedDomain} only.`);
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error checking quiz domain:", err);
+            }
+        }
+
         setOtpLoading(true);
         setOtpError('');
         try {
