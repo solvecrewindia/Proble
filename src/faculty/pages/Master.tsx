@@ -81,6 +81,7 @@ export default function Master() {
     const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
     const [results, setResults] = useState<any[]>([]);
     const [viewingResults, setViewingResults] = useState(false);
+    const [refreshingResults, setRefreshingResults] = useState(false);
 
     const fetchResults = async (quizId: string) => {
         console.log(`[DEBUG] fetchResults called for quizId: ${quizId}`);
@@ -320,6 +321,20 @@ export default function Master() {
                         <div className="p-6 border-b border-neutral-300 dark:border-neutral-600 flex justify-between items-center">
                             <h2 className="text-xl font-bold text-text">Student Results</h2>
                             <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={refreshingResults}
+                                    onClick={async () => {
+                                        if (!selectedQuizId) return;
+                                        setRefreshingResults(true);
+                                        await fetchResults(selectedQuizId);
+                                        setRefreshingResults(false);
+                                    }}
+                                >
+                                    <RotateCw className={`mr-2 h-4 w-4 ${refreshingResults ? 'animate-spin' : ''}`} />
+                                    {refreshingResults ? 'Refreshing...' : 'Refresh'}
+                                </Button>
                                 <Button variant="outline" size="sm" onClick={downloadResultsAsCSV}>
                                     <Download className="mr-2 h-4 w-4" /> Download Excel
                                 </Button>
