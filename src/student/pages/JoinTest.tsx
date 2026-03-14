@@ -132,7 +132,8 @@ const JoinTest = () => {
                 if (attemptError) {
                     console.error("Error checking attempts:", attemptError);
                 } else if (existingAttempts && existingAttempts.length > 0) {
-                    throw new Error("You have already attempted this assessment. Retakes are not allowed.");
+                    // Redirect to the dashboard if they already completed it
+                    return navigate('/student/dashboard');
                 }
             }
 
