@@ -174,7 +174,7 @@ export default function Master() {
                 alert("Warning: Score deleted but attempt history clearing failed: " + attemptsError.message);
             }
 
-            alert("Retest enabled successfully. The student can now join and retake the test.");
+            alert(`Retest granted for ${studentName}`);
             if (selectedQuizId) fetchResults(selectedQuizId);
         }
     };

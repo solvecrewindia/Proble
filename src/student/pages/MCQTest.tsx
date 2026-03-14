@@ -656,10 +656,10 @@ const MCQTest = () => {
                     <div className="flex flex-col items-center gap-4">
                         {/* Violations Recorded text removed */}
                         <button
-                            onClick={() => navigate('/')}
+                            onClick={() => navigate('/student/dashboard')}
                             className="btn-primary w-full py-4 text-lg rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all"
                         >
-                            Return to Home
+                            Return to Dashboard
                         </button>
                     </div>
                 </div>
