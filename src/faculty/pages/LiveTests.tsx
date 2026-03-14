@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Save, CheckCircle, Clock, Copy, QrCode, Link as LinkIcon, Trash2, Download, RotateCw, FileSpreadsheet } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { Play, Save, CheckCircle, Clock, Copy, QrCode, Link as LinkIcon, Trash2, Download, RotateCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase'; // Import supabase
 import { Card, CardContent } from '../components/ui/Card'; // Import UI components
@@ -79,57 +78,6 @@ export default function LiveTests() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    };
-
-    const downloadStudentResult = async (result: any) => {
-        if (!selectedQuizId) return;
-        const quiz = quizzes.find(q => q.id === selectedQuizId);
-        if (!quiz || !quiz.questions) {
-            alert("Quiz data not found for generating report.");
-            return;
-        }
-
-        // Fetch the student's answers from the attempts table
-        const { data: attemptData } = await supabase
-            .from('attempts')
-            .select('answers')
-            .eq('quiz_id', selectedQuizId)
-            .eq('student_id', result.student_id)
-            .single();
-
-        const answers = attemptData?.answers || {};
-
-        const reportData = quiz.questions.map((q, index) => {
-            const userAnswer = answers[q.id] !== undefined ? answers[q.id] : null;
-            const formatAnswer = (ans: any, type: string) => {
-                if (ans === null || ans === undefined) return "Skipped";
-                if (type === 'mcq' || type === 'true_false') {
-                    if (q.options && q.options[ans]) return `${String.fromCharCode(65 + Number(ans))}. ${q.options[ans]}`;
-                    return String.fromCharCode(65 + Number(ans));
-                }
-                if (type === 'msq' && Array.isArray(ans)) {
-                    return ans.map(a => String.fromCharCode(65 + Number(a))).join(', ');
-                }
-                return ans;
-            };
-
-            const isCorrect = JSON.stringify(userAnswer) === JSON.stringify(q.correct);
-
-            return {
-                "Question No": `Q${index + 1}`,
-                "Question": q.stem,
-                "Given Answer": formatAnswer(userAnswer, q.type),
-                "Correct Answer": formatAnswer(q.correct, q.type),
-                "Status": isCorrect ? "Correct" : "Incorrect",
-                "Points": isCorrect ? q.weight : 0
-            };
-        });
-
-        const ws = XLSX.utils.json_to_sheet(reportData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Result Report");
-        const studentName = result.profiles?.registration_number || result.profiles?.username || "Student";
-        XLSX.writeFile(wb, `${studentName.replace(/[^a-z0-9]/gi, '_')}_Report.xlsx`);
     };
 
     const handleRetest = async (resultId: string, studentName: string) => {
@@ -411,15 +359,6 @@ export default function LiveTests() {
                                                                 title="Reset Attempt"
                                                             >
                                                                 <RotateCw className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-8 w-8 p-0 text-primary hover:bg-primary/10"
-                                                                onClick={() => downloadStudentResult(res)}
-                                                                title="Download Report"
-                                                            >
-                                                                <FileSpreadsheet className="h-4 w-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
