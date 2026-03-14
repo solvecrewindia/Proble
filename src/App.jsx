@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from './shared/context/AuthContext'
 import { useAntiCheat } from './shared/hooks/useAntiCheat';
 import { ThemeProvider } from './shared/context/ThemeContext';
 import Header from './shared/components/Header';
-import RegistrationNumberModal from './shared/components/RegistrationNumberModal';
 import InstallPwaPopup from './shared/components/InstallPwaPopup';
 import Maintenance from './shared/components/Maintenance';
 import { useState, Suspense, useEffect } from 'react';
@@ -170,7 +169,6 @@ function AppContent() {
             {!isHeaderHidden && (
                 <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
             )}
-            <RegistrationNumberModal />
             <InstallPwaPopup />
             <Suspense fallback={<FullScreenLoader />}>
                 <Routes>
