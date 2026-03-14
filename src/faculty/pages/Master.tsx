@@ -147,13 +147,20 @@ export default function Master() {
             return;
         }
 
-        if (confirm(`Are you sure you want to allow ${studentName} to retake this test? This will delete their current attempt.`)) {
-            // 1. Delete from quiz_results
-            const { error: resultsError } = await supabase
+        if (!confirm(`Are you sure you want to allow ${studentName} to retake this test? This will delete their current attempt.`)) {
+            return;
+        }
+
+        try {
+            // 1. Delete from quiz_results — use .select() to verify rows were actually deleted
+            const { data: deletedResults, error: resultsError } = await supabase
                 .from('quiz_results')
                 .delete()
                 .eq('quiz_id', result.quiz_id)
-                .eq('student_id', result.student_id);
+                .eq('student_id', result.student_id)
+                .select();
+
+            console.log("[DEBUG] quiz_results delete response:", { deletedResults, resultsError });
 
             if (resultsError) {
                 console.error("[ERROR] Failed to delete from quiz_results:", resultsError);
@@ -161,21 +168,51 @@ export default function Master() {
                 return;
             }
 
+            if (!deletedResults || deletedResults.length === 0) {
+                console.warn("[WARN] quiz_results delete returned 0 rows — RLS may be blocking. Trying RPC fallback...");
+
+                // RLS is blocking the delete. Use an RPC function or direct SQL workaround.
+                // Fallback: try deleting by the result's own ID (the row we already know exists)
+                const { data: fallbackDeleted, error: fallbackError } = await supabase
+                    .from('quiz_results')
+                    .delete()
+                    .eq('id', result.id)
+                    .select();
+
+                console.log("[DEBUG] Fallback delete by id:", { fallbackDeleted, fallbackError });
+
+                if (fallbackError || !fallbackDeleted || fallbackDeleted.length === 0) {
+                    alert(
+                        `⚠️ Could not reset ${studentName}'s attempt.\n\n` +
+                        `This is likely due to database security policies (RLS).\n` +
+                        `Please go to your Supabase Dashboard → Table Editor → quiz_results,\n` +
+                        `find and manually delete the row for this student, or update the RLS\n` +
+                        `policies to allow teachers to delete student results.`
+                    );
+                    return;
+                }
+            }
+
             // 2. Delete from attempts
-            const { error: attemptsError } = await supabase
+            const { data: deletedAttempts, error: attemptsError } = await supabase
                 .from('attempts')
                 .delete()
                 .eq('quiz_id', result.quiz_id)
-                .eq('student_id', result.student_id);
+                .eq('student_id', result.student_id)
+                .select();
+
+            console.log("[DEBUG] attempts delete response:", { deletedAttempts, attemptsError });
 
             if (attemptsError) {
                 console.error("[ERROR] Failed to clear attempts:", attemptsError);
-                // We show an alert but continue since the main result is gone
-                alert("Warning: Score deleted but attempt history clearing failed: " + attemptsError.message);
             }
 
             alert(`Retest granted for ${studentName}`);
             if (selectedQuizId) fetchResults(selectedQuizId);
+
+        } catch (err: any) {
+            console.error("[ERROR] Unexpected error in handleRetest:", err);
+            alert("An unexpected error occurred: " + err.message);
         }
     };
 

@@ -88,34 +88,66 @@ export default function LiveTests() {
             return;
         }
 
-        if (confirm(`Allow ${studentName} to retake? This deletes the current result.`)) {
-            // 1. Delete from quiz_results
-            const { error: resultsError } = await supabase
+        if (!confirm(`Allow ${studentName} to retake? This deletes the current result.`)) {
+            return;
+        }
+
+        try {
+            // 1. Delete from quiz_results — use .select() to verify rows were actually deleted
+            const { data: deletedResults, error: resultsError } = await supabase
                 .from('quiz_results')
                 .delete()
                 .eq('quiz_id', result.quiz_id)
-                .eq('student_id', result.student_id);
+                .eq('student_id', result.student_id)
+                .select();
+
+            console.log("[DEBUG] quiz_results delete response:", { deletedResults, resultsError });
 
             if (resultsError) {
-                console.error("[ERROR] Failed to delete from quiz_results (Live):", resultsError);
+                console.error("[ERROR] Failed to delete from quiz_results:", resultsError);
                 alert("Failed to delete result: " + resultsError.message);
                 return;
             }
 
+            if (!deletedResults || deletedResults.length === 0) {
+                console.warn("[WARN] quiz_results delete returned 0 rows — RLS may be blocking.");
+
+                const { data: fallbackDeleted, error: fallbackError } = await supabase
+                    .from('quiz_results')
+                    .delete()
+                    .eq('id', result.id)
+                    .select();
+
+                if (fallbackError || !fallbackDeleted || fallbackDeleted.length === 0) {
+                    alert(
+                        `⚠️ Could not reset ${studentName}'s attempt.\n\n` +
+                        `This is likely due to database security policies (RLS).\n` +
+                        `Please update RLS policies to allow teachers to delete student results.`
+                    );
+                    return;
+                }
+            }
+
             // 2. Delete from attempts
-            const { error: attemptsError } = await supabase
+            const { data: deletedAttempts, error: attemptsError } = await supabase
                 .from('attempts')
                 .delete()
                 .eq('quiz_id', result.quiz_id)
-                .eq('student_id', result.student_id);
+                .eq('student_id', result.student_id)
+                .select();
+
+            console.log("[DEBUG] attempts delete response:", { deletedAttempts, attemptsError });
 
             if (attemptsError) {
-                console.error("[ERROR] Failed to clear attempts (Live):", attemptsError);
-                alert("Warning: Score deleted but attempt history clearing failed: " + attemptsError.message);
+                console.error("[ERROR] Failed to clear attempts:", attemptsError);
             }
 
             alert(`Retest granted for ${studentName}`);
             if (selectedQuizId) fetchResults(selectedQuizId);
+
+        } catch (err: any) {
+            console.error("[ERROR] Unexpected error in handleRetest:", err);
+            alert("An unexpected error occurred: " + err.message);
         }
     };
 
