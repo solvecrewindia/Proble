@@ -118,9 +118,9 @@ export default function Login() {
             if (needsRegNo && data.registrationNumber) {
                 const { error: regError } = await updateRegistrationNumber(verifiedUserId!, data.registrationNumber);
                 if (regError) {
-                     setOtpError(regError.message || 'Failed to save registration number');
-                     setIsLoading(false);
-                     return;
+                    setOtpError(regError.message || 'Failed to save registration number');
+                    setIsLoading(false);
+                    return;
                 }
             }
 
@@ -518,7 +518,7 @@ export default function Login() {
                             {otpStage === 'signup' && (
                                 <form onSubmit={handleSubmitOtpSignup(onOtpSignupSubmit)} className="space-y-4">
                                     <div className="text-center mb-4">
-                                        <p className="text-sm font-medium text-primary">New account detected!</p>
+                                        <p className="text-sm font-medium text-primary">Creating new account</p>
                                         <p className="text-xs text-neutral-500">Create a password to secure your results.</p>
                                     </div>
                                     <div className="space-y-2">
@@ -563,7 +563,7 @@ export default function Login() {
                                     <Button
                                         type="submit"
                                         disabled={isLoading}
-                                        className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg"
+                                        className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-primary to-blue-500 text-white shadow-lg"
                                     >
                                         {isLoading ? 'Creating Account...' : 'Create & Join'}
                                     </Button>
