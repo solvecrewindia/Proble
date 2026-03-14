@@ -81,7 +81,7 @@ export default function LiveTests() {
         document.body.removeChild(link);
     };
 
-    const downloadStudentResult = (result: any) => {
+    const downloadStudentResult = async (result: any) => {
         if (!selectedQuizId) return;
         const quiz = quizzes.find(q => q.id === selectedQuizId);
         if (!quiz || !quiz.questions) {
@@ -89,8 +89,18 @@ export default function LiveTests() {
             return;
         }
 
+        // Fetch the student's answers from the attempts table
+        const { data: attemptData } = await supabase
+            .from('attempts')
+            .select('answers')
+            .eq('quiz_id', selectedQuizId)
+            .eq('student_id', result.student_id)
+            .single();
+
+        const answers = attemptData?.answers || {};
+
         const reportData = quiz.questions.map((q, index) => {
-            const userAnswer = result.answers ? result.answers[q.id] : null;
+            const userAnswer = answers[q.id] !== undefined ? answers[q.id] : null;
             const formatAnswer = (ans: any, type: string) => {
                 if (ans === null || ans === undefined) return "Skipped";
                 if (type === 'mcq' || type === 'true_false') {

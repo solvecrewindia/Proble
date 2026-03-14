@@ -203,14 +203,15 @@ const MCQTest = () => {
             setShowResults(true);
 
             // 3. Save to quiz_results (Legacy/Dashboard support)
-            await supabase.from('quiz_results').upsert({
+            // Use .insert() because 'quiz_id, student_id' might not be a unique constraint
+            // and 'answers' column does not exist on this table
+            await supabase.from('quiz_results').insert({
                 quiz_id: id,
                 student_id: user.id,
                 score: calculatedScore,
                 total_questions: questions.length,
-                percentage: (calculatedScore / questions.length) * 100,
-                answers: answers // Store answers for detailed Excel report
-            }, { onConflict: 'quiz_id, student_id' });
+                percentage: (calculatedScore / questions.length) * 100
+            });
 
             // 4. Mark Attempt as Completed
             await supabase.from('attempts').update({
