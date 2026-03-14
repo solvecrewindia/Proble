@@ -132,8 +132,7 @@ const JoinTest = () => {
                 if (attemptError) {
                     console.error("Error checking attempts:", attemptError);
                 } else if (existingAttempts && existingAttempts.length > 0) {
-                    // Redirect to the dashboard if they already completed it
-                    return navigate('/student/dashboard');
+                    throw new Error("You have already completed this test.");
                 }
             }
 
@@ -338,13 +337,25 @@ const JoinTest = () => {
                             </div>
 
                             {error && (
-                                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-2">
-                                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                                    <span>{error}</span>
+                                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-bold flex flex-col items-center justify-center gap-3 animate-in slide-in-from-top-2">
+                                    <div className="flex items-center gap-2">
+                                        <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                                        <span>{error}</span>
+                                    </div>
+                                    {error.includes('already completed') && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="w-full border-red-500/50 text-red-500 hover:bg-red-500/20"
+                                            onClick={() => navigate('/student/dashboard')}
+                                        >
+                                            Return to Dashboard
+                                        </Button>
+                                    )}
                                 </div>
                             )}
 
-                            {!error.includes('restricted to users from') && (
+                            {!error.includes('restricted to users from') && !error.includes('already completed') && (
                                 <Button
                                     type="submit"
                                     className="w-full h-16 text-xl font-black rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-1 active:translate-y-0"
