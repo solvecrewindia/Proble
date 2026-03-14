@@ -230,35 +230,23 @@ const MCQTest = () => {
         }
     }, [answers, questions, id, codeExecutionStatus]);
 
-    // Security State (Moved here to access calculateAndShowResults)
+    // Security Focus State (For UI overlays only)
     useEffect(() => {
         const handleFocus = () => setIsWindowFocused(true);
-        const handleBlur = () => {
-            if (testActive && !showResults) {
-                setIsWindowFocused(false);
-                calculateAndShowResults(); // Strict Mode: Finish immediately
-            }
-        };
-
-        const handleVisibilityChange = () => {
-            if (document.hidden && testActive && !showResults) {
-                setIsWindowFocused(false);
-                calculateAndShowResults();
-            }
-        };
-
+        const handleBlur = () => setIsWindowFocused(false);
+        
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        window.addEventListener('pagehide', handleBlur);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) setIsWindowFocused(false);
+            else setIsWindowFocused(true);
+        });
 
         return () => {
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('pagehide', handleBlur);
         };
-    }, [testActive, showResults, calculateAndShowResults]);
+    }, []);
 
     // Anti-Cheat Integration
     const {
@@ -267,15 +255,11 @@ const MCQTest = () => {
         enterFullScreen
     } = useAntiCheat({
         enabled: testActive && !showResults,
-        level: quizSettings?.antiCheatLevel || 'standard',
-        maxViolations: 3,
+        level: quizSettings?.antiCheatLevel || (quizSettings?.isMaster ? 'strict' : 'standard'), // Master tests default to strict
+        maxViolations: quizSettings?.maxViolations || 3,
         onAutoSubmit: () => {
-            alert("Maximum violations reached. Your test is being submitted.");
+            // No alert here, overlay handles the visual feedback
             calculateAndShowResults();
-        },
-        onViolation: (count, type) => {
-            // Warning logic is handled by hook state, we just log here
-            console.log(`Violation: ${type} (${count}/3)`);
         }
     });
 

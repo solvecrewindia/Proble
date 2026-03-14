@@ -32,7 +32,7 @@ export const useAntiCheat = ({
             // Notify parent
             if (onViolation) onViolation(newCount, type);
 
-            // Check limit
+            // Check limit - triggers auto-submit
             if (newCount >= effectiveLimit && onAutoSubmit) {
                 onAutoSubmit();
             }
@@ -40,11 +40,11 @@ export const useAntiCheat = ({
             return newCount;
         });
 
-        setWarning(`Violation detected: ${type}. warning ${violations + 1}/${effectiveLimit}`);
+        setWarning(`Security Violation: ${type}. Warning ${violations + 1}/${effectiveLimit}`);
 
-        // Clear warning after a few seconds
+        // Clear warning after 5 seconds
         setTimeout(() => setWarning(null), 5000);
-    }, [enabled, maxViolations, onViolation, onAutoSubmit, violations]);
+    }, [enabled, effectiveLimit, onViolation, onAutoSubmit, violations]);
 
     // 1. Full Screen Enforcement
     const enterFullScreen = async () => {
@@ -65,30 +65,38 @@ export const useAntiCheat = ({
     useEffect(() => {
         if (!enabled) return;
 
-        // Bypass for iOS
         const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-        if (isIOS) {
-            setIsFullScreen(true);
-            return;
-        }
-
+        
         const handleFullScreenChange = () => {
-            if (!document.fullscreenElement) {
+            // Document.fullscreenElement is common for Desktop and Android
+            const inFullScreen = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+            
+            if (!inFullScreen) {
                 setIsFullScreen(false);
+                // On mobile, sometimes rotation or system bars cause this, but it's still a risk
                 triggerViolation("Exited Full Screen");
             } else {
                 setIsFullScreen(true);
             }
         };
 
-        document.addEventListener('fullscreenchange', handleFullScreenChange);
-
-        // Initial check/force
-        if (!document.fullscreenElement) {
-            setIsFullScreen(false);
+        if (isIOS) {
+            // iOS Safari doesn't support standard fullscreen API for elements well
+            // We assume true for UI purposes but still rely on blur/visibility
+            setIsFullScreen(true);
+        } else {
+            document.addEventListener('fullscreenchange', handleFullScreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullScreenChange);
+            
+            if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+                setIsFullScreen(false);
+            }
         }
 
-        return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullScreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullScreenChange);
+        };
     }, [enabled, triggerViolation]);
 
     // 2. Visibility Change (Tab Switching) & Focus Loss
@@ -124,13 +132,7 @@ export const useAntiCheat = ({
 
         const preventDefault = (e: Event) => e.preventDefault();
 
-        document.addEventListener('contextmenu', preventDefault);
-        document.addEventListener('copy', preventDefault);
-        document.addEventListener('paste', preventDefault);
-        document.addEventListener('cut', preventDefault);
-
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Block specific combos like Alt+Tab (hard to block but we can detect blur), F12, Ctrl+C
             if (
                 (e.ctrlKey && ['c', 'v', 'x', 'p', 'u'].includes(e.key.toLowerCase())) ||
                 e.key === 'F12' ||
@@ -141,22 +143,41 @@ export const useAntiCheat = ({
             }
         };
 
+        document.addEventListener('contextmenu', preventDefault);
+        document.addEventListener('copy', preventDefault);
+        document.addEventListener('paste', preventDefault);
+        document.addEventListener('cut', preventDefault);
         window.addEventListener('keydown', handleKeyDown);
 
-        // 4. Disable Text Selection via CSS
+        // 5. Block Long-Press (Often used to trigger Google Lens / Circle to Search)
+        const handleTouchStart = (e: TouchEvent) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+                triggerViolation("Multi-touch Gesture");
+            }
+        };
+
+        document.addEventListener('touchstart', handleTouchStart, { passive: false });
+        
+        // 6. Disable Text Selection & Image Dragging via CSS
         const style = document.createElement('style');
         style.innerHTML = `
             body {
-                -webkit-user-select: none;
-                -moz-user-select: none;
-                -ms-user-select: none;
-                user-select: none;
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+                user-select: none !important;
+                -webkit-touch-callout: none !important; /* Disable iOS context menu */
+            }
+            img {
+                -webkit-user-drag: none !important;
+                pointer-events: none !important; /* Block long-press on images */
             }
             input, textarea, [contenteditable] {
-                -webkit-user-select: text;
-                -moz-user-select: text;
-                -ms-user-select: text;
-                user-select: text;
+                -webkit-user-select: text !important;
+                -moz-user-select: text !important;
+                -ms-user-select: text !important;
+                user-select: text !important;
             }
         `;
         document.head.appendChild(style);
