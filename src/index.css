@@ -60,11 +60,11 @@
     }
 
     .btn-primary {
-        @apply bg-gradient-to-r from-primary to-secondary text-white font-medium px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-primary/25 transition-all duration-300 active:scale-95;
+        @apply bg-primary text-white font-medium px-4 py-2 rounded-xl hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 transition-all duration-300 active:scale-95;
     }
 
     .text-gradient {
-        @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+        @apply text-primary;
     }
 }
 

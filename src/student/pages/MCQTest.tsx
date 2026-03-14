@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
@@ -262,7 +262,6 @@ const MCQTest = () => {
 
     // Anti-Cheat Integration
     const {
-        violations,
         isFullScreen,
         warning,
         enterFullScreen
@@ -589,7 +588,7 @@ const MCQTest = () => {
                             <div className="text-7xl font-black text-primary mb-2 drop-shadow-sm">
                                 {Math.round((score / questions.length) * 100)}%
                             </div>
-                            <p className="text-xs font-bold text-muted uppercase tracking-widest">Global Performance Score</p>
+                            <p className="text-xs font-bold text-muted uppercase tracking-widest">Total Score Percentage</p>
                             <p className="text-sm font-medium text-text mt-4">You scored {score} out of {questions.length}</p>
                         </div>
                     )}
@@ -667,22 +666,16 @@ const MCQTest = () => {
                             })}
                         </div>
                     ) : (
-                        showScore && (
-                            <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 mb-12 animate-in fade-in duration-700">
-                                <p className="text-sm font-medium text-text italic">
-                                    To maintain assessment integrity, detailed answers are not shown for this test.
-                                </p>
-                            </div>
-                        )
+                        null
                     )}
 
                     <div className="flex flex-col items-center gap-4">
-                        <p className="text-xs font-bold text-muted uppercase tracking-widest mb-2">Violations Recorded: {violations}</p>
+                        {/* Violations Recorded text removed */}
                         <button
-                            onClick={() => navigate(`/student/practice/${id}`)}
+                            onClick={() => navigate('/')}
                             className="btn-primary w-full py-4 text-lg rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all"
                         >
-                            Return to Dashboard
+                            Return to Home
                         </button>
                     </div>
                 </div>
