@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { registerSW } from 'virtual:pwa-register'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './faculty/lib/queryClient'
 // Global error handler for chunk load failures
@@ -33,3 +34,16 @@ createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// Automatically check for SW updates and reload if necessary
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    // A new service worker has been found and installed.
+    // We force a hard reload so the user gets the new version immediately.
+    window.location.reload();
+  },
+  onOfflineReady() {
+    console.log('App is ready to work offline.')
+  },
+});
