@@ -140,6 +140,7 @@ export default function Master() {
     };
 
     const handleRetest = async (result: any, studentName: string) => {
+        console.log("[DEBUG] handleRetest triggered for:", result);
         if (confirm(`Are you sure you want to allow ${studentName} to retake this test? This will delete their current attempt.`)) {
             // 1. Delete from quiz_results
             const { error: resultsError } = await supabase
@@ -148,11 +149,13 @@ export default function Master() {
                 .eq('id', result.id);
 
             if (resultsError) {
+                console.error("[ERROR] Failed to delete from quiz_results:", resultsError);
                 alert("Failed to delete result: " + resultsError.message);
                 return;
             }
 
             // 2. Delete from attempts to unlock the test for the student
+            // Use result.student_id and result.quiz_id
             const { error: attemptsError } = await supabase
                 .from('attempts')
                 .delete()
@@ -160,12 +163,12 @@ export default function Master() {
                 .eq('student_id', result.student_id);
 
             if (attemptsError) {
-                console.error("Error clearing attempts:", attemptsError);
-                // We don't alert here as the main result is already gone, 
-                // but ideally both should be deleted.
+                console.error("[ERROR] Failed to clear attempts:", attemptsError);
+                alert("Result deleted, but attempt history clearing failed: " + attemptsError.message);
+            } else {
+                alert("Attempt reset successfully. The student can now retake the test.");
             }
 
-            alert("Attempt reset successfully. The student can now retake the test.");
             if (selectedQuizId) fetchResults(selectedQuizId);
         }
     };

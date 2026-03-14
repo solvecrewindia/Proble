@@ -81,6 +81,7 @@ export default function LiveTests() {
     };
 
     const handleRetest = async (result: any, studentName: string) => {
+        console.log("[DEBUG] LiveTests handleRetest triggered for:", result);
         if (confirm(`Allow ${studentName} to retake? This deletes the current result.`)) {
             // 1. Delete from quiz_results
             const { error: resultsError } = await supabase
@@ -89,16 +90,24 @@ export default function LiveTests() {
                 .eq('id', result.id);
 
             if (resultsError) {
-                console.error("Error deleting live result:", resultsError);
+                console.error("[ERROR] Failed to delete from quiz_results (Live):", resultsError);
+                alert("Failed to delete result: " + resultsError.message);
                 return;
             }
 
             // 2. Delete from attempts
-            await supabase
+            const { error: attemptsError } = await supabase
                 .from('attempts')
                 .delete()
                 .eq('quiz_id', result.quiz_id)
                 .eq('student_id', result.student_id);
+
+            if (attemptsError) {
+                console.error("[ERROR] Failed to clear attempts (Live):", attemptsError);
+                alert("Result deleted, but attempt history clearing failed: " + attemptsError.message);
+            } else {
+                alert("Attempt reset successfully. The student can now retake the test.");
+            }
 
             if (selectedQuizId) fetchResults(selectedQuizId);
         }
