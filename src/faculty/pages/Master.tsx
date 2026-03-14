@@ -141,12 +141,19 @@ export default function Master() {
 
     const handleRetest = async (result: any, studentName: string) => {
         console.log("[DEBUG] handleRetest triggered for:", result);
+
+        if (!result.quiz_id || !result.student_id) {
+            alert(`Error: Missing IDs. Quiz: ${result.quiz_id}, Student: ${result.student_id}`);
+            return;
+        }
+
         if (confirm(`Are you sure you want to allow ${studentName} to retake this test? This will delete their current attempt.`)) {
             // 1. Delete from quiz_results
             const { error: resultsError } = await supabase
                 .from('quiz_results')
                 .delete()
-                .eq('id', result.id);
+                .eq('quiz_id', result.quiz_id)
+                .eq('student_id', result.student_id);
 
             if (resultsError) {
                 console.error("[ERROR] Failed to delete from quiz_results:", resultsError);
@@ -154,8 +161,7 @@ export default function Master() {
                 return;
             }
 
-            // 2. Delete from attempts to unlock the test for the student
-            // Use result.student_id and result.quiz_id
+            // 2. Delete from attempts
             const { error: attemptsError } = await supabase
                 .from('attempts')
                 .delete()
@@ -164,11 +170,11 @@ export default function Master() {
 
             if (attemptsError) {
                 console.error("[ERROR] Failed to clear attempts:", attemptsError);
-                alert("Result deleted, but attempt history clearing failed: " + attemptsError.message);
-            } else {
-                alert("Attempt reset successfully. The student can now retake the test.");
+                // We show an alert but continue since the main result is gone
+                alert("Warning: Score deleted but attempt history clearing failed: " + attemptsError.message);
             }
 
+            alert("Retest enabled successfully. The student can now join and retake the test.");
             if (selectedQuizId) fetchResults(selectedQuizId);
         }
     };
