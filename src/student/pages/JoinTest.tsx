@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
-import { Key, Clock, FileText, AlertCircle, Play, QrCode, X } from 'lucide-react';
+import { Key, Clock, FileText, AlertCircle, Play, QrCode, X, ShieldAlert } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../shared/components/Card';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -18,6 +18,7 @@ const JoinTest = () => {
     const [verifying, setVerifying] = useState(!!urlCode);
     const [quiz, setQuiz] = useState<any>(null);
     const [error, setError] = useState('');
+    const [alreadyCompleted, setAlreadyCompleted] = useState(false);
 
     const [scanning, setScanning] = useState(false);
     const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -132,7 +133,9 @@ const JoinTest = () => {
                 if (attemptError) {
                     console.error("Error checking attempts:", attemptError);
                 } else if (existingAttempts && existingAttempts.length > 0) {
-                    throw new Error("You have already completed this test.");
+                    setAlreadyCompleted(true);
+                    setVerifying(false);
+                    return;
                 }
             }
 
@@ -178,6 +181,45 @@ const JoinTest = () => {
             }, 0);
         }
     };
+
+    if (alreadyCompleted) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
+                {/* Background glow */}
+                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-red-500/10 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-red-500/5 rounded-full blur-[120px]" />
+
+                <div className="relative z-10 max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                    {/* Icon */}
+                    <div className="relative inline-block">
+                        <div className="absolute inset-0 bg-red-500/20 blur-3xl rounded-full animate-pulse" />
+                        <div className="relative w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border-2 border-red-500/30">
+                            <ShieldAlert className="w-12 h-12 text-red-500" />
+                        </div>
+                    </div>
+
+                    {/* Message */}
+                    <div className="space-y-3">
+                        <h1 className="text-3xl font-black text-text tracking-tight">
+                            Test Already Completed
+                        </h1>
+                        <p className="text-muted text-base leading-relaxed px-4">
+                            You have already completed this test.<br />
+                            If you accidentally exited or something went wrong, please contact your respective faculty.
+                        </p>
+                    </div>
+
+                    {/* Action */}
+                    <Button
+                        className="w-full max-w-xs mx-auto h-14 text-lg font-bold rounded-2xl"
+                        onClick={() => navigate('/student/dashboard')}
+                    >
+                        Go to Dashboard
+                    </Button>
+                </div>
+            </div>
+        );
+    }
 
     if (verifying) {
         return (
