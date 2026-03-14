@@ -391,12 +391,6 @@ export default function Login() {
                                         {otpLoading ? 'Sending...' : 'Verify Email'}
                                     </Button>
 
-                                    <button
-                                        onClick={() => setIsQuizMode(false)}
-                                        className="w-full text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 underline mt-4"
-                                    >
-                                        Use regular login options
-                                    </button>
                                 </div>
                             )}
 
