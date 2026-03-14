@@ -174,6 +174,7 @@ const JoinTest = () => {
             const extracted = extractCode(pastedText);
             setTimeout(() => {
                 setCode(extracted);
+                if (error) setError('');
             }, 0);
         }
     };
@@ -326,7 +327,10 @@ const JoinTest = () => {
                                     placeholder="ACCESS CODE"
                                     value={code}
                                     onPaste={handlePaste}
-                                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                                    onChange={(e) => {
+                                        setCode(e.target.value.toUpperCase());
+                                        if (error) setError('');
+                                    }}
                                     className="w-full h-20 text-center text-3xl font-black tracking-[0.15em] uppercase rounded-2xl border border-white/5 bg-white/5 text-text focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted/30 placeholder:tracking-normal placeholder:font-bold placeholder:text-lg"
                                     maxLength={30}
                                 />
@@ -334,17 +338,20 @@ const JoinTest = () => {
 
                             {error && (
                                 <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-2">
-                                    <AlertCircle className="w-5 h-5" /> {error}
+                                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                                    <span>{error}</span>
                                 </div>
                             )}
 
-                            <Button
-                                type="submit"
-                                className="w-full h-16 text-xl font-black rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-1 active:translate-y-0"
-                                disabled={!code}
-                            >
-                                Verify & Join
-                            </Button>
+                            {!error.includes('restricted to users from') && (
+                                <Button
+                                    type="submit"
+                                    className="w-full h-16 text-xl font-black rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-1 active:translate-y-0"
+                                    disabled={!code}
+                                >
+                                    Verify & Join
+                                </Button>
+                            )}
                         </form>
                     </div>
                 </div>
