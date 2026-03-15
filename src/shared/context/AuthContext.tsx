@@ -9,6 +9,7 @@ interface AuthContextType {
     logout: () => void;
     isLoading: boolean;
     refreshUser: () => Promise<void>;
+    loadSessionUser: () => Promise<User | null>;
     signInWithGoogle: () => Promise<void>;
     signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
     verifyOtp: (email: string, token: string) => Promise<{ user: any; error: Error | null }>;
@@ -143,6 +144,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    // Loads profile from the current active Supabase session.
+    // Use this after OTP login to sync auth state before navigating.
+    const loadSessionUser = async (): Promise<User | null> => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) return null;
+            const userEmail = session.user.email || `user-${session.user.id}@example.com`;
+            const userData = await fetchProfile(session.user.id, userEmail);
+            if (userData) {
+                setUser(userData);
+                return userData;
+            }
+            return null;
+        } catch (error) {
+            console.error('loadSessionUser error:', error);
+            return null;
+        }
+    };
+
     useEffect(() => {
         let mounted = true;
 
@@ -206,15 +226,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 } else if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
                     const userEmail = session.user.email || `user-${session.user.id}@example.com`;
 
-                    // Prevent double-fetching if initializeAuth already got it.
-                    // But if user is null currently (or from cache vs fresh), lets just fetch to be consistent
-                    // unless we just fetched it in initializeAuth (hard to track)
+                    // For SIGNED_IN: ALWAYS refetch from DB to ensure fresh state.
+                    // Old Google users going through OTP will have same user.id in cache,
+                    // so the skip-on-same-ID check would wrongly skip the refresh.
+                    // For TOKEN_REFRESHED / INITIAL_SESSION: skip if we already have the user loaded.
+                    const shouldRefetch = event === 'SIGNED_IN' || !user || user.id !== session.user.id;
 
-                    // Optimistic: If we already have a user (from cache or init), we are good visually.
-                    // But we should ensure freshness primarily on SIGNED_IN.
-                    // On INITIAL_SESSION, if we already processed it in initializeAuth, duplication is okay-ish.
-
-                    if (!user || user.id !== session.user.id) {
+                    if (shouldRefetch) {
                         const userData = await fetchProfile(session.user.id, userEmail);
                         if (mounted) {
                             const currentIsGood = user && !user.isFallback;
@@ -228,7 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             setIsLoading(false);
                         }
                     } else {
-                        // User already set, just ensure loading is false
+                        // User already set and same ID on non-SIGNED_IN event — just clear loading
                         if (mounted) setIsLoading(false);
                     }
                 }
@@ -409,7 +427,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const { error } = await supabase.auth.signInWithOtp({
                 email,
                 options: {
-                    emailRedirectTo: window.location.origin
+                    shouldCreateUser: true,
+                    // NOTE: Do NOT set emailRedirectTo here — that switches Supabase
+                    // into "magic link" mode instead of sending a 6-digit OTP code.
                 }
             });
             return { error };
@@ -484,7 +504,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup, updateRegistrationNumber }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, loadSessionUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup, updateRegistrationNumber }}>
             {children}
         </AuthContext.Provider>
     );
