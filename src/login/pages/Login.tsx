@@ -1,11 +1,12 @@
 import React, { useState } from 'react'; // v2 build trigger
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, Eye, EyeOff, Home, GraduationCap, School } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, Home, GraduationCap, School, AlertCircle, User } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../../shared/context/AuthContext';
 import { useTheme } from '../../shared/context/ThemeContext';
+import { supabase } from '../../lib/supabase';
 
 type Tab = 'signin' | 'signup';
 type Role = 'student' | 'teacher' | null;
@@ -15,12 +16,172 @@ export default function Login() {
     const [signupStep, setSignupStep] = useState(1);
     const [selectedRole, setSelectedRole] = useState<Role>(null);
     const [isLoading, setIsLoading] = useState(false);
-
+    const [isQuizMode, setIsQuizMode] = useState(false);
 
     const navigate = useNavigate();
     const location = useLocation();
-    const { login, signup, signInWithGoogle } = useAuth();
+    const { login, signup, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup, updateRegistrationNumber } = useAuth();
     const { theme } = useTheme();
+
+    // OTP Flow State for Quiz Mode
+    const [otpStage, setOtpStage] = useState<'email' | 'otp' | 'password' | 'signup'>('email');
+    const [otpEmail, setOtpEmail] = useState('');
+    const [otpValue, setOtpValue] = useState('');
+    const [otpLoading, setOtpLoading] = useState(false);
+    const [otpError, setOtpError] = useState('');
+    const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
+    const [needsRegNo, setNeedsRegNo] = useState(false);
+
+    const handleSendOTP = async () => {
+        if (!otpEmail || !otpEmail.includes('@')) {
+            setOtpError('Please enter a valid email');
+            return;
+        }
+
+        const quizIntent = localStorage.getItem('quiz_join_intent');
+        if (quizIntent) {
+            try {
+                const { data: quizDataList, error: quizError } = await supabase
+                    .from('quizzes')
+                    .select('settings')
+                    .eq('code', quizIntent)
+                    .limit(1);
+
+                if (!quizError && quizDataList?.[0]) {
+                    const quizData = quizDataList[0];
+                    if (quizData.settings?.allowedDomain) {
+                        if (!otpEmail.endsWith(quizData.settings.allowedDomain)) {
+                            setOtpError(`This quiz is restricted to users from ${quizData.settings.allowedDomain} only.`);
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error checking quiz domain:", err);
+            }
+        }
+
+        setOtpLoading(true);
+        setOtpError('');
+        try {
+            const { error } = await signInWithOtp(otpEmail);
+            if (error) throw error;
+            setOtpStage('otp');
+        } catch (err: any) {
+            setOtpError(err.message || 'Failed to send OTP');
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const handleVerifyOTP = async () => {
+        if (!otpValue || otpValue.length < 6) {
+            setOtpError('Please enter the full verification code');
+            return;
+        }
+        setOtpLoading(true);
+        setOtpError('');
+        try {
+            // This call ONLY returns a user if the token/code matches exactly on the server
+            const { user, error } = await verifyOtp(otpEmail, otpValue);
+
+            if (error) {
+                setOtpError(error.message || 'Incorrect or expired code. Please check your email.');
+                return;
+            }
+
+            if (user) {
+                setVerifiedUserId(user.id);
+                // Success - only now can we proceed to the next stage
+                const existsInfo = await checkProfileExists(user.id);
+                if (existsInfo.exists) {
+                    setNeedsRegNo(!existsInfo.hasRegNo);
+                    setOtpStage('password');
+                } else {
+                    setNeedsRegNo(true);
+                    setOtpStage('signup');
+                }
+            } else {
+                setOtpError('Verification failed. Please try sending the code again.');
+            }
+        } catch (err: any) {
+            setOtpError(err.message || 'Verification error. Please try again.');
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const onOtpPasswordSubmit = async (data: any) => {
+        try {
+            setIsLoading(true);
+
+            if (needsRegNo && data.registrationNumber) {
+                const { error: regError } = await updateRegistrationNumber(verifiedUserId!, data.registrationNumber);
+                if (regError) {
+                    setOtpError(regError.message || 'Failed to save registration number');
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            const user = await login(otpEmail, data.password);
+            if (user) {
+                finishQuizLogin();
+            }
+        } catch (error: any) {
+            setOtpError(error.message || 'Login failed');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const onOtpSignupSubmit = async (data: any) => {
+        if (!verifiedUserId) {
+            setOtpError('Authentication session lost. Please restart verification.');
+            return;
+        }
+        try {
+            setIsLoading(true);
+            const { user, error } = await finalizeSignup(
+                verifiedUserId,
+                otpEmail,
+                data.password,
+                data.userName,
+                'student',
+                data.registrationNumber
+            );
+
+            if (error) throw error;
+            if (user) {
+                finishQuizLogin();
+            }
+        } catch (error: any) {
+            setOtpError(error.message || 'Account setup failed');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const finishQuizLogin = () => {
+        const searchParams = new URLSearchParams(location.search);
+        const returnTo = searchParams.get('returnTo');
+        if (returnTo) {
+            navigate(decodeURIComponent(returnTo), { replace: true });
+        } else {
+            navigate('/');
+        }
+    };
+
+    // Check for Quiz Intent on Mount
+    React.useEffect(() => {
+        const quizIntent = localStorage.getItem('quiz_join_intent');
+        const searchParams = new URLSearchParams(location.search);
+        const returnTo = searchParams.get('returnTo');
+
+        if (quizIntent || (returnTo && returnTo.includes('/quiz/'))) {
+            setIsQuizMode(true);
+        }
+    }, [location.search]);
 
     // Form hooks for Sign In
     const {
@@ -28,6 +189,18 @@ export default function Login() {
         handleSubmit: handleSubmitSignIn,
         setValue: setSignInValue,
         formState: { errors: errorsSignIn }
+    } = useForm();
+
+    const {
+        register: registerOtpPass,
+        handleSubmit: handleSubmitOtpPass,
+        formState: { errors: errorsOtpPass }
+    } = useForm();
+
+    const {
+        register: registerOtpSignup,
+        handleSubmit: handleSubmitOtpSignup,
+        formState: { errors: errorsOtpSignup }
     } = useForm();
 
     const [rememberMe, setRememberMe] = useState(false);
@@ -193,27 +366,235 @@ export default function Login() {
             <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-12 relative z-20">
                 <div className="w-full max-w-md bg-surface/50 backdrop-blur-2xl rounded-3xl p-8 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 dark:ring-white/10 transition-all">
 
-                    {/* Tab Switcher */}
-                    <div className="flex p-1 bg-gray-100 dark:bg-neutral-800 rounded-2xl mb-8 relative">
-                        {/* Sliding Indicator */}
-                        <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-neutral-700 rounded-xl shadow-sm transition-all duration-300 ease-spring ${activeTab === 'signin' ? 'left-1' : 'left-[calc(50%+4px)]'}`} />
+                    {/* Tab Switcher - Hide in Quiz Mode */}
+                    {!isQuizMode && (
+                        <div className="flex p-1 bg-gray-100 dark:bg-neutral-800 rounded-2xl mb-8 relative">
+                            {/* Sliding Indicator */}
+                            <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-neutral-700 rounded-xl shadow-sm transition-all duration-300 ease-spring ${activeTab === 'signin' ? 'left-1' : 'left-[calc(50%+4px)]'}`} />
 
-                        <button
-                            onClick={() => { setActiveTab('signin'); setSignupStep(1); }}
-                            className={`flex-1 relative z-10 py-3 text-sm font-semibold rounded-xl transition-colors duration-200 ${activeTab === 'signin' ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}
-                        >
-                            Sign In
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('signup')}
-                            className={`flex-1 relative z-10 py-3 text-sm font-semibold rounded-xl transition-colors duration-200 ${activeTab === 'signup' ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}
-                        >
-                            Create Account
-                        </button>
-                    </div>
+                            <button
+                                onClick={() => { setActiveTab('signin'); setSignupStep(1); }}
+                                className={`flex-1 relative z-10 py-3 text-sm font-semibold rounded-xl transition-colors duration-200 ${activeTab === 'signin' ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}
+                            >
+                                Sign In
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('signup')}
+                                className={`flex-1 relative z-10 py-3 text-sm font-semibold rounded-xl transition-colors duration-200 ${activeTab === 'signup' ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}`}
+                            >
+                                Create Account
+                            </button>
+                        </div>
+                    )}
+
+                    {/* QUIZ MODE UI */}
+                    {isQuizMode && (
+                        <div className="animate-in fade-in zoom-in-95 duration-500">
+                            <div className="text-center mb-8">
+                                <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6 animate-pulse">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 16h5v5" /></svg>
+                                </div>
+                                <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">Join Assessment</h2>
+                                <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-2">Verify your email to continue to your test.</p>
+                            </div>
+
+                            {otpError && (
+                                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-xs rounded-xl flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4" /> {otpError}
+                                </div>
+                            )}
+
+                            {/* Stage 1: Email Input */}
+                            {otpStage === 'email' && (
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Email</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Mail className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            </div>
+                                            <Input
+                                                type="email"
+                                                value={otpEmail}
+                                                onChange={(e) => setOtpEmail(e.target.value)}
+                                                placeholder="Enter your email"
+                                                className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={handleSendOTP}
+                                        disabled={otpLoading}
+                                        className="w-full h-12 font-bold rounded-xl bg-primary text-white"
+                                    >
+                                        {otpLoading ? 'Sending...' : 'Verify Email'}
+                                    </Button>
+
+                                </div>
+                            )}
+
+                            {/* Stage 2: OTP Input */}
+                            {otpStage === 'otp' && (
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Verification Code</label>
+                                        <Input
+                                            value={otpValue}
+                                            onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
+                                            placeholder="8854-53"
+                                            maxLength={10}
+                                            className="h-12 text-center text-2xl tracking-[0.2em] bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                        />
+                                        <p className="text-[10px] text-neutral-400 text-center">Enter the code sent to {otpEmail}</p>
+                                    </div>
+                                    <Button
+                                        onClick={handleVerifyOTP}
+                                        disabled={otpLoading}
+                                        className="w-full h-12 font-bold rounded-xl bg-primary text-white"
+                                    >
+                                        {otpLoading ? 'Verifying...' : 'Verify Code'}
+                                    </Button>
+                                    <button
+                                        onClick={() => setOtpStage('email')}
+                                        className="w-full text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                    >
+                                        Change email address
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Stage 3: Password for Registered User */}
+                            {otpStage === 'password' && (
+                                <form onSubmit={handleSubmitOtpPass(onOtpPasswordSubmit)} className="space-y-4">
+                                    {needsRegNo && (
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Registration Number</label>
+                                            <div className="relative group">
+                                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                    <School className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                                </div>
+                                                <Input
+                                                    {...registerOtpPass('registrationNumber', { required: 'Registration number is required' })}
+                                                    placeholder="e.g. RA2111026010001"
+                                                    className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                                    error={errorsOtpPass.registrationNumber?.message as string}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Enter Password</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Lock className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            </div>
+                                            <Input
+                                                type={showPassword ? "text" : "password"}
+                                                {...registerOtpPass('password', { required: 'Password is required' })}
+                                                placeholder="••••••••"
+                                                className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                                error={errorsOtpPass.password?.message as string}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={togglePasswordVisibility}
+                                                className="absolute right-4 top-3.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 focus:outline-none transition-colors"
+                                            >
+                                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-primary to-blue-500 text-white shadow-lg"
+                                    >
+                                        {isLoading ? 'Logging in...' : 'Login & Join'}
+                                    </Button>
+                                </form>
+                            )}
+
+                            {/* Stage 3: Signup for New User */}
+                            {otpStage === 'signup' && (
+                                <form onSubmit={handleSubmitOtpSignup(onOtpSignupSubmit)} className="space-y-4">
+                                    <div className="text-center mb-4">
+                                        <p className="text-sm font-medium text-primary">Creating new account</p>
+                                        <p className="text-xs text-neutral-500">for {otpEmail}</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Your Name</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <User className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            </div>
+                                            <Input
+                                                {...registerOtpSignup('userName', { required: 'Name is required' })}
+                                                placeholder="e.g. John Doe"
+                                                className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                                error={errorsOtpSignup.userName?.message as string}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Registration Number</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <School className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            </div>
+                                            <Input
+                                                {...registerOtpSignup('registrationNumber', { required: 'Registration number is required' })}
+                                                placeholder="e.g. RA2111026010001"
+                                                className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                                error={errorsOtpSignup.registrationNumber?.message as string}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Create Password</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Lock className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                            </div>
+                                            <Input
+                                                type={showPassword ? "text" : "password"}
+                                                {...registerOtpSignup('password', {
+                                                    required: 'Password is required',
+                                                    minLength: { value: 6, message: 'Minimum 6 characters' }
+                                                })}
+                                                placeholder="••••••••"
+                                                className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                                error={errorsOtpSignup.password?.message as string}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={togglePasswordVisibility}
+                                                className="absolute right-4 top-3.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 focus:outline-none transition-colors"
+                                            >
+                                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="w-full h-12 font-bold rounded-xl bg-gradient-to-r from-primary to-blue-500 text-white shadow-lg"
+                                    >
+                                        {isLoading ? 'Creating Account...' : 'Create & Join'}
+                                    </Button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setOtpStage('email'); setOtpEmail(''); }}
+                                        className="w-full text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                    >
+                                        Change email address
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    )}
 
                     {/* Regular Sign In View */}
-                    {activeTab === 'signin' && (
+                    {!isQuizMode && activeTab === 'signin' && (
                         <div className="animate-in fade-in slide-in-from-right-8 duration-500">
                             <div className="text-center mb-8">
                                 <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">Welcome Back!</h2>
