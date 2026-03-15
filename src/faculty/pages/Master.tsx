@@ -116,9 +116,16 @@ export default function Master() {
     const downloadResultsAsCSV = () => {
         if (results.length === 0) return;
 
+        // Sort by registration number ascending for the download only
+        const sortedResults = [...results].sort((a, b) => {
+            const regA = a.profiles?.registration_number || '';
+            const regB = b.profiles?.registration_number || '';
+            return regA.localeCompare(regB);
+        });
+
         const csvContent = [
             ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Date'],
-            ...results.map(res => [
+            ...sortedResults.map(res => [
                 res.profiles?.username || 'Unknown',
                 res.profiles?.registration_number || 'N/A',
                 res.profiles?.email || 'N/A',
