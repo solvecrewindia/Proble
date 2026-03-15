@@ -115,7 +115,7 @@ export default function Login() {
             }
         } catch (error: any) {
             if (error.message?.toLowerCase().includes('already registered')) {
-                setQuizError('This email is already registered. Please login instead.');
+                setQuizError('This email is already registered. Please login with your existing password.');
                 setQuizStage('login');
             } else {
                 setQuizError(error.message || 'Account setup failed');

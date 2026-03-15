@@ -314,11 +314,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // If a profile is missing, it implies the account was deleted or not fully created.
         // We should NOT auto-create it here.
 
+        // If a profile is missing (isFallback), it implies the account was deleted from profiles 
+        // but still exists in auth.users. Instead of throwing an error, we accept the fallback 
+        // profile so they can log in, and it will be re-created upon further actions or they 
+        // can continue with their basic mocked attributes.
         if ((userData as any).isFallback) {
-            console.warn("AuthContext: Login successful but profile missing (isFallback). Assuming account deleted/invalid.");
-            // Force logout because the user "doesn't exist" in our functional system (profiles table)
-            await supabase.auth.signOut();
-            throw new Error("Account data not found. Access denied.");
+            console.warn("AuthContext: Login successful but profile missing (isFallback). Allowing login with fallback profile to recreate session.");
+            // We NO LONGER force logout here. The user is allowed to proceed.
         }
 
         setUser(userData);
