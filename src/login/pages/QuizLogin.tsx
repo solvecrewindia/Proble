@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Lock, Mail, Eye, EyeOff, School, AlertCircle, Home } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, School, AlertCircle, Home, User } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../../shared/context/AuthContext';
@@ -131,7 +131,7 @@ export default function QuizLogin() {
             const { user, error } = await signup(
                 quizEmail,
                 data.password,
-                quizEmail.split('@')[0],
+                data.userName,
                 'student'
             );
 
@@ -317,6 +317,22 @@ export default function QuizLogin() {
                                 <div className="text-center mb-4">
                                     <p className="text-sm font-medium text-primary">Creating new account</p>
                                     <p className="text-xs text-neutral-500">for {quizEmail}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Your Name</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <User className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                        </div>
+                                        <Input
+                                            {...registerQuizSignup('userName', { required: 'Name is required' })}
+                                            placeholder="e.g. John Doe"
+                                            autoComplete="new-password"
+                                            defaultValue=""
+                                            className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl"
+                                            error={errorsQuizSignup.userName?.message as string}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 ml-1">Registration Number</label>
