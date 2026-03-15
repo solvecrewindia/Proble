@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -319,7 +319,12 @@ export default function Master() {
                     <div className="bg-surface border border-neutral-300 dark:border-neutral-600 rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
                         {/* ... result content ... */}
                         <div className="p-6 border-b border-neutral-300 dark:border-neutral-600 flex justify-between items-center">
-                            <h2 className="text-xl font-bold text-text">Student Results</h2>
+                            <h2 className="text-xl font-bold text-text flex items-center gap-3">
+                                Student Results
+                                <Badge variant="secondary" className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                                    {results.length} Attended
+                                </Badge>
+                            </h2>
                             <div className="flex gap-2">
                                 <Button
                                     variant="outline"
