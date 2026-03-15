@@ -14,6 +14,7 @@ import { lazyRetry } from './shared/utils/lazyRetry';
 // Lazy Load Components
 const FacultyApp = lazyRetry(() => import('./faculty/App'), 'FacultyApp');
 const Login = lazyRetry(() => import('./login/pages/Login'), 'Login');
+const QuizLogin = lazyRetry(() => import('./login/pages/QuizLogin'), 'QuizLogin');
 const HomepageApp = lazyRetry(() => import('./homepage/App'), 'HomepageApp');
 const QuizDetails = lazyRetry(() => import('./student/pages/courses/CourseDetails'), 'CourseDetails');
 const CourseList = lazyRetry(() => import('./student/pages/courses/CourseList'), 'CourseList');
@@ -176,6 +177,7 @@ function AppContent() {
                     <Route path="/" element={<RootRedirect searchQuery={searchQuery} />} />
                     <Route path="/about" element={<AboutUs />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/quiz-login" element={<QuizLogin />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/course/:module" element={<CourseList />} />
                     <Route path="/course/details/:id" element={<QuizDetails />} />

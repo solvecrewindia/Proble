@@ -21,7 +21,7 @@ const SharedQuizHandler = () => {
                 localStorage.setItem('quiz_join_intent', code);
             }
 
-            navigate(`/login?returnTo=${returnTo}`, {
+            navigate(`/quiz-login?returnTo=${returnTo}`, {
                 replace: true
             });
         } else {
