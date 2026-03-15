@@ -19,6 +19,7 @@ const JoinTest = () => {
     const [quiz, setQuiz] = useState<any>(null);
     const [error, setError] = useState('');
     const [alreadyCompleted, setAlreadyCompleted] = useState(false);
+    const [isExpired, setIsExpired] = useState(false);
 
     const [scanning, setScanning] = useState(false);
     const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -137,6 +138,16 @@ const JoinTest = () => {
                     setVerifying(false);
                     return;
                 }
+                
+                // Add Validity Constraint Check
+                if (quizData.settings?.validUntil) {
+                    const validityDate = new Date(quizData.settings.validUntil);
+                    if (new Date() > validityDate) {
+                        setIsExpired(true);
+                        setVerifying(false);
+                        return;
+                    }
+                }
             }
 
             if (quizData.settings?.allowedDomain) {
@@ -212,6 +223,40 @@ const JoinTest = () => {
                     {/* Action */}
                     <Button
                         className="w-full max-w-xs mx-auto h-14 text-lg font-bold rounded-2xl"
+                        onClick={() => navigate('/student/dashboard')}
+                    >
+                        Go to Dashboard
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    if (isExpired) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
+                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-neutral-500/10 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-neutral-500/5 rounded-full blur-[120px]" />
+
+                <div className="relative z-10 max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                    <div className="relative inline-block">
+                        <div className="absolute inset-0 bg-neutral-500/20 blur-3xl rounded-full animate-pulse" />
+                        <div className="relative w-24 h-24 bg-neutral-500/10 rounded-full flex items-center justify-center mx-auto border-2 border-neutral-500/30">
+                            <Clock className="w-12 h-12 text-neutral-500" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <h1 className="text-3xl font-black text-text tracking-tight">
+                            Test Completed
+                        </h1>
+                        <p className="text-muted text-base leading-relaxed px-4">
+                            The validity period for this master test has expired. It is no longer accepting new submissions.
+                        </p>
+                    </div>
+
+                    <Button
+                        className="w-full max-w-xs mx-auto h-14 text-lg font-bold rounded-2xl bg-neutral-500 hover:bg-neutral-600 text-white"
                         onClick={() => navigate('/student/dashboard')}
                     >
                         Go to Dashboard

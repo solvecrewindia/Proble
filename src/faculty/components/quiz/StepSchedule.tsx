@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Key, Shield, Link, Copy, Check, QrCode, Play, AlertCircle } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -86,17 +86,41 @@ export function StepSchedule({ data, update }: any) {
                             />
                         </div>
                     ) : (
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-text flex items-center">
-                                <Clock className="mr-2 h-4 w-4" /> Duration (minutes)
-                            </label>
-                            <Input
-                                type="number"
-                                placeholder="e.g. 60"
-                                value={data.durationMinutes || ''}
-                                onChange={(e) => update({ durationMinutes: Number(e.target.value) })}
-                            />
-                        </div>
+                        <>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-text flex items-center">
+                                    <Clock className="mr-2 h-4 w-4" /> Duration (minutes)
+                                </label>
+                                <Input
+                                    type="number"
+                                    placeholder="e.g. 60"
+                                    value={data.durationMinutes || ''}
+                                    onChange={(e) => update({ durationMinutes: Number(e.target.value) })}
+                                />
+                            </div>
+                            
+                            {data.type === 'master' && (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-text flex items-center">
+                                        <Calendar className="mr-2 h-4 w-4 text-red-500" /> End Date & Time (Validity)
+                                    </label>
+                                    <Input
+                                        type="datetime-local"
+                                        value={data.settings?.validUntil ? data.settings.validUntil.slice(0, 16) : ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            update({
+                                                settings: { 
+                                                    ...data.settings, 
+                                                    validUntil: val ? new Date(val).toISOString() : null 
+                                                }
+                                            });
+                                        }}
+                                    />
+                                    <p className="text-xs text-muted">Test expires instantly after this.</p>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
