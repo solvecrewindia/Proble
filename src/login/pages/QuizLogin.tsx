@@ -11,8 +11,21 @@ import { supabase } from '../../lib/supabase';
 export default function QuizLogin() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { login, signup, updateRegistrationNumber, loadSessionUser } = useAuth();
+    const { user, isLoading, login, signup, updateRegistrationNumber, loadSessionUser } = useAuth();
     const { theme } = useTheme();
+
+    // Auto-Redirect for Already Authenticated Users
+    useEffect(() => {
+        if (!isLoading && user) {
+            const searchParams = new URLSearchParams(location.search);
+            const returnTo = searchParams.get('returnTo');
+            if (returnTo) {
+                navigate(decodeURIComponent(returnTo), { replace: true });
+            } else {
+                navigate('/');
+            }
+        }
+    }, [user, isLoading, location.search, navigate]);
 
     // Quiz Flow State
     const [quizStage, setQuizStage] = useState<'email' | 'login' | 'signup'>('email');

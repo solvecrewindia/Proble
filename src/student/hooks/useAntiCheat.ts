@@ -103,8 +103,13 @@ export const useAntiCheat = ({
     useEffect(() => {
         if (!enabled) return;
 
+        let isArmed = false;
+        const armTimer = setTimeout(() => {
+            isArmed = true;
+        }, 2000); // 2 second grace period on start to allow OAuth popups to cleanly close
+
         const handleVisibility = () => {
-            if (document.hidden) {
+            if (document.hidden && isArmed) {
                 triggerViolation("Tab Switched / Window Hidden");
             }
         };
@@ -112,7 +117,7 @@ export const useAntiCheat = ({
         const handleBlur = () => {
             // If the document is hidden, visibilitychange naturally handles it.
             // We want to catch cases where document is VISIBLE but NOT FOCUSED (e.g. clicking address bar, split screen interaction)
-            if (!document.hidden) {
+            if (!document.hidden && isArmed) {
                 triggerViolation("Focus Lost / Overlay Interaction");
             }
         };
@@ -121,6 +126,7 @@ export const useAntiCheat = ({
         window.addEventListener('blur', handleBlur);
 
         return () => {
+            clearTimeout(armTimer);
             document.removeEventListener('visibilitychange', handleVisibility);
             window.removeEventListener('blur', handleBlur);
         };
