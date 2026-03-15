@@ -3,6 +3,31 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './faculty/lib/queryClient'
+const APP_VERSION = '1.0.1'; // Increment this whenever a hard cache clear is needed
+
+// Aggressive Cache Busting
+(() => {
+  const currentVersion = localStorage.getItem('app_version');
+  if (currentVersion !== APP_VERSION) {
+    console.log(`Updating app from version ${currentVersion || 'none'} to ${APP_VERSION}`);
+    localStorage.clear(); // Option 1: Clear everything (aggressive)
+    // OR just set the new version: localStorage.setItem('app_version', APP_VERSION);
+    localStorage.setItem('app_version', APP_VERSION);
+    
+    // Clear Service Worker Caches
+    if ('caches' in window) {
+      caches.keys().then((names) => {
+        names.forEach(name => {
+          caches.delete(name);
+        });
+      });
+    }
+
+    // Force a hard reload from the server (bypassing browser cache)
+    window.location.reload(true);
+  }
+})();
+
 // Global error handler for chunk load failures
 window.addEventListener('error', (event) => {
   const error = event.error || event.reason;
