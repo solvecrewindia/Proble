@@ -38,12 +38,24 @@ createRoot(document.getElementById('root')).render(
 // Automatically check for SW updates and reload if necessary
 const updateSW = registerSW({
   immediate: true,
-  onNeedRefresh() {
-    // A new service worker has been found and installed.
-    // We force a hard reload so the user gets the new version immediately.
-    window.location.reload();
+  onRegisteredSW(swUrl, r) {
+    // Check for updates every 60 minutes
+    r && setInterval(() => {
+      r.update();
+    }, 60 * 60 * 1000);
   },
   onOfflineReady() {
     console.log('App is ready to work offline.')
   },
 });
+
+// Detect when the new service worker takes over and reload the page
+let refreshing = false;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+}
