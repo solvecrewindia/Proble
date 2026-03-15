@@ -37,7 +37,23 @@ export default function Master() {
             if (error) {
                 console.error("Error fetching master quizzes:", error);
             }
-            if (data) setQuizzes(data as any);
+            
+            if (data) {
+                const now = new Date();
+                const updatedQuizzes = await Promise.all(data.map(async (quiz: any) => {
+                    const isActiveOrPaused = quiz.status === 'active' || quiz.status === 'paused' || !quiz.status;
+                    if (isActiveOrPaused && quiz.settings?.validUntil) {
+                        const validUntil = new Date(quiz.settings.validUntil);
+                        if (now > validUntil) {
+                            // Auto-expire in database
+                            await supabase.from('quizzes').update({ status: 'completed' }).eq('id', quiz.id);
+                            return { ...quiz, status: 'completed' };
+                        }
+                    }
+                    return quiz;
+                }));
+                setQuizzes(updatedQuizzes);
+            }
         } catch (err) {
             console.error("Unexpected error fetching quizzes:", err);
         } finally {

@@ -535,6 +535,23 @@ const MCQTest = () => {
 
     const activeQuestion = useMemo(() => questions[currentQuestion - 1], [questions, currentQuestion]);
 
+    // Mid-Quiz Expiry Check
+    useEffect(() => {
+        if (!testActive || showResults || !quizSettings?.validUntil) return;
+
+        const interval = setInterval(() => {
+            const now = new Date();
+            const validUntil = new Date(quizSettings.validUntil);
+            if (now > validUntil) {
+                clearInterval(interval);
+                alert("Time is up. This test has ended and will be auto-submitted.");
+                calculateAndShowResults();
+            }
+        }, 15000); // Check every 15 seconds
+
+        return () => clearInterval(interval);
+    }, [testActive, showResults, quizSettings, calculateAndShowResults]);
+
     if (loading) return <div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>;
 
     if (showResults) {
