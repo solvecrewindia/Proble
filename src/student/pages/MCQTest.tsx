@@ -31,6 +31,7 @@ const MCQTest = () => {
 
     const [loading, setLoading] = useState(true);
     const [testActive, setTestActive] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     const [quizSettings, setQuizSettings] = useState<any>(null);
@@ -143,6 +144,7 @@ const MCQTest = () => {
     }, [id, testActive]);
 
     const calculateAndShowResults = useCallback(async () => {
+        setIsSubmitting(true);
         setTestActive(false);
         if (document.fullscreenElement) {
             document.exitFullscreen().catch(err => console.log(err));
@@ -707,7 +709,7 @@ const MCQTest = () => {
             {/* Watermark removed by user request (Visual Noise) */}
 
             {/* --- BLUR PROTECTION OVERLAY --- */}
-            {!isWindowFocused && testActive && !showResults && !isOffline && (
+            {!isSubmitting && !isWindowFocused && testActive && !showResults && !isOffline && (
                 <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-75">
                     <ShieldAlert className="w-24 h-24 text-red-500 mb-6 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
                     <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight">Exam Terminated</h2>
@@ -719,7 +721,7 @@ const MCQTest = () => {
             )}
 
             {/* --- OFFLINE PROTECTION OVERLAY --- */}
-            {isOffline && testActive && !showResults && (
+            {!isSubmitting && isOffline && testActive && !showResults && (
                 <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
                     <WifiOff className="w-24 h-24 text-yellow-500 mb-6 animate-pulse" />
                     <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight">Connection Lost</h2>
@@ -729,6 +731,18 @@ const MCQTest = () => {
                     </p>
                 </div>
             )}
+
+            {/* --- SUBMITTING OVERLAY --- */}
+            {isSubmitting && (
+                <div className="fixed inset-0 z-[120] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
+                    <Loader2 className="w-16 h-16 text-primary animate-spin mb-6" />
+                    <h2 className="text-3xl font-bold text-text mb-4 tracking-tight">Submitting Exam...</h2>
+                    <p className="text-xl text-muted max-w-xl leading-relaxed">
+                        Please wait while your answers are securely evaluated.
+                    </p>
+                </div>
+            )}
+
             {/* --- WARNING OVERLAY --- */}
             {warning && (
                 <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top-4 fade-in duration-300 w-full max-w-lg px-4">
@@ -780,7 +794,7 @@ const MCQTest = () => {
             </header>
 
             {/* --- ANTI-CHEAT & PAUSE OVERLAYS (Keep Existing Logic) --- */}
-            {(!testActive || !isFullScreen) && (
+            {!isSubmitting && (!testActive || !isFullScreen) && (
                 <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in">
                     <div className="bg-surface border border-red-500/30 shadow-2xl rounded-2xl p-8 max-w-lg text-center">
                         <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-6" />

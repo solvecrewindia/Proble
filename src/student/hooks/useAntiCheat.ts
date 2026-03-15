@@ -26,24 +26,21 @@ export const useAntiCheat = ({
     const triggerViolation = useCallback((type: string) => {
         if (!enabled) return;
 
-        setViolations(prev => {
-            const newCount = prev + 1;
+        const currentCount = violations + 1;
+        setViolations(currentCount);
 
-            // Notify parent
-            if (onViolation) onViolation(newCount, type);
+        // Notify parent
+        if (onViolation) onViolation(currentCount, type);
 
-            // Check limit - triggers auto-submit
-            if (newCount >= effectiveLimit && onAutoSubmit) {
-                onAutoSubmit();
-            }
-
-            return newCount;
-        });
-
-        setWarning(`Security Violation: ${type}. Warning ${violations + 1}/${effectiveLimit}`);
-
-        // Clear warning after 5 seconds
-        setTimeout(() => setWarning(null), 5000);
+        // Check limit - triggers auto-submit
+        if (currentCount >= effectiveLimit) {
+            if (onAutoSubmit) onAutoSubmit();
+            setWarning(`Security Violation: ${type}. Exam Terminated.`);
+        } else {
+            setWarning(`Security Violation: ${type}. Warning ${currentCount}/${effectiveLimit}`);
+            // Clear warning after 5 seconds
+            setTimeout(() => setWarning(null), 5000);
+        }
     }, [enabled, effectiveLimit, onViolation, onAutoSubmit, violations]);
 
     // 1. Full Screen Enforcement
