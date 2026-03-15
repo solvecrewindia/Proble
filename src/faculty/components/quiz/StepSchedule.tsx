@@ -106,7 +106,11 @@ export function StepSchedule({ data, update }: any) {
                                     </label>
                                     <Input
                                         type="datetime-local"
-                                        value={data.settings?.validUntil ? data.settings.validUntil.slice(0, 16) : ''}
+                                        value={
+                                            data.settings?.validUntil
+                                                ? new Date(new Date(data.settings.validUntil).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+                                                : ''
+                                        }
                                         onChange={(e) => {
                                             const val = e.target.value;
                                             update({
