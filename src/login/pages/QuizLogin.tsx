@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff, School, AlertCircle, Home } from 'lucide-react';
@@ -20,6 +20,30 @@ export default function QuizLogin() {
     const [quizLoading, setQuizLoading] = useState(false);
     const [quizError, setQuizError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [allowedDomain, setAllowedDomain] = useState<string | null>(null);
+
+    // Fetch the quiz allowedDomain on mount to update the placeholder
+    useEffect(() => {
+        const fetchDomain = async () => {
+            const quizIntent = localStorage.getItem('quiz_join_intent');
+            if (quizIntent) {
+                try {
+                    const { data, error } = await supabase
+                        .from('quizzes')
+                        .select('settings')
+                        .eq('code', quizIntent)
+                        .maybeSingle();
+
+                    if (!error && data?.settings?.allowedDomain) {
+                        setAllowedDomain(data.settings.allowedDomain);
+                    }
+                } catch (err) {
+                    console.error("Error fetching allowed domain:", err);
+                }
+            }
+        };
+        fetchDomain();
+    }, []);
 
     const {
         register: registerQuizLogin,
@@ -216,7 +240,9 @@ export default function QuizLogin() {
                                             type="email"
                                             value={quizEmail}
                                             onChange={(e) => setQuizEmail(e.target.value)}
-                                            placeholder="Enter your email"
+                                            placeholder={allowedDomain 
+                                                ? `Enter your ${allowedDomain.replace(/^@/, '').split('.')[0].toUpperCase()} email` 
+                                                : "Enter your email"}
                                             className="h-12 pl-12 bg-background border-transparent ring-1 ring-neutral-200 dark:ring-neutral-700 focus:ring-2 focus:ring-primary/50 focus:border-primary rounded-xl transition-all"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
