@@ -7,6 +7,7 @@ import { Card } from '../../shared/components/Card';
 import { Loader2, CheckCircle, Clock, WifiOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
+import { MathText } from '../../shared/components/MathText';
 
 export default function StudentLiveQuiz() {
     const { id } = useParams();
@@ -436,9 +437,7 @@ export default function StudentLiveQuiz() {
                     </div>
 
                     {/* Question Text */}
-                    <h2 className="text-xl md:text-2xl font-semibold leading-relaxed text-text">
-                        {currentQuestion.stem}
-                    </h2>
+                    <MathText text={currentQuestion.stem} className="text-xl md:text-2xl font-semibold leading-relaxed text-text" as="h2" />
 
                     {/* Options */}
                     <div className="flex flex-col gap-3">
@@ -485,12 +484,10 @@ export default function StudentLiveQuiz() {
                                     )}>
                                         {String.fromCharCode(65 + idx)}
                                     </div>
-                                    <span className={cn(
+                                    <MathText text={option} className={cn(
                                         "font-medium text-base",
                                         viewMode === 'results' && isCorrectCheck ? "text-green-700 dark:text-green-400" : "text-text"
-                                    )}>
-                                        {option}
-                                    </span>
+                                    )} />
                                 </button>
                             );
                         })}

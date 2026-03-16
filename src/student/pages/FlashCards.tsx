@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { ArrowLeft, Loader2, RotateCw, Lightbulb, ZoomIn } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { MathText } from '../../shared/components/MathText';
 
 interface ReferenceCard {
     id: number;
@@ -163,9 +164,7 @@ const FlashCards = () => {
                                                 />
                                             </div>
                                         )}
-                                        <h3 className="font-medium text-sm select-none text-text leading-relaxed">
-                                            {card.question}
-                                        </h3>
+                                        <MathText text={card.question} className="font-medium text-sm select-none text-text leading-relaxed" as="h3" />
                                     </div>
                                     <p className="mt-4 text-[10px] text-muted-foreground uppercase tracking-widest shrink-0 font-bold opacity-70">Tap to reveal</p>
                                 </div>
@@ -176,9 +175,7 @@ const FlashCards = () => {
                                         <RotateCw className="w-5 h-5" />
                                     </div>
                                     <div className="flex-1 w-full overflow-y-auto no-scrollbar pr-2 flex items-center justify-center">
-                                        <h3 className="font-semibold text-sm text-primary select-none leading-relaxed">
-                                            {card.answer}
-                                        </h3>
+                                        <MathText text={card.answer} className="font-semibold text-sm text-primary select-none leading-relaxed" as="h3" />
                                     </div>
                                     <p className="mt-4 text-[10px] text-primary/60 uppercase tracking-widest shrink-0 font-bold opacity-70">Tap to hide</p>
                                 </div>

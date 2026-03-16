@@ -7,6 +7,7 @@ import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { cn } from '../../lib/utils';
+import { MathText } from '../../../shared/components/MathText';
 import type { Question, Module, Quiz } from '../../types';
 
 interface ExistingQuizBrowserProps {
@@ -353,7 +354,7 @@ export function ExistingQuizBrowser({ onAddQuestions }: ExistingQuizBrowserProps
                                                             <Badge variant="secondary" className="mb-2 text-xs">{q.type.toUpperCase()}</Badge>
                                                             <span className="text-xs text-muted">Pts: {q.weight}</span>
                                                         </div>
-                                                        <p className="font-medium text-text">{q.stem}</p>
+                                                        <MathText text={q.stem} className="font-medium text-text" as="p" />
                                                         {q.options && (
                                                             <div className="mt-2 text-sm text-muted pl-4 border-l-2 border-neutral-300 dark:border-neutral-600">
                                                                 {q.options.slice(0, 2).map((opt, i) => (

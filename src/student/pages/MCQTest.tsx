@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 import { QuizTimer } from '../components/QuizTimer';
 import { Calculator } from '../../shared/components/Calculator';
+import { MathText } from '../../shared/components/MathText';
 
 const MCQTest = () => {
     const navigate = useNavigate();
@@ -626,11 +627,11 @@ const MCQTest = () => {
                                 const formatAns = (ans: any, type: string) => {
                                     if (ans === undefined || ans === null || ans === '') return <span className="text-muted italic">Skipped</span>;
                                     if (type === 'mcq' || type === 'true_false') {
-                                        if (q.options && q.options[ans]) return q.options[ans].text || q.options[ans];
+                                        if (q.options && q.options[ans]) return <MathText text={q.options[ans].text || q.options[ans]} />;
                                         return `Option ${Number(ans) + 1}`;
                                     }
                                     if (type === 'msq' && Array.isArray(ans)) {
-                                        return ans.map((a: any) => q.options[a]?.text || q.options[a] || `Option ${Number(a) + 1}`).join(', ');
+                                        return ans.map((a: any, i: number) => <span key={i}>{i > 0 && ', '}<MathText text={q.options[a]?.text || q.options[a] || `Option ${Number(a) + 1}`} /></span>);
                                     }
                                     if (type === 'code') return <span className="font-mono text-xs">Code Solution</span>;
                                     return ans;
@@ -652,7 +653,7 @@ const MCQTest = () => {
                                                 {isCorrect ? "Mastered" : "Revision Needed"}
                                             </div>
                                         </div>
-                                        <p className="text-sm text-text font-semibold mb-6 leading-relaxed">{q.question}</p>
+                                        <MathText text={q.question} className="text-sm text-text font-semibold mb-6 leading-relaxed" as="p" />
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface/30 p-4 rounded-xl border border-white/5">
                                             <div>
@@ -840,9 +841,7 @@ const MCQTest = () => {
 
                         {/* Question Text */}
                         <div className="prose dark:prose-invert max-w-none select-none pointer-events-none">
-                            <h2 className="text-lg md:text-xl font-semibold leading-relaxed text-text">
-                                {activeQuestion.question}
-                            </h2>
+                                <MathText text={activeQuestion.question} className="text-lg md:text-xl font-semibold leading-relaxed text-text" as="h2" />
                         </div>
 
                         {/* Optional Image */}
@@ -925,7 +924,7 @@ const MCQTest = () => {
 
                                             {/* Option Content */}
                                             <div className="flex-1">
-                                                <div className="text-sm font-medium text-text selection:bg-transparent">{optText}</div>
+                                                <MathText text={optText} className="text-sm font-medium text-text selection:bg-transparent" />
                                                 {optImg && (
                                                     <img
                                                         src={optImg}

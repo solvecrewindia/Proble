@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { MathText } from '../../shared/components/MathText';
 import type { Quiz } from '../types';
 
 export default function LiveController() {
@@ -272,9 +273,7 @@ export default function LiveController() {
                                 </span>
                             </div>
 
-                            <h2 className="text-2xl font-bold text-text mb-6">
-                                {currentQuestion.stem}
-                            </h2>
+                            <MathText text={currentQuestion.stem} className="text-2xl font-bold text-text mb-6" as="h2" />
 
                             {/* Options Visualization */}
                             <div className="space-y-3 flex-1 overflow-y-auto">
@@ -302,7 +301,7 @@ export default function LiveController() {
                                                     <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center font-bold text-sm text-muted">
                                                         {String.fromCharCode(65 + idx)}
                                                     </div>
-                                                    <span className="font-medium text-text">{option}</span>
+                                                    <MathText text={option} className="font-medium text-text" />
                                                 </div>
 
                                                 {viewMode === 'results' && (
@@ -420,7 +419,7 @@ export default function LiveController() {
                                         )}>
                                             {idx + 1}
                                         </span>
-                                        <span className="truncate flex-1">{q.stem}</span>
+                                        <MathText text={q.stem} className="truncate flex-1" />
                                         {currentQuestionIndex > idx && <CheckCircle className="w-4 h-4 text-green-500" />}
                                     </div>
                                 ))}

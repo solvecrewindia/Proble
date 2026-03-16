@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { searchVideos, VideoResult } from '../services/videoSearchService';
 import { Youtube, PlayCircle } from 'lucide-react';
 import { Calculator } from '../../shared/components/Calculator';
+import { MathText } from '../../shared/components/MathText';
 
 const PracticeTest = () => {
     const navigate = useNavigate();
@@ -503,9 +504,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
 
                         {/* Question Text */}
                         <div className="prose dark:prose-invert max-w-none">
-                            <h2 className="text-lg md:text-xl font-semibold leading-relaxed text-text">
-                                {q.question}
-                            </h2>
+                                <MathText text={q.question} className="text-lg md:text-xl font-semibold leading-relaxed text-text" as="h2" />
                         </div>
 
                         {/* Optional Question Image */}
@@ -723,7 +722,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
 
                                             {/* Content */}
                                             <div className="flex-1">
-                                                <div className="text-sm font-medium">{optText}</div>
+                                                <MathText text={optText} className="text-sm font-medium" />
                                                 {optImg && (
                                                     <img
                                                         src={optImg}

@@ -1,6 +1,7 @@
-﻿import { Clock, AlertCircle, Code2 } from 'lucide-react';
+import { Clock, AlertCircle, Code2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Badge } from '../ui/Badge';
+import { MathText } from '../../../shared/components/MathText';
 import type { Question } from '../../types';
 
 export function StepPreview({ data, questions }: any) {
@@ -44,7 +45,7 @@ export function StepPreview({ data, questions }: any) {
                                     />
                                 </div>
                             )}
-                            <p className="text-lg font-medium text-text">{q.stem}</p>
+                            <MathText text={q.stem} className="text-lg font-medium text-text" as="p" />
 
                             {(q.type === 'mcq' || q.type === 'msq' || q.type === 'true_false') && q.options && (
                                 <div className="space-y-2">
@@ -62,7 +63,7 @@ export function StepPreview({ data, questions }: any) {
                                                         className="h-24 w-auto object-contain rounded-md border border-neutral-300 dark:border-neutral-600 mb-2"
                                                     />
                                                 )}
-                                                <span className="text-text">{typeof opt === 'object' ? opt.text : opt}</span>
+                                                <MathText text={typeof opt === 'object' ? opt.text : opt} className="text-text" />
                                             </div>
                                         </div>
                                     ))}
