@@ -444,7 +444,7 @@ const JoinTest = () => {
                         <Button
                             type="button"
                             onClick={() => setScanning(true)}
-                            className="w-full h-16 text-xl font-bold bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 text-text border border-white/10 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] group"
+                            className="w-full h-16 text-xl font-bold bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-text border border-neutral-200 dark:border-white/10 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] group"
                         >
                             <QrCode className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform text-primary" />
                             Scan QR Code
@@ -452,10 +452,10 @@ const JoinTest = () => {
 
                         <div className="relative py-2">
                             <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t border-white/5" />
+                                <span className="w-full border-t border-neutral-200 dark:border-white/5" />
                             </div>
                             <div className="relative flex justify-center text-[10px] uppercase font-black tracking-[0.2em]">
-                                <span className="bg-[#0c0c0c] px-4 text-muted/60">Secure Entry</span>
+                                <span className="bg-background px-4 text-muted/60">Secure Entry</span>
                             </div>
                         </div>
 
@@ -470,7 +470,7 @@ const JoinTest = () => {
                                         setCode(e.target.value.toUpperCase());
                                         if (error) setError('');
                                     }}
-                                    className="w-full h-20 text-center text-3xl font-black tracking-[0.15em] uppercase rounded-2xl border border-white/5 bg-white/5 text-text focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted/30 placeholder:tracking-normal placeholder:font-bold placeholder:text-lg"
+                                    className="w-full h-20 text-center text-3xl font-black tracking-[0.15em] uppercase rounded-2xl border border-neutral-200 dark:border-white/5 bg-neutral-100 dark:bg-white/5 text-text focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted/30 placeholder:tracking-normal placeholder:font-bold placeholder:text-lg"
                                     maxLength={30}
                                 />
                             </div>
