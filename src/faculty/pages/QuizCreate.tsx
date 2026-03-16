@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -68,8 +68,8 @@ export default function QuizCreate() {
                     type: quiz.type,
                     accessCode: quiz.code, // Map code to accessCode for StepSchedule
                     settings: quiz.settings || {},
-                    scheduledAt: quiz.starts_at, // Assuming column name, verify schema if possible or infer
-                    durationMinutes: quiz.duration
+                    scheduledAt: quiz.settings?.scheduledAt || quiz.starts_at || null, // Read from settings, fallback for legacy
+                    durationMinutes: quiz.settings?.duration || quiz.duration
                 });
             }
 
@@ -147,8 +147,8 @@ export default function QuizCreate() {
                 settings: {
                     ...data.settings,
                     duration: data.durationMinutes, // Sync duration to settings
+                    scheduledAt: data.scheduledAt || null, // Save scheduled time inside settings
                 },
-                starts_at: data.scheduledAt, // Save scheduled time
                 created_by: userId
             };
 

@@ -194,8 +194,9 @@ export default function LiveTests() {
     }, [user]);
 
     const isExpired = (quiz: Quiz) => {
-        if (!quiz.scheduledAt || !quiz.settings?.duration) return false;
-        const endTime = new Date(new Date(quiz.scheduledAt).getTime() + quiz.settings.duration * 60000); // duration is in minutes
+        const scheduledAt = quiz.settings?.scheduledAt || quiz.scheduledAt;
+        if (!scheduledAt || !quiz.settings?.duration) return false;
+        const endTime = new Date(new Date(scheduledAt).getTime() + quiz.settings.duration * 60000); // duration is in minutes
         return new Date() > endTime;
     };
 

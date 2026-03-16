@@ -58,6 +58,8 @@ export interface Quiz {
         category?: string;
         timePerQuestion?: number; // seconds
         allowedDomain?: string | null;
+        scheduledAt?: string | null;
+        validUntil?: string | null;
     };
     created_by: string; // Foreign Key to profiles
     createdAt: string;
