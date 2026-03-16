@@ -5,7 +5,7 @@ import { flashCardsData } from '../../data/gameData';
 import { saveFlashCardScore, isFlashCardLocked } from '../../utils/gameState';
 import { ArrowLeft, Check, Clock, Brain, Trophy, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
+import { MathText } from '../../../shared/components/MathText';
 import { useAuth } from '../../../shared/context/AuthContext';
 
 const FlashCardGame = () => {
@@ -195,7 +195,7 @@ const FlashCardGame = () => {
                 </div>
 
                 <div className="bg-surface p-8 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-lg mb-6">
-                    <h2 className="text-xl font-bold mb-6">{card.question}</h2>
+                    <MathText text={card.question} className="text-xl font-bold mb-6" as="h2" />
 
                     <div className="space-y-3">
                         {card.options.map((opt: string, idx: number) => (
@@ -215,7 +215,7 @@ const FlashCardGame = () => {
                                     }
                                 `}
                             >
-                                {opt}
+                                <MathText text={opt} />
                             </button>
                         ))}
                     </div>

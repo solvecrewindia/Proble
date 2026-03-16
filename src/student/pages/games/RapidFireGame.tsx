@@ -4,6 +4,7 @@ import { Clock, Trophy, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../shared/context/AuthContext';
 import { saveRapidFireScore, isRapidFireLocked } from '../../utils/gameState';
+import { MathText } from '../../../shared/components/MathText';
 
 interface Question {
     id: number;
@@ -349,9 +350,7 @@ const RapidFireGame = () => {
 
             {/* Question Card */}
             <div className="flex-1 bg-surface border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 md:p-8 shadow-sm flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                <h3 className="text-xl md:text-2xl font-bold text-text leading-relaxed mb-8">
-                    {q.question}
-                </h3>
+                <MathText text={q.question} className="text-xl md:text-2xl font-bold text-text leading-relaxed mb-8" as="h3" />
 
                 <div className="space-y-3">
                     {q.options.map((opt, idx) => (
@@ -375,7 +374,7 @@ const RapidFireGame = () => {
                             `}>
                                 {String.fromCharCode(65 + idx)}
                             </div>
-                            {opt}
+                            <MathText text={opt} />
                         </button>
                     ))}
                 </div>

@@ -4,6 +4,7 @@ import { ArrowLeft, Check, X, RefreshCw, AlertCircle, Lock, Clock } from 'lucide
 import { dailyChallengeService, DailyChallenge, ChallengeQuestion } from '../../services/dailyChallengeService';
 import { getFlashCardState, isDailyChallengeLocked, setDailyChallengeCompleted, saveFlashCardScore } from '../../utils/gameState';
 import { useAuth } from '../../../shared/context/AuthContext';
+import { MathText } from '../../../shared/components/MathText';
 
 const DailyGame = () => {
     const navigate = useNavigate();
@@ -196,7 +197,7 @@ const DailyGame = () => {
                     {/* RENDER QUESTION BASED ON TYPE */}
                     {currentQuestion.type === 'quiz' && (
                         <div className="space-y-4">
-                            <h3 className="text-xl font-medium">{currentQuestion.content.question}</h3>
+                            <MathText text={currentQuestion.content.question} className="text-xl font-medium" as="h3" />
                             <div className="grid gap-3">
                                 {currentQuestion.content.options.map((opt: string, idx: number) => (
                                     <button
@@ -207,7 +208,7 @@ const DailyGame = () => {
                                             : 'border-neutral-200 dark:border-neutral-700 hover:border-primary/50'
                                             }`}
                                     >
-                                        {opt}
+                                        <MathText text={opt} />
                                     </button>
                                 ))}
                             </div>
@@ -218,7 +219,7 @@ const DailyGame = () => {
                     {(currentQuestion.type === 'flashcard' || currentQuestion.type === 'debugger' || currentQuestion.type === 'puzzle') && (
                         <div className="space-y-4">
                             <div className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg font-mono text-sm mb-4">
-                                {currentQuestion.content.snippet || currentQuestion.content.term || currentQuestion.content.question}
+                                <MathText text={currentQuestion.content.snippet || currentQuestion.content.term || currentQuestion.content.question} />
                             </div>
 
                             {currentQuestion.content.options && (
@@ -232,7 +233,7 @@ const DailyGame = () => {
                                                 : 'border-neutral-200 dark:border-neutral-700 hover:border-primary/50'
                                                 }`}
                                         >
-                                            {opt}
+                                            <MathText text={opt} />
                                         </button>
                                     ))}
                                 </div>
