@@ -20,6 +20,7 @@ const JoinTest = () => {
     const [error, setError] = useState('');
     const [alreadyCompleted, setAlreadyCompleted] = useState(false);
     const [isExpired, setIsExpired] = useState(false);
+    const [isNotStartedYet, setIsNotStartedYet] = useState<Date | null>(null);
 
     const [scanning, setScanning] = useState(false);
     const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -148,6 +149,16 @@ const JoinTest = () => {
                         return;
                     }
                 }
+
+                // Add Start Time Constraint Check
+                if (quizData.settings?.scheduledAt) {
+                    const startDate = new Date(quizData.settings.scheduledAt);
+                    if (new Date() < startDate) {
+                        setIsNotStartedYet(startDate);
+                        setVerifying(false);
+                        return;
+                    }
+                }
             }
 
             if (quizData.settings?.allowedDomain) {
@@ -257,6 +268,43 @@ const JoinTest = () => {
 
                     <Button
                         className="w-full max-w-xs mx-auto h-14 text-lg font-bold rounded-2xl bg-neutral-500 hover:bg-neutral-600 text-white"
+                        onClick={() => navigate('/student/dashboard')}
+                    >
+                        Go to Dashboard
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    if (isNotStartedYet) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
+                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-500/10 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-500/5 rounded-full blur-[120px]" />
+
+                <div className="relative z-10 max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                    <div className="relative inline-block">
+                        <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full animate-pulse" />
+                        <div className="relative w-24 h-24 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto border-2 border-blue-500/30">
+                            <Clock className="w-12 h-12 text-blue-500" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <h1 className="text-3xl font-black text-text tracking-tight">
+                            Test Not Started Yet
+                        </h1>
+                        <p className="text-muted text-base leading-relaxed px-4">
+                            This test has not started yet. Please wait until{' '}
+                            <span className="font-bold text-text">
+                                {isNotStartedYet.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>.
+                        </p>
+                    </div>
+
+                    <Button
+                        className="w-full max-w-xs mx-auto h-14 text-lg font-bold rounded-2xl bg-blue-500"
                         onClick={() => navigate('/student/dashboard')}
                     >
                         Go to Dashboard

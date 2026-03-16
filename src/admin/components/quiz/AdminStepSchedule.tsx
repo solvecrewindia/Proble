@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Calendar, Clock, Lock } from 'lucide-react'; // Removing Key, Link, Shield, Copy, Check
 import { Input } from '../../../faculty/components/ui/Input';
 import { Card } from '../../../faculty/components/ui/Card';
@@ -19,8 +19,15 @@ export function AdminStepSchedule({ data, update }: any) {
                         </label>
                         <Input
                             type="datetime-local"
-                            value={data.scheduledAt ? data.scheduledAt.slice(0, 16) : ''}
-                            onChange={(e) => update({ scheduledAt: new Date(e.target.value).toISOString() })}
+                            value={
+                                data.scheduledAt
+                                    ? new Date(new Date(data.scheduledAt).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+                                    : ''
+                            }
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                update({ scheduledAt: val ? new Date(val).toISOString() : null });
+                            }}
                         />
                     </div>
 

@@ -317,9 +317,17 @@ export default function Master() {
 
     // Filter quizzes based on active tab
     const filteredQuizzes = quizzes.filter(quiz => {
-        if (activeTab === 'ongoing') return quiz.status === 'active' || quiz.status === 'paused' || !quiz.status; // Default to active if null
-        if (activeTab === 'completed') return quiz.status === 'completed';
-        if (activeTab === 'scheduled') return quiz.status === 'draft'; // Assuming draft is scheduled/pre-live
+        const now = new Date();
+        const startTime = quiz.settings?.scheduledAt ? new Date(quiz.settings.scheduledAt) : null;
+        const endTime = quiz.settings?.validUntil ? new Date(quiz.settings.validUntil) : null;
+
+        const isCompleted = quiz.status === 'completed' || (endTime && now > endTime);
+        const isScheduled = !isCompleted && startTime && now < startTime;
+        const isOngoing = !isCompleted && !isScheduled && quiz.status !== 'draft';
+
+        if (activeTab === 'ongoing') return isOngoing;
+        if (activeTab === 'scheduled') return isScheduled || (quiz.status === 'draft' && !isCompleted); // Include drafts in scheduled
+        if (activeTab === 'completed') return isCompleted;
         return true;
     });
 

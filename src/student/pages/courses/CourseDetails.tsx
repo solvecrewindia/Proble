@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
@@ -316,23 +316,35 @@ const QuizDetails = () => {
                     )}
 
                     {/* Mock Test Card */}
-                    <div
-                        onClick={() => navigate(`/student/test/${id}`)}
-                        className={`group relative bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-cyan-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${quiz.type === 'master' ? 'md:col-span-2' : ''}`}
-                    >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+                    {(() => {
+                        const isMaster = quiz.type === 'master';
+                        const startTime = quiz.settings?.scheduledAt ? new Date(quiz.settings.scheduledAt) : null;
+                        const isNotStartedYet = startTime && new Date() < startTime;
 
-                        <div className="relative z-10 flex flex-col h-full">
+                        return (
+                            <div
+                                onClick={() => !isNotStartedYet && navigate(`/student/test/${id}`)}
+                                className={`group relative bg-surface border border-neutral-800 rounded-3xl p-8 transition-all duration-500 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${isMaster ? 'md:col-span-2' : ''} ${isNotStartedYet ? 'opacity-70 cursor-not-allowed' : 'hover:bg-surface-highlight hover:border-cyan-500/50 cursor-pointer hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1'}`}
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
 
-                            <h3 className="text-xl font-bold text-text mb-2 group-hover:text-cyan-400 transition-colors">Mock Test</h3>
-                            <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
-                                Full exam simulation under strict timed conditions. Get detailed analytics and global ranking.
-                            </p>
-                            <div className="flex items-center text-sm font-bold text-[#61dafbaa] group-hover:translate-x-1 transition-transform">
-                                Begin Exam <ArrowRight className="w-4 h-4 ml-2" />
+                                <div className="relative z-10 flex flex-col h-full">
+
+                                    <h3 className={`text-xl font-bold mb-2 transition-colors ${isNotStartedYet ? 'text-text' : 'text-text group-hover:text-cyan-400'}`}>
+                                        Mock Test
+                                    </h3>
+                                    <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
+                                        {isNotStartedYet
+                                            ? `This test has not started yet. Please wait until ${startTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
+                                            : "Full exam simulation under strict timed conditions. Get detailed analytics and global ranking."}
+                                    </p>
+                                    <div className={`flex items-center text-sm font-bold transition-transform ${isNotStartedYet ? 'text-muted' : 'text-[#61dafbaa] group-hover:translate-x-1'}`}>
+                                        {isNotStartedYet ? 'Scheduled' : 'Begin Exam'} {!isNotStartedYet && <ArrowRight className="w-4 h-4 ml-2" />}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        );
+                    })()}
                 </div>
             </div>
         </div>

@@ -59,7 +59,11 @@ export function StepSchedule({ data, update }: any) {
                         </label>
                         <Input
                             type="datetime-local"
-                            value={data.scheduledAt ? data.scheduledAt.slice(0, 16) : ''}
+                            value={
+                                data.scheduledAt
+                                    ? new Date(new Date(data.scheduledAt).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+                                    : ''
+                            }
                             onChange={(e) => {
                                 const val = e.target.value;
                                 if (!val) {
