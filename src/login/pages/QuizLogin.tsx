@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Lock, Mail, Eye, EyeOff, School, AlertCircle, Home, User } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, School, AlertCircle, Home, User, Flag } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../../shared/context/AuthContext';
@@ -197,6 +197,18 @@ export default function QuizLogin() {
             >
                 <Home className="w-5 h-5 group-hover:scale-110 transition-transform" />
             </button>
+
+            {/* Report Problem Button */}
+            <a
+                href="https://docs.google.com/forms/d/e/1FAIpQLSf5J-sAjj4-yM6Dmbf9duPZI5H0hvWahH5osQZPVLcnUVHWjA/viewform?pli=1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-6 right-6 z-50 p-3 rounded-full bg-white/10 hover:bg-white/20 text-text dark:text-white backdrop-blur-md border border-white/20 shadow-lg transition-all group flex items-center gap-2"
+                title="Report a Problem"
+            >
+                <Flag className="w-5 h-5 group-hover:scale-110 transition-transform text-red-500" />
+                <span className="hidden sm:inline text-xs font-semibold uppercase tracking-wider">Report Problem</span>
+            </a>
 
             {/* Left Side: Visuals & Branding */}
             <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-12 relative z-10">
