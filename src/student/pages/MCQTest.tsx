@@ -205,16 +205,35 @@ const MCQTest = () => {
             setScore(calculatedScore);
             setShowResults(true);
 
-            // 3. Save to quiz_results (Legacy/Dashboard support)
-            // Use .insert() because 'quiz_id, student_id' might not be a unique constraint
-            // and 'answers' column does not exist on this table
-            await supabase.from('quiz_results').insert({
+            // --- SERVER-SIDE DUPLICATE CHECK (Zero-Trust) ---
+            // Even if the frontend somehow allowed a retake, verify at DB level.
+            const { data: existingResult } = await supabase
+                .from('quiz_results')
+                .select('id')
+                .eq('quiz_id', id)
+                .eq('student_id', user.id)
+                .limit(1);
+
+            if (existingResult && existingResult.length > 0) {
+                console.warn("Duplicate submission blocked — result already exists for this student + quiz.");
+                localStorage.removeItem(`quiz_progress_${user.id}_${id}`);
+                return; // Don't save again
+            }
+
+            // 3. Save to quiz_results (enforced by UNIQUE constraint on student_id, quiz_id)
+            // Using .upsert() so that even without the above check, the DB constraint
+            // will prevent a true duplicate row — it will update instead.
+            const { error: resultError } = await supabase.from('quiz_results').upsert({
                 quiz_id: id,
                 student_id: user.id,
                 score: calculatedScore,
                 total_questions: questions.length,
                 percentage: (calculatedScore / questions.length) * 100
-            });
+            }, { onConflict: 'student_id, quiz_id', ignoreDuplicates: true });
+
+            if (resultError) {
+                console.error("Failed to save quiz result:", resultError);
+            }
 
             // 4. Mark Attempt as Completed
             await supabase.from('attempts').update({
@@ -297,7 +316,7 @@ const MCQTest = () => {
                 if (quizData) {
                     if (quizData.settings) setQuizSettings(quizData.settings);
 
-                    // Security Check: Prevent unauthorized retakes
+                    // --- SERVER-SIDE RETAKE GUARD (cannot bypass with incognito/localStorage clear) ---
                     const { data: { user } } = await supabase.auth.getUser();
                     if (user) {
                         const isMaster = quizData.type === 'master';

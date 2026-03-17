@@ -124,7 +124,11 @@ const JoinTest = () => {
 
             quizData.question_count = count || 0;
 
-            if (user && quizData.type === 'master') {
+            // --- SERVER-SIDE ATTEMPT CHECK (Enforced by Supabase, not localStorage) ---
+            // This check queries the DB directly, so incognito mode / cleared
+            // browser data cannot bypass it. The unique constraint on
+            // quiz_results(student_id, quiz_id) is the ultimate safety net.
+            if (quizData.type === 'master') {
                 const { data: existingAttempts, error: attemptError } = await supabase
                     .from('quiz_results')
                     .select('id')
@@ -140,7 +144,7 @@ const JoinTest = () => {
                     return;
                 }
                 
-                // Add Validity Constraint Check
+                // Validity Constraint Check
                 if (quizData.settings?.validUntil) {
                     const validityDate = new Date(quizData.settings.validUntil);
                     if (new Date() > validityDate) {
