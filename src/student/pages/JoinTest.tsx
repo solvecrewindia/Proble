@@ -200,6 +200,25 @@ const JoinTest = () => {
             setQuiz(quizData);
         } catch (err: any) {
             console.error('Error fetching quiz:', err);
+            
+            // --- AUTO-SESSION REFRESH ON JWT EXPIRE ---
+            const isAuthError = err.message?.toLowerCase().includes('jwt') || err.message?.toLowerCase().includes('unauthorized');
+            
+            if (isAuthError) {
+                console.warn("JoinTest: Detected expired session. Attempting background refresh...");
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        console.log("JoinTest: Session refreshed. Retrying verification...");
+                        // Delay slightly to ensure client state synchronizes
+                        setTimeout(() => handleVerifyCode(codeToVerify), 500);
+                        return;
+                    }
+                } catch (refreshErr) {
+                    console.error("JoinTest: Failed to refresh session automatically", refreshErr);
+                }
+            }
+
             setError(err.message || 'Invalid access code. Please check and try again.');
             setQuiz(null);
         } finally {

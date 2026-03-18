@@ -509,17 +509,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const getServerTime = async (): Promise<Date> => {
         try {
             // 1. Try RPC
+            // We use a silent catch here specifically for auth/JWT issues
             const { data, error } = await supabase.rpc('get_server_time');
             if (!error && data) return new Date(data);
             
+            if (error) {
+                console.warn("AuthContext: getServerTime RPC failed (likely JWT or RLS), falling back to anonymous HEAD.", error.message);
+            }
+            
             // 2. Fallback to HTTP HEAD request to Supabase URL (Extract Date header)
-            // Using a simple fetch to the base URL
+            // This is ANONYMOUS and does not require a valid JWT.
             const start = Date.now();
-            const response = await fetch(import.meta.env.VITE_SUPABASE_URL, { method: 'HEAD' });
+            const response = await fetch(import.meta.env.VITE_SUPABASE_URL, { 
+                method: 'HEAD',
+                cache: 'no-store' // Avoid browser caching of the header
+            });
             const serverDateStr = response.headers.get('date');
             if (serverDateStr) {
                 const serverDate = new Date(serverDateStr);
-                // Add half of the RTT to the server date for better accuracy
                 const rtt = Date.now() - start;
                 return new Date(serverDate.getTime() + (rtt / 2));
             }

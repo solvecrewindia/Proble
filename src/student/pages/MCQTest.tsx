@@ -246,8 +246,25 @@ const MCQTest = () => {
             // Clear Local Storage on Successful Submit
             localStorage.removeItem(`quiz_progress_${user.id}_${id}`);
 
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error saving results:", err);
+            
+            // --- AUTO-SESSION REFRESH ON JWT EXPIRE ---
+            const isAuthError = err.message?.toLowerCase().includes('jwt') || err.message?.toLowerCase().includes('unauthorized');
+            if (isAuthError) {
+                console.warn("MCQTest: Detected expired session during submit. Attempting refresh...");
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        console.log("MCQTest: Session refreshed. Retrying submission...");
+                        calculateAndShowResults();
+                        return;
+                    }
+                } catch (refreshErr) {
+                    console.error("MCQTest: Failed to refresh session automatically", refreshErr);
+                }
+            }
+
             setShowResults(true);
         }
     }, [answers, questions, id, codeExecutionStatus]);
@@ -404,8 +421,20 @@ const MCQTest = () => {
                     });
                     setQuestions(mapped);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Error loading test:", err);
+                
+                // --- AUTO-SESSION REFRESH ON JWT EXPIRE ---
+                const isAuthError = err.message?.toLowerCase().includes('jwt') || err.message?.toLowerCase().includes('unauthorized');
+                if (isAuthError) {
+                    console.warn("MCQTest: Detected expired session during fetch. Attempting refresh...");
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        console.log("MCQTest: Session refreshed. Retrying fetch...");
+                        fetchQuestions(); // Retry
+                        return;
+                    }
+                }
             } finally {
                 setLoading(false);
             }
