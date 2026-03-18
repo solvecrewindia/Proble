@@ -350,13 +350,6 @@ const JoinTest = () => {
                             </span>.
                         </p>
                     </div>
-
-                    <Button
-                        className="w-full max-w-xs mx-auto h-14 text-lg font-bold rounded-2xl bg-blue-500"
-                        onClick={() => handleVerifyCode(code)}
-                    >
-                        Try Again
-                    </Button>
                 </div>
             </div>
         );
