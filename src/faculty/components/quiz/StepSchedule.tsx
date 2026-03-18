@@ -1,21 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Key, Shield, Link, Copy, Check, QrCode, Play, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, Clock, Key, Shield, Link, Copy, Check, QrCode, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../../shared/context/AuthContext';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { QRCodeModal } from './QRCodeModal';
-import { supabase } from '../../../lib/supabase';
 
 export function StepSchedule({ data, update }: any) {
     const [copied, setCopied] = useState(false);
     const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
+    const { getServerTime } = useAuth();
+    const [isPast, setIsPast] = useState(false);
 
 
     useEffect(() => {
         if (!data.accessCode) {
             generateCode();
         }
-    }, []);
+        checkIfPast();
+    }, [data.scheduledAt]);
+
+    const checkIfPast = async () => {
+        if (data.scheduledAt) {
+            const now = await getServerTime();
+            if (new Date(data.scheduledAt) < now) {
+                setIsPast(true);
+            } else {
+                setIsPast(false);
+            }
+        } else {
+            setIsPast(false);
+        }
+    };
 
     const generateCode = () => {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -73,6 +89,11 @@ export function StepSchedule({ data, update }: any) {
                                 }
                             }}
                         />
+                        {isPast && (
+                            <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
+                                <AlertTriangle className="h-3 w-3" /> Selected time is in the past.
+                            </p>
+                        )}
                     </div>
 
                     {data.type === 'live' ? (

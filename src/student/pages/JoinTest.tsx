@@ -10,7 +10,7 @@ import { useAuth } from '../../shared/context/AuthContext';
 const JoinTest = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, getServerTime } = useAuth();
     const urlCode = searchParams.get('code');
 
     const [code, setCode] = useState(urlCode || '');
@@ -158,7 +158,10 @@ const JoinTest = () => {
             // Add Start Time Constraint Check
             if (quizData.settings?.scheduledAt) {
                 const startDate = new Date(quizData.settings.scheduledAt);
-                if (new Date() < startDate) {
+                const serverTime = await getServerTime();
+                
+                // Add a 1-minute buffer (60000ms) to allow for minor network/processing delays
+                if (serverTime.getTime() + 60000 < startDate.getTime()) {
                     setIsNotStartedYet(startDate);
                     setVerifying(false);
                     return;

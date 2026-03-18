@@ -16,6 +16,7 @@ interface AuthContextType {
     checkProfileExists: (userId: string) => Promise<{ exists: boolean; hasRegNo: boolean }>;
     finalizeSignup: (userId: string, email: string, password: string, username: string, role: User['role'], registrationNumber?: string) => Promise<{ user: User | null; error: Error | null }>;
     updateRegistrationNumber: (userId: string, registrationNumber: string) => Promise<{ error: Error | null }>;
+    getServerTime: () => Promise<Date>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -505,8 +506,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
 
+    const getServerTime = async (): Promise<Date> => {
+        try {
+            // 1. Try RPC
+            const { data, error } = await supabase.rpc('get_server_time');
+            if (!error && data) return new Date(data);
+            
+            // 2. Fallback to HTTP HEAD request to Supabase URL (Extract Date header)
+            // Using a simple fetch to the base URL
+            const start = Date.now();
+            const response = await fetch(import.meta.env.VITE_SUPABASE_URL, { method: 'HEAD' });
+            const serverDateStr = response.headers.get('date');
+            if (serverDateStr) {
+                const serverDate = new Date(serverDateStr);
+                // Add half of the RTT to the server date for better accuracy
+                const rtt = Date.now() - start;
+                return new Date(serverDate.getTime() + (rtt / 2));
+            }
+        } catch (err) {
+            console.warn("AuthContext: getServerTime failed, falling back to local clock:", err);
+        }
+        
+        // 3. Final Fallback: Local Clock
+        return new Date();
+    };
+
+
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, loadSessionUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup, updateRegistrationNumber }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, loadSessionUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup, updateRegistrationNumber, getServerTime }}>
             {children}
         </AuthContext.Provider>
     );
