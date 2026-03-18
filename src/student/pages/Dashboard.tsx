@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, CheckCircle, Clock, Flame, Activity as ActivityIcon, Building2, GraduationCap, MonitorPlay } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -17,6 +17,11 @@ const StudentDashboard = () => {
     });
     const [activityData, setActivityData] = useState<any[]>([]);
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
+    const [moduleStats, setModuleStats] = useState({
+        placement: { total: 0, completed: 0 },
+        srmist: { total: 0, completed: 0 },
+        nptel: { total: 0, completed: 0 }
+    });
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -38,8 +43,8 @@ const StudentDashboard = () => {
                     // 1. Completed
                     const completed = results.length;
 
-                    // 2. Badges (Mock: Score > 80% = Badge)
-                    const badges = results.filter(r => r.percentage >= 80).length;
+                    // 2. Badges (Threshold: 75% score)
+                    const badges = results.filter(r => r.percentage >= 75).length;
 
                     // 3. Study Hours (Estimate: Quiz Duration or 15mins default * count)
                     // Note: 'settings' is jsonb, typically has 'duration' in minutes
@@ -104,7 +109,6 @@ const StudentDashboard = () => {
                     }));
                     setActivityData(chartData);
 
-                    // --- Recent Activity ---
                     setRecentActivity(results.slice(0, 5).map(r => ({
                         id: r.id,
                         quiz: r.quizzes?.title || 'Unknown Quiz',
@@ -113,6 +117,32 @@ const StudentDashboard = () => {
                         percentage: Math.round(r.percentage),
                         date: new Date(r.created_at).toLocaleDateString()
                     })));
+
+                    // --- Module Stats ---
+                    // Fetch total active quizzes for each module type
+                    const { data: qCounts } = await supabase
+                        .from('quizzes')
+                        .select('type')
+                        .in('type', ['placement', 'srmist', 'nptel'])
+                        .eq('status', 'active');
+
+                    const totals = {
+                        placement: qCounts?.filter(q => q.type === 'placement').length || 0,
+                        srmist: qCounts?.filter(q => q.type === 'srmist').length || 0,
+                        nptel: qCounts?.filter(q => q.type === 'nptel').length || 0
+                    };
+
+                    const moduleCompletions = {
+                        placement: results.filter(r => r.quizzes?.type === 'placement').length,
+                        srmist: results.filter(r => r.quizzes?.type === 'srmist').length,
+                        nptel: results.filter(r => r.quizzes?.type === 'nptel').length
+                    };
+
+                    setModuleStats({
+                        placement: { total: totals.placement, completed: moduleCompletions.placement },
+                        srmist: { total: totals.srmist, completed: moduleCompletions.srmist },
+                        nptel: { total: totals.nptel, completed: moduleCompletions.nptel }
+                    });
                 }
             } catch (err) {
                 console.error("Error fetching dashboard data:", err);
@@ -166,8 +196,21 @@ const StudentDashboard = () => {
                         <div className="mb-4 p-3 w-fit rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
                             <Building2 className="w-6 h-6" />
                         </div>
-                        <h3 className="text-lg font-bold mb-2 group-hover:text-orange-500 transition-colors">Placement</h3>
+                        <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-lg font-bold group-hover:text-orange-500 transition-colors">Placement</h3>
+                            <span className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded">
+                                {moduleStats.placement.completed}/{moduleStats.placement.total}
+                            </span>
+                        </div>
                         <p className="text-sm text-muted">Aptitude, reasoning, and technical interview prep.</p>
+                        {moduleStats.placement.total > 0 && (
+                            <div className="mt-4 h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-orange-500 transition-all duration-500" 
+                                    style={{ width: `${(moduleStats.placement.completed / moduleStats.placement.total) * 100}%` }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -181,8 +224,21 @@ const StudentDashboard = () => {
                         <div className="mb-4 p-3 w-fit rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
                             <GraduationCap className="w-6 h-6" />
                         </div>
-                        <h3 className="text-lg font-bold mb-2 group-hover:text-blue-500 transition-colors">SRMIST</h3>
+                        <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-lg font-bold group-hover:text-blue-500 transition-colors">SRMIST</h3>
+                            <span className="text-xs font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded">
+                                {moduleStats.srmist.completed}/{moduleStats.srmist.total}
+                            </span>
+                        </div>
                         <p className="text-sm text-muted">University specific courses and materials.</p>
+                        {moduleStats.srmist.total > 0 && (
+                            <div className="mt-4 h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-blue-500 transition-all duration-500" 
+                                    style={{ width: `${(moduleStats.srmist.completed / moduleStats.srmist.total) * 100}%` }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -196,8 +252,21 @@ const StudentDashboard = () => {
                         <div className="mb-4 p-3 w-fit rounded-xl bg-green-500/10 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
                             <MonitorPlay className="w-6 h-6" />
                         </div>
-                        <h3 className="text-lg font-bold mb-2 group-hover:text-green-500 transition-colors">NPTEL</h3>
+                        <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-lg font-bold group-hover:text-green-500 transition-colors">NPTEL</h3>
+                            <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded">
+                                {moduleStats.nptel.completed}/{moduleStats.nptel.total}
+                            </span>
+                        </div>
                         <p className="text-sm text-muted">Online certification courses and assignments.</p>
+                        {moduleStats.nptel.total > 0 && (
+                            <div className="mt-4 h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-green-500 transition-all duration-500" 
+                                    style={{ width: `${(moduleStats.nptel.completed / moduleStats.nptel.total) * 100}%` }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

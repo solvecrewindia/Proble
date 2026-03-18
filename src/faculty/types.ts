@@ -44,8 +44,8 @@ export interface Quiz {
     title: string;
     description: string;
     image_url?: string;
-    type: 'global' | 'master' | 'live';
-    status: 'draft' | 'active' | 'completed' | 'paused';
+    type: 'global' | 'master' | 'live' | 'nptel' | 'gate' | 'srmist' | 'placement' | 'course';
+    status: 'draft' | 'active' | 'completed' | 'paused' | 'ongoing' | 'scheduled' | 'ended';
     accessCode?: string;
     scheduledAt?: string;
     questions: Question[];
