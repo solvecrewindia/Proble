@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff, School, AlertCircle, Home, User, Flag } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -317,6 +317,14 @@ export default function QuizLogin() {
                                         >
                                             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                         </button>
+                                    </div>
+                                    <div className="flex justify-end pr-1">
+                                        <Link 
+                                            to="/forgot-password" 
+                                            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                                        >
+                                            Forgot password?
+                                        </Link>
                                     </div>
                                 </div>
                                 <Button
