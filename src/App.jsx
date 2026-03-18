@@ -76,8 +76,11 @@ const OnboardingRoute = ({ children }) => {
     if (isLoading) return <FullScreenLoader />;
     if (!user) return <Navigate to="/login" replace />;
 
-    // If user HAS a role, they shouldn't be here (unless we allow re-onboarding? No)
-    if (user.role && !user.isNewUser) {
+    // If user HAS a role, they shouldn't be here UNLESS they are missing mandatory info
+    const isStudent = user.role?.toLowerCase() === 'student';
+    const isMissingInfo = isStudent && (!user.full_name || !user.registration_number);
+
+    if (user.role && !user.isNewUser && !isMissingInfo) {
         return <Navigate to="/" replace />;
     }
     return children;
