@@ -59,6 +59,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         }
     }
 
+    // Profile Completion Guard for Students
+    const isStudent = user.role?.toLowerCase() === 'student';
+    const isMissingInfo = isStudent && (!user.full_name || !user.registration_number);
+    if (isMissingInfo) {
+        console.warn(`ProtectedRoute: Mandatory profile info missing for Student. Redirecting to onboarding.`);
+        return <Navigate to="/onboarding" replace />;
+    }
+
     return children;
 };
 
@@ -87,8 +95,12 @@ const RootRedirect = ({ searchQuery }) => {
 
     // Role Guard: Redirect based on role
     if (user) {
-        // Redirection for new users
-        if (user.isNewUser || !user.role) {
+        // Redirection for new users or students with missing mandatory info
+        const isStudent = user.role?.toLowerCase() === 'student';
+        const isMissingInfo = isStudent && (!user.full_name || !user.registration_number);
+
+        if (user.isNewUser || !user.role || isMissingInfo) {
+            console.log("RootRedirect: Redirecting to onboarding. NewUser:", !!user.isNewUser, "NoRole:", !user.role, "MissingInfo:", isMissingInfo);
             return <Navigate to="/onboarding" replace />;
         }
 

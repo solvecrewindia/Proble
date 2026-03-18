@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../shared/context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, School, Check, User as UserIcon, Loader2 } from 'lucide-react';
+import { GraduationCap, School, User as UserIcon, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
@@ -11,18 +11,20 @@ export default function Onboarding() {
     const navigate = useNavigate();
     // Initialize state directly from localStorage to prevent flash of Role Selection
     const [step, setStep] = useState(() => {
+        if (user?.role) return 2;
         return localStorage.getItem('quiz_join_intent') ? 2 : 1;
     });
-    const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | null>(() => {
+    const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'admin' | 'faculty' | null>(() => {
+        if (user?.role) return user.role as any;
         const intent = localStorage.getItem('quiz_join_intent');
         return intent ? 'student' : null;
     });
     const [isLoading, setIsLoading] = useState(false);
 
     // Form states
-    const [username, setUsername] = useState('');
-    const [fullName, setFullName] = useState('');
-    const [regNo, setRegNo] = useState('');
+    const [username, setUsername] = useState(user?.username || '');
+    const [fullName, setFullName] = useState(user?.full_name || '');
+    const [regNo, setRegNo] = useState(user?.registration_number || '');
 
     useEffect(() => {
         if (!user) {
@@ -96,20 +98,20 @@ export default function Onboarding() {
         try {
             setIsLoading(true);
 
-            // 1. Insert into profiles
+            // 1. Upsert into profiles
             const { error } = await supabase
                 .from('profiles')
-                .insert([
+                .upsert([
                     {
                         id: user.id,
                         username: username,
                         full_name: fullName,
                         role: selectedRole,
                         email: user.email,
-                        registration_number: selectedRole === 'student' ? regNo : null,
-                        avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null // Carry over Google Image
+                        registration_number: (selectedRole === 'student' || selectedRole === 'admin') ? regNo : null,
+                        avatar_url: user.avatar_url || null // Already carried over in AuthContext
                     }
-                ]);
+                ], { onConflict: 'id' });
 
             if (error) throw error;
 
@@ -154,10 +156,12 @@ export default function Onboarding() {
                 {/* Header */}
                 <div className="text-center mb-10">
                     <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 mb-2">
-                        Welcome to Proble!
+                        {user?.role ? 'Complete Your Profile' : 'Welcome to Proble!'}
                     </h1>
                     <p className="text-neutral-500 dark:text-neutral-400">
-                        Let's set up your profile to get you started.
+                        {user?.role 
+                            ? 'Please provide the missing mandatory information below.' 
+                            : "Let's set up your profile to get you started."}
                     </p>
                 </div>
 
