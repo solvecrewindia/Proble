@@ -10,7 +10,7 @@ import { useAuth } from '../../shared/context/AuthContext';
 const JoinTest = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { user, getServerTime } = useAuth();
+    const { user, getServerTime, isLoading: isAuthLoading } = useAuth();
     const urlCode = searchParams.get('code');
 
     const [code, setCode] = useState(urlCode || '');
@@ -201,18 +201,6 @@ const JoinTest = () => {
             }
 
             setQuiz(quizData);
-
-            // AUTO-START: If the quiz was loaded via URL param, just jump straight to the test page.
-            // This fulfills the "direct link" requirement for faculty sharing links.
-            if (codeToVerify === urlCode) {
-                console.log("JoinTest: Auto-starting test via URL code...");
-                const targetPath = quizData.type === 'live' 
-                    ? `/student/live/${quizData.id}` 
-                    : `/student/test/${quizData.id}`;
-                
-                // Use replace: true so they can't "Go Back" to the verify screen and get stuck
-                navigate(targetPath, { replace: true });
-            }
         } catch (err: any) {
             console.error('Error fetching quiz:', err);
             
@@ -370,7 +358,7 @@ const JoinTest = () => {
         );
     }
 
-    if (verifying) {
+    if (verifying || (urlCode && !user && isAuthLoading)) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
