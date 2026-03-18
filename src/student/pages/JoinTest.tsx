@@ -68,11 +68,14 @@ const JoinTest = () => {
         }
     }, [scanning]);
 
+    const hasAutoVerified = useRef(false);
+
     useEffect(() => {
-        if (urlCode) {
+        if (urlCode && user && !hasAutoVerified.current) {
+            hasAutoVerified.current = true;
             handleVerifyCode(urlCode);
         }
-    }, []);
+    }, [urlCode, user]);
 
     // Auto-refresh when waiting for a scheduled test
     useEffect(() => {
@@ -198,6 +201,18 @@ const JoinTest = () => {
             }
 
             setQuiz(quizData);
+
+            // AUTO-START: If the quiz was loaded via URL param, just jump straight to the test page.
+            // This fulfills the "direct link" requirement for faculty sharing links.
+            if (codeToVerify === urlCode) {
+                console.log("JoinTest: Auto-starting test via URL code...");
+                const targetPath = quizData.type === 'live' 
+                    ? `/student/live/${quizData.id}` 
+                    : `/student/test/${quizData.id}`;
+                
+                // Use replace: true so they can't "Go Back" to the verify screen and get stuck
+                navigate(targetPath, { replace: true });
+            }
         } catch (err: any) {
             console.error('Error fetching quiz:', err);
             
