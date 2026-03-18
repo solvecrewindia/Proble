@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Bar, Line } from 'react-chartjs-2';
@@ -51,8 +51,9 @@ export default function Analytics() {
                 .from('quiz_results')
                 .select(`
                     *,
-                    quizzes ( title )
+                    quizzes!inner ( title, created_by )
                 `)
+                .eq('quizzes.created_by', userId)
                 .order('created_at', { ascending: true });
 
             if (error) {

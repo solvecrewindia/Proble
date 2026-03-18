@@ -1,11 +1,10 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { BarChart2, Share2, Plus, Check, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import type { Quiz } from '../types';
 
 function ShareButton({ quizCode, quizId }: { quizCode?: string; quizId: string }) {
     const [copied, setCopied] = useState(false);
@@ -46,7 +45,8 @@ function ShareButton({ quizCode, quizId }: { quizCode?: string; quizId: string }
 
 export default function Global() {
     const navigate = useNavigate();
-    const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+    const [quizzes, setQuizzes] = useState<any[]>([]);
+    const [stats, setStats] = useState<Record<string, { participants: number; avgScore: number }>>({});
     const [loading, setLoading] = useState(true);
 
     const { user: contextUser } = useAuth();
@@ -63,7 +63,32 @@ export default function Global() {
                 .eq('type', 'global')
                 .order('created_at', { ascending: false });
 
-            if (data) setQuizzes(data as any);
+            if (data) {
+                setQuizzes(data);
+                
+                // Fetch stats for these quizzes
+                const quizIds = data.map(q => q.id);
+                if (quizIds.length > 0) {
+                    const { data: results } = await supabase
+                        .from('quiz_results')
+                        .select('quiz_id, percentage')
+                        .in('quiz_id', quizIds);
+
+                    if (results) {
+                        const newStats: any = {};
+                        quizIds.forEach(id => {
+                            const qResults = results.filter(r => r.quiz_id === id);
+                            newStats[id] = {
+                                participants: qResults.length,
+                                avgScore: qResults.length > 0 
+                                    ? qResults.reduce((acc, curr) => acc + curr.percentage, 0) / qResults.length 
+                                    : 0
+                            };
+                        });
+                        setStats(newStats);
+                    }
+                }
+            }
             setLoading(false);
         };
 
@@ -125,7 +150,7 @@ export default function Global() {
 
                                         <div className="grid grid-cols-4 gap-4 py-4 border-y border-neutral-300 dark:border-neutral-600">
                                             <div>
-                                                <div className="text-2xl font-bold text-text">-</div>
+                                                <div className="text-2xl font-bold text-text">{stats[quiz.id]?.participants || 0}</div>
                                                 <div className="text-xs text-muted">Participants</div>
                                             </div>
                                             <div>
@@ -142,7 +167,9 @@ export default function Global() {
                                                 )}
                                             </div>
                                             <div>
-                                                <div className="text-2xl font-bold text-text">-</div>
+                                                <div className="text-2xl font-bold text-text">
+                                                    {stats[quiz.id]?.avgScore ? `${stats[quiz.id].avgScore.toFixed(1)}%` : '0%'}
+                                                </div>
                                                 <div className="text-xs text-muted">Avg. Score</div>
                                             </div>
                                             <div>

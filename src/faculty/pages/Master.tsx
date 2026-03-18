@@ -18,6 +18,7 @@ export default function Master() {
 
     // QR Code State
     const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
+    const [stats, setStats] = useState<Record<string, { avgProgress: number }>>({});
 
     const fetchQuizzes = React.useCallback(async () => {
         if (!user) {
@@ -40,6 +41,28 @@ export default function Master() {
             
             if (data) {
                 setQuizzes(data);
+                
+                // Fetch average progress for these quizzes
+                const quizIds = data.map(q => q.id);
+                if (quizIds.length > 0) {
+                    const { data: results } = await supabase
+                        .from('quiz_results')
+                        .select('quiz_id, percentage')
+                        .in('quiz_id', quizIds);
+
+                    if (results) {
+                        const newStats: any = {};
+                        quizIds.forEach(id => {
+                            const qResults = results.filter(r => r.quiz_id === id);
+                            newStats[id] = {
+                                avgProgress: qResults.length > 0 
+                                    ? qResults.reduce((acc, curr) => acc + curr.percentage, 0) / qResults.length 
+                                    : 0
+                            };
+                        });
+                        setStats(newStats);
+                    }
+                }
             }
         } catch (err) {
             console.error("Unexpected error fetching quizzes:", err);
@@ -541,7 +564,9 @@ export default function Master() {
                                         <div className="text-xs text-muted">Flagged Incidents</div>
                                     </div>
                                     <div className="bg-background p-3 rounded-lg border border-neutral-300 dark:border-neutral-600">
-                                        <div className="text-2xl font-bold text-text">-</div>
+                                        <div className="text-2xl font-bold text-text">
+                                            {stats[quiz.id]?.avgProgress ? `${stats[quiz.id].avgProgress.toFixed(1)}%` : '0%'}
+                                        </div>
                                         <div className="text-xs text-muted">Avg. Progress</div>
                                     </div>
                                 </div>
