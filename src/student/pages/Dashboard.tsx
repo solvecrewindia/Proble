@@ -124,7 +124,7 @@ const StudentDashboard = () => {
                         .from('quizzes')
                         .select('type')
                         .in('type', ['placement', 'srmist', 'nptel'])
-                        .eq('status', 'active');
+                        .in('status', ['active', 'scheduled']);
 
                     const totals = {
                         placement: qCounts?.filter(q => q.type === 'placement').length || 0,

@@ -14,7 +14,7 @@ const MCQTest = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const { theme, setTheme } = useTheme();
-    const { user } = useAuth();
+    const { user, getServerTime } = useAuth();
     const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
     const [questions, setQuestions] = useState<any[]>([]);
@@ -561,8 +561,8 @@ const MCQTest = () => {
     useEffect(() => {
         if (!testActive || showResults || !quizSettings?.validUntil) return;
 
-        const interval = setInterval(() => {
-            const now = new Date();
+        const interval = setInterval(async () => {
+            const now = await getServerTime();
             const validUntil = new Date(quizSettings.validUntil);
             if (now > validUntil) {
                 clearInterval(interval);

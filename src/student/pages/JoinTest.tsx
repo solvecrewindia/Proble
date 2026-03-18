@@ -74,6 +74,24 @@ const JoinTest = () => {
         }
     }, []);
 
+    // Auto-refresh when waiting for a scheduled test
+    useEffect(() => {
+        if (!isNotStartedYet || !code) return;
+
+        console.log("Starting auto-refresh timer for scheduled test...");
+        const interval = setInterval(async () => {
+            const serverTime = await getServerTime();
+            if (serverTime >= isNotStartedYet) {
+                console.log("Scheduled time reached! Refreshing...");
+                clearInterval(interval);
+                setIsNotStartedYet(null);
+                handleVerifyCode(code);
+            }
+        }, 5000); // Check every 5 seconds
+
+        return () => clearInterval(interval);
+    }, [isNotStartedYet, code, getServerTime]);
+
     const extractCode = (text: string) => {
         try {
             if (text.includes('://') || text.includes('vercel.app')) {
@@ -128,14 +146,18 @@ const JoinTest = () => {
             // This check queries the DB directly, so incognito mode / cleared
             // browser data cannot bypass it. The unique constraint on
             // quiz_results(student_id, quiz_id) is the ultimate safety net.
-            if (quizData.type === 'master') {
+            // --- SERVER-SIDE ATTEMPT CHECK (Enforced by Supabase, not localStorage) ---
+            // Broaden check: Any quiz with a scheduled start time or of type 'master' 
+            // is typically meant to be taken once. 
+            const shouldCheckAttempts = quizData.type === 'master' || quizData.settings?.scheduledAt;
+            
+            if (shouldCheckAttempts) {
                 const { data: existingAttempts, error: attemptError } = await supabase
                     .from('quiz_results')
                     .select('id')
                     .eq('quiz_id', quizData.id)
                     .eq('student_id', user.id)
                     .limit(1);
-
                 if (attemptError) {
                     console.error("Error checking attempts:", attemptError);
                 } else if (existingAttempts && existingAttempts.length > 0) {
@@ -160,8 +182,8 @@ const JoinTest = () => {
                 const startDate = new Date(quizData.settings.scheduledAt);
                 const serverTime = await getServerTime();
                 
-                // Add a 1-minute buffer (60000ms) to allow for minor network/processing delays
-                if (serverTime.getTime() + 60000 < startDate.getTime()) {
+                // STRICT TIMING: No buffer. Use server time as the absolute source.
+                if (serverTime.getTime() < startDate.getTime()) {
                     setIsNotStartedYet(startDate);
                     setVerifying(false);
                     return;
@@ -312,9 +334,9 @@ const JoinTest = () => {
 
                     <Button
                         className="w-full max-w-xs mx-auto h-14 text-lg font-bold rounded-2xl bg-blue-500"
-                        onClick={() => navigate('/student/dashboard')}
+                        onClick={() => handleVerifyCode(code)}
                     >
-                        Go to Dashboard
+                        Try Again
                     </Button>
                 </div>
             </div>
