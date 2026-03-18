@@ -39,20 +39,7 @@ export default function Master() {
             }
             
             if (data) {
-                const now = new Date();
-                const updatedQuizzes = await Promise.all(data.map(async (quiz: any) => {
-                    const isActiveOrPaused = quiz.status === 'active' || quiz.status === 'paused' || !quiz.status;
-                    if (isActiveOrPaused && quiz.settings?.validUntil) {
-                        const validUntil = new Date(quiz.settings.validUntil);
-                        if (now > validUntil) {
-                            // Auto-expire in database
-                            await supabase.from('quizzes').update({ status: 'completed' }).eq('id', quiz.id);
-                            return { ...quiz, status: 'completed' };
-                        }
-                    }
-                    return quiz;
-                }));
-                setQuizzes(updatedQuizzes);
+                setQuizzes(data);
             }
         } catch (err) {
             console.error("Unexpected error fetching quizzes:", err);
@@ -315,20 +302,25 @@ export default function Master() {
         setQrCodeData({ url, code });
     };
 
-    // Filter quizzes based on active tab
-    const filteredQuizzes = quizzes.filter(quiz => {
+    const getStatus = (quiz: any) => {
+        if (quiz.status === 'completed') return 'completed';
+        if (quiz.status === 'draft') return 'scheduled';
+        
         const now = new Date();
         const startTime = quiz.settings?.scheduledAt ? new Date(quiz.settings.scheduledAt) : null;
         const endTime = quiz.settings?.validUntil ? new Date(quiz.settings.validUntil) : null;
 
-        const isCompleted = quiz.status === 'completed' || (endTime && now > endTime);
-        const isScheduled = !isCompleted && startTime && now < startTime;
-        const isOngoing = !isCompleted && !isScheduled && quiz.status !== 'draft';
+        if (!startTime || now >= startTime) {
+            if (!endTime || now <= endTime) return "ongoing";
+        } else {
+            return "scheduled";
+        }
+        return "completed";
+    };
 
-        if (activeTab === 'ongoing') return isOngoing;
-        if (activeTab === 'scheduled') return isScheduled || (quiz.status === 'draft' && !isCompleted); // Include drafts in scheduled
-        if (activeTab === 'completed') return isCompleted;
-        return true;
+    // Filter quizzes based on active tab
+    const filteredQuizzes = quizzes.filter(quiz => {
+        return getStatus(quiz) === activeTab;
     });
 
     if (loading) return <div className="p-8 text-center">Loading master tests...</div>;
