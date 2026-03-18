@@ -143,25 +143,25 @@ const JoinTest = () => {
                     setVerifying(false);
                     return;
                 }
-                
-                // Validity Constraint Check
-                if (quizData.settings?.validUntil) {
-                    const validityDate = new Date(quizData.settings.validUntil);
-                    if (new Date() > validityDate) {
-                        setIsExpired(true);
-                        setVerifying(false);
-                        return;
-                    }
-                }
+            }
 
-                // Add Start Time Constraint Check
-                if (quizData.settings?.scheduledAt) {
-                    const startDate = new Date(quizData.settings.scheduledAt);
-                    if (new Date() < startDate) {
-                        setIsNotStartedYet(startDate);
-                        setVerifying(false);
-                        return;
-                    }
+            // Validity Constraint Check
+            if (quizData.settings?.validUntil) {
+                const validityDate = new Date(quizData.settings.validUntil);
+                if (new Date() > validityDate) {
+                    setIsExpired(true);
+                    setVerifying(false);
+                    return;
+                }
+            }
+
+            // Add Start Time Constraint Check
+            if (quizData.settings?.scheduledAt) {
+                const startDate = new Date(quizData.settings.scheduledAt);
+                if (new Date() < startDate) {
+                    setIsNotStartedYet(startDate);
+                    setVerifying(false);
+                    return;
                 }
             }
 
@@ -263,10 +263,10 @@ const JoinTest = () => {
 
                     <div className="space-y-3">
                         <h1 className="text-3xl font-black text-text tracking-tight">
-                            Test Completed
+                            This Test Has Ended
                         </h1>
                         <p className="text-muted text-base leading-relaxed px-4">
-                            The validity period for this master test has expired. It is no longer accepting new submissions.
+                            The assessment you are trying to access is no longer available.
                         </p>
                     </div>
 

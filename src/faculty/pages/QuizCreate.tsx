@@ -139,11 +139,25 @@ export default function QuizCreate() {
                 data.settings.antiCheatLevel = 'standard';
             }
 
+            const now = new Date();
+            let newStatus = 'ongoing';
+            
+            if (data.scheduledAt) {
+                const start = new Date(data.scheduledAt);
+                if (now < start) newStatus = 'scheduled';
+            }
+            
+            if (data.settings?.validUntil) {
+                const end = new Date(data.settings.validUntil);
+                if (now > end) newStatus = 'completed';
+            }
+
             const quizPayload = {
                 title: data.title,
                 description: data.description,
                 type: data.type,
                 code: needsCode ? (data.accessCode || generateCode()) : null,
+                status: newStatus,
                 settings: {
                     ...data.settings,
                     duration: data.durationMinutes, // Sync duration to settings
