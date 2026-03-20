@@ -224,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setUser(null);
                     setIsLoading(false);
                     localStorage.removeItem('cached_user_profile'); // Clear cache on logout
-                } else if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
+                } else if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION' || event === 'PASSWORD_RECOVERY')) {
                     const userEmail = session.user.email || `user-${session.user.id}@example.com`;
 
                     // For SIGNED_IN: ALWAYS refetch from DB to ensure fresh state.

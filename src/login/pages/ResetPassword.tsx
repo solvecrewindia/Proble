@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useTheme } from '../../shared/context/ThemeContext';
+import { useAuth } from '../../shared/context/AuthContext';
 
 export default function ResetPassword() {
     const { register, handleSubmit, watch, formState: { errors } } = useForm();
@@ -14,6 +15,7 @@ export default function ResetPassword() {
     const [errorMessage, setErrorMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const { theme } = useTheme();
+    const { loadSessionUser } = useAuth();
     const navigate = useNavigate();
 
     const password = watch('password');
@@ -30,10 +32,13 @@ export default function ResetPassword() {
 
             if (error) throw error;
 
+            // Sync auth state
+            await loadSessionUser();
+
             setStatus('success');
-            // Redirect to login after a short delay
+            // Redirect to dashboard after a short delay
             setTimeout(() => {
-                navigate('/login');
+                navigate('/');
             }, 3000);
         } catch (error: any) {
             console.error('Update password error:', error);
@@ -58,13 +63,13 @@ export default function ResetPassword() {
                     <h2 className="text-3xl font-bold text-neutral-900 dark:text-white">Password Updated!</h2>
                     <p className="text-neutral-500 dark:text-neutral-400">
                         Your password has been successfully reset. <br />
-                        Redirecting you to login...
+                        Redirecting you to your dashboard...
                     </p>
                     <Button 
-                        onClick={() => navigate('/login')}
+                        onClick={() => navigate('/')}
                         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12 rounded-xl"
                     >
-                        Go to Login Now
+                        Go to Dashboard Now
                     </Button>
                 </div>
             </div>
