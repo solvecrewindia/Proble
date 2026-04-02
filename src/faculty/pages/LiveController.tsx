@@ -147,24 +147,40 @@ export default function LiveController() {
             fetchRealStats(currentQ.id);
         }
 
-        const channel = supabase
-            .channel(`live-stats-${id}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'attempts',
-                    filter: `quiz_id=eq.${id}`
-                },
-                () => {
-                    if (currentQ?.id) fetchRealStats(currentQ.id);
-                }
-            )
-            .subscribe();
+        // Polling Fallback (every 5 seconds)
+        const pollInterval = setInterval(() => {
+            if (currentQ?.id) fetchRealStats(currentQ.id);
+        }, 5000);
+
+        // Real-time subscription for new joiners
+        let channel: any = null;
+        try {
+            if (typeof WebSocket !== 'undefined') {
+                channel = supabase
+                    .channel(`live-stats-${id}`)
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: '*',
+                            schema: 'public',
+                            table: 'attempts',
+                            filter: `quiz_id=eq.${id}`
+                        },
+                        () => {
+                            if (currentQ?.id) fetchRealStats(currentQ.id);
+                        }
+                    )
+                    .subscribe();
+            } else {
+                console.warn("WebSockets not supported. Using polling fallback for stats.");
+            }
+        } catch (err) {
+            console.error("Failed to establish Realtime connection for stats:", err);
+        }
 
         return () => {
-            supabase.removeChannel(channel);
+            if (channel) supabase.removeChannel(channel);
+            clearInterval(pollInterval);
         };
     }, [id, quiz, currentQuestionIndex]);
 

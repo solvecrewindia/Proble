@@ -16,7 +16,6 @@ export default function StudentLiveQuiz() {
     const { theme } = useTheme();
 
     // State
-    const [quiz, setQuiz] = useState<any>(null);
     const [questions, setQuestions] = useState<any[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(-1);
     const [loading, setLoading] = useState(true);
@@ -59,8 +58,6 @@ export default function StudentLiveQuiz() {
 
             if (quizError) throw quizError;
 
-            // Update Quiz State
-            setQuiz(quizData);
 
             // Update Local State based on settings
             if (quizData.settings) {
@@ -190,66 +187,77 @@ export default function StudentLiveQuiz() {
         }, 3000);
 
         // Realtime Subscription
-        const channel = supabase
-            .channel(`live-quiz-${id}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'quizzes',
-                    filter: `id=eq.${id}`
-                },
-                (payload: any) => {
-                    console.log("Realtime Update Received:", payload);
-                    const newSettings = payload.new.settings;
-                    const newStatus = payload.new.status;
+        let channel: any = null;
+        try {
+            if (typeof WebSocket !== 'undefined') {
+                channel = supabase
+                    .channel(`live-quiz-${id}`)
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'UPDATE',
+                            schema: 'public',
+                            table: 'quizzes',
+                            filter: `id=eq.${id}`
+                        },
+                        (payload: any) => {
+                            console.log("Realtime Update Received:", payload);
+                            const newSettings = payload.new.settings;
+                            const newStatus = payload.new.status;
 
-                    if (newStatus === 'completed') {
-                        setStatus('completed');
-                    }
+                            if (newStatus === 'completed') {
+                                setStatus('completed');
+                            }
 
-                    if (newSettings) {
-                        if (typeof newSettings.currentQuestionIndex === 'number') {
-                            setCurrentQuestionIndex((prev) => {
-                                if (prev !== newSettings.currentQuestionIndex) {
-                                    // New Question: Reset entire state
-                                    setSelectedOption(null);
-                                    setIsSubmitted(false);
-                                    setIsTimeUp(false);
-                                    setTimeLeft(null);
-                                    return newSettings.currentQuestionIndex;
+                            if (newSettings) {
+                                if (typeof newSettings.currentQuestionIndex === 'number') {
+                                    setCurrentQuestionIndex((prev) => {
+                                        if (prev !== newSettings.currentQuestionIndex) {
+                                            // New Question: Reset entire state
+                                            setSelectedOption(null);
+                                            setIsSubmitted(false);
+                                            setIsTimeUp(false);
+                                            setTimeLeft(null);
+                                            return newSettings.currentQuestionIndex;
+                                        }
+                                        return prev;
+                                    });
                                 }
-                                return prev;
-                            });
-                        }
-                        if (newSettings.viewMode) {
-                            setViewMode(newSettings.viewMode);
-                            if (newSettings.viewMode === 'results') {
-                                setTimeLeft(null); // Clear timer in results mode
+                                if (newSettings.viewMode) {
+                                    setViewMode(newSettings.viewMode);
+                                    if (newSettings.viewMode === 'results') {
+                                        setTimeLeft(null); // Clear timer in results mode
+                                    }
+                                }
+
+                                // Sync Timer
+                                if (newSettings.questionExpiresAt && newSettings.viewMode === 'voting') {
+                                    const expiresAt = new Date(newSettings.questionExpiresAt).getTime();
+                                    const now = Date.now();
+                                    const diff = Math.max(0, Math.ceil((expiresAt - now) / 1000));
+                                    setTimeLeft(diff);
+                                    setIsTimeUp(diff === 0);
+                                }
                             }
                         }
-
-                        // Sync Timer
-                        if (newSettings.questionExpiresAt && newSettings.viewMode === 'voting') {
-                            const expiresAt = new Date(newSettings.questionExpiresAt).getTime();
-                            const now = Date.now();
-                            const diff = Math.max(0, Math.ceil((expiresAt - now) / 1000));
-                            setTimeLeft(diff);
-                            setIsTimeUp(diff === 0);
-                        }
-                    }
-                }
-            )
-            .subscribe((status) => {
-                console.log("Subscription Status:", status);
-                if (status === 'SUBSCRIBED') setRealtimeStatus('connected');
-                else if (status === 'CHANNEL_ERROR') setRealtimeStatus('disconnected');
-                else if (status === 'TIMED_OUT') setRealtimeStatus('disconnected');
-            });
+                    )
+                    .subscribe((status) => {
+                        console.log("Subscription Status:", status);
+                        if (status === 'SUBSCRIBED') setRealtimeStatus('connected');
+                        else if (status === 'CHANNEL_ERROR') setRealtimeStatus('disconnected');
+                        else if (status === 'TIMED_OUT') setRealtimeStatus('disconnected');
+                    });
+            } else {
+                console.warn("WebSockets not supported in this browser. Falling back to polling.");
+                setRealtimeStatus('disconnected');
+            }
+        } catch (err) {
+            console.error("Failed to establish Realtime connection:", err);
+            setRealtimeStatus('disconnected');
+        }
 
         return () => {
-            supabase.removeChannel(channel);
+            if (channel) supabase.removeChannel(channel);
             clearInterval(pollInterval);
         };
 

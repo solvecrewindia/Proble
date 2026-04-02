@@ -71,26 +71,41 @@ export default function LiveLobby() {
         fetchQuiz();
         fetchParticipants();
 
+        // Polling Fallback (every 5 seconds)
+        const pollInterval = setInterval(() => {
+            fetchParticipants();
+        }, 5000);
+
         // Real-time subscription for new joiners
-        const channel = supabase
-            .channel('live-lobby')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'attempts',
-                    filter: `quiz_id=eq.${id}`
-                },
-                (payload) => {
-                    console.log('New participant joined:', payload);
-                    fetchParticipants(); // Refetch to get student details safely
-                }
-            )
-            .subscribe();
+        let channel: any = null;
+        try {
+            if (typeof WebSocket !== 'undefined') {
+                channel = supabase
+                    .channel('live-lobby')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'attempts',
+                            filter: `quiz_id=eq.${id}`
+                        },
+                        (payload) => {
+                            console.log('New participant joined:', payload);
+                            fetchParticipants(); // Refetch to get student details safely
+                        }
+                    )
+                    .subscribe();
+            } else {
+                console.warn("WebSockets not supported. Using polling fallback for lobby.");
+            }
+        } catch (err) {
+            console.error("Failed to establish Realtime connection for lobby:", err);
+        }
 
         return () => {
-            supabase.removeChannel(channel);
+            if (channel) supabase.removeChannel(channel);
+            clearInterval(pollInterval);
         };
     }, [id]);
 
