@@ -296,10 +296,6 @@ export default function StudentLiveQuiz() {
                 .single();
 
             const currentAnswers = attempt?.answers || {};
-            // Note: simple correct check, assuming index match or string match. Ideally backend validates or we validate against fetched Q.
-
-            // To be safe, let's just save the index for now.
-            // We use the Question ID as the key in the answers object
             const questionId = questions[currentQuestionIndex].id;
 
             const newAnswers = {
@@ -307,18 +303,49 @@ export default function StudentLiveQuiz() {
                 [questionId]: selectedOption
             };
 
+            // 2. Calculate current total score accurately
+            let totalScore = 0;
+            questions.forEach((q) => {
+                const answer = newAnswers[q.id];
+                if (answer !== undefined && answer !== null) {
+                    // Check if answer matches correct_answer (supports index or string)
+                    const isCorrect = (
+                        q.correct === q.options[answer] ||
+                        String(q.correct) === String(answer) ||
+                        q.correct === answer
+                    );
+                    if (isCorrect) totalScore++;
+                }
+            });
+
+            const percentage = (totalScore / questions.length) * 100;
+
+            // 3. Update 'attempts' with new answers and score
             await supabase
                 .from('attempts')
                 .update({
                     answers: newAnswers,
-                    // Optionally update score here if we want instant scoring
+                    score: totalScore,
+                    updated_at: new Date().toISOString()
                 })
                 .eq('quiz_id', id)
                 .eq('student_id', user.id);
 
+            // 4. Upsert into 'quiz_results' for Faculty real-time visibility
+            // The unique constraint (student_id, quiz_id) handles the conflict
+            await supabase
+                .from('quiz_results')
+                .upsert({
+                    quiz_id: id,
+                    student_id: user.id,
+                    score: totalScore,
+                    total_questions: questions.length,
+                    percentage: percentage,
+                    created_at: new Date().toISOString() // Or let DB handle it, but for new rows it's good
+                }, { onConflict: 'student_id, quiz_id' });
+
         } catch (err) {
             console.error("Failed to submit answer:", err);
-            // Revert optimistic UI if needed, but for now simple is fine
         }
     };
 
