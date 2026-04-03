@@ -140,7 +140,7 @@ export default function QuizCreate() {
             }
 
             const now = new Date();
-            let newStatus = 'ongoing';
+            let newStatus = data.type === 'live' ? 'draft' : 'ongoing';
             
             if (data.scheduledAt) {
                 const start = new Date(data.scheduledAt);

@@ -92,7 +92,7 @@ export default function LiveController() {
 
                         await supabase
                             .from('quizzes')
-                            .update({ settings: newSettings })
+                            .update({ settings: newSettings, status: 'active' })
                             .eq('id', id);
                     }
                 }
