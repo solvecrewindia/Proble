@@ -33,11 +33,12 @@ export default function StudentLiveQuiz() {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [status, setStatus] = useState<'waiting' | 'active' | 'completed'>('waiting');
-    const [viewMode, setViewMode] = useState<'voting' | 'results'>('voting');
+    const [viewMode, setViewMode] = useState<'voting' | 'results' | 'leaderboard'>('voting');
     const [isGameMode, setIsGameMode] = useState(false);
     const [startupCountdown, setStartupCountdown] = useState(0);
     const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
+    const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
     const [quizTitle, setQuizTitle] = useState('');
 
     // Timer State
@@ -199,12 +200,15 @@ export default function StudentLiveQuiz() {
                 if (qIds[currentQIndex]) {
                     const currentQId = qIds[currentQIndex].id;
                     const savedAnswers = existingAttempt.answers || {};
-                    const savedOption = savedAnswers[currentQId];
+                    const savedRecord = savedAnswers[currentQId];
 
-                    if (typeof savedOption === 'number') {
-                        // Only set if we haven't already selected something (prevents overwriting user's unsaved selection on pollen)
-                        setSelectedOption(prev => prev === null ? savedOption : prev);
-                        setIsSubmitted(true);
+                    if (savedRecord !== undefined && savedRecord !== null) {
+                        const savedOption = typeof savedRecord === 'object' ? savedRecord.option : savedRecord;
+                        if (typeof savedOption === 'number') {
+                            // Only set if we haven't already selected something (prevents overwriting user's unsaved selection on pollen)
+                            setSelectedOption(prev => prev === null ? savedOption : prev);
+                            setIsSubmitted(true);
+                        }
                     }
                 }
             }
@@ -317,6 +321,36 @@ export default function StudentLiveQuiz() {
 
     }, [id, user, authLoading]);
 
+    // Leaderboard Fetcher
+    useEffect(() => {
+        if (viewMode === 'leaderboard' && isGameMode) {
+            const fetchLeaderboard = async () => {
+                const { data } = await supabase
+                    .from('quiz_results')
+                    .select('score, student_id')
+                    .eq('quiz_id', id)
+                    .order('score', { ascending: false })
+                    .limit(10);
+
+                if (data) {
+                    const enriched = data.map((d: any) => {
+                        const p = participants.find(p => p.id === d.student_id);
+                        return {
+                            ...d,
+                            name: p?.name || 'Crewmate',
+                            avatarUrl: p?.avatarUrl
+                        };
+                    });
+                    setLeaderboardData(enriched);
+                }
+            };
+            
+            fetchLeaderboard();
+            const polling = setInterval(fetchLeaderboard, 2000);
+            return () => clearInterval(polling);
+        }
+    }, [viewMode, isGameMode, id, participants]);
+
     // Countdown Interval
     useEffect(() => {
         if (startupCountdown > 0) {
@@ -368,50 +402,73 @@ export default function StudentLiveQuiz() {
             const currentAnswers = attempt?.answers || {};
             const questionId = questions[currentQuestionIndex].id;
 
+            let pointsForThisQ = 0;
+            if (isGameMode) {
+                // Check if correct exactly now to decide points
+                const q = questions[currentQuestionIndex];
+                const isCorrect = (q.correct === q.options[selectedOption] || String(q.correct) === String(selectedOption) || q.correct === selectedOption);
+                if (isCorrect) {
+                     // e.g. 500 base + remaining time bonus (assuming roughly 60s max = +500 points)
+                     pointsForThisQ = 500 + Math.round((timeLeft || 0) * 8.5); 
+                }
+            }
+
+            const answerPayload = isGameMode ? { option: selectedOption, points: pointsForThisQ } : selectedOption;
+
             const newAnswers = {
                 ...currentAnswers,
-                [questionId]: selectedOption
+                [questionId]: answerPayload
             };
 
             // 2. Calculate current total score accurately
-            let totalScore = 0;
+            let totalCorrect = 0;
+            let cumulativeGamePoints = 0;
+
             questions.forEach((q) => {
-                const answer = newAnswers[q.id];
-                if (answer !== undefined && answer !== null) {
-                    // Check if answer matches correct_answer (supports index or string)
+                const answerRecord = newAnswers[q.id];
+                if (answerRecord !== undefined && answerRecord !== null) {
+                    const isObject = typeof answerRecord === 'object';
+                    const answer = isObject ? answerRecord.option : answerRecord;
+
+                    // Check if answer matches correct_answer
                     const isCorrect = (
                         q.correct === q.options[answer] ||
                         String(q.correct) === String(answer) ||
                         q.correct === answer
                     );
-                    if (isCorrect) totalScore++;
+                    if (isCorrect) {
+                        totalCorrect++;
+                    }
+                    if (isObject) {
+                        cumulativeGamePoints += (answerRecord.points || 0);
+                    }
                 }
             });
 
-            const percentage = (totalScore / questions.length) * 100;
+            const percentage = (totalCorrect / questions.length) * 100;
 
-            // 3. Update 'attempts' with new answers and score
+            // 3. Update 'attempts' with new answers and standard total correct score
             await supabase
                 .from('attempts')
                 .update({
                     answers: newAnswers,
-                    score: totalScore,
+                    score: totalCorrect,
                     updated_at: new Date().toISOString()
                 })
                 .eq('quiz_id', id)
                 .eq('student_id', user.id);
 
             // 4. Upsert into 'quiz_results' for Faculty real-time visibility
-            // The unique constraint (student_id, quiz_id) handles the conflict
+            // If Game Mode, we force cumulativeGamePoints into the 'score' field to act as the Leaderboard metric.
             await supabase
                 .from('quiz_results')
                 .upsert({
                     quiz_id: id,
                     student_id: user.id,
-                    score: totalScore,
+                    score: isGameMode ? cumulativeGamePoints : totalCorrect,
                     total_questions: questions.length,
                     percentage: percentage,
-                    created_at: new Date().toISOString() // Or let DB handle it, but for new rows it's good
+                    created_at: new Date().toISOString()
                 }, { onConflict: 'student_id, quiz_id' });
 
         } catch (err) {
@@ -457,9 +514,8 @@ export default function StudentLiveQuiz() {
                     <h1 className="text-4xl font-extrabold mb-8 tracking-tight animate-bounce drop-shadow-xl text-center">Choose Your Character!</h1>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full">
                         {CHARACTERS.map(char => (
-                            <button key={char.id} onClick={() => handleSelectCharacter(char.id)} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border-4 border-white/20 hover:border-white transition-all transform hover:scale-105 flex flex-col items-center gap-4">
-                                <img src={char.src} alt={char.name} className="w-24 h-24 object-contain drop-shadow-xl" />
-                                <span className="font-bold text-lg">{char.name}</span>
+                            <button key={char.id} onClick={() => handleSelectCharacter(char.id)} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border-4 border-white/20 hover:border-white transition-all transform hover:scale-105 flex flex-col items-center justify-center">
+                                <img src={char.src} alt="Crewmate" className="w-24 h-24 object-contain drop-shadow-xl" />
                             </button>
                         ))}
                     </div>
@@ -518,7 +574,7 @@ export default function StudentLiveQuiz() {
     }
 
     // Determine detailed status
-    const isLocked = isSubmitted || isTimeUp || viewMode === 'results';
+    const isLocked = isSubmitted || isTimeUp || viewMode === 'results' || viewMode === 'leaderboard';
 
     if (startupCountdown > 0) {
         return (
@@ -532,6 +588,66 @@ export default function StudentLiveQuiz() {
                 <h2 className="text-4xl font-extrabold text-indigo-300 mb-8 z-10 tracking-widest uppercase drop-shadow-lg">Get Ready!</h2>
                 <div key={startupCountdown} className="text-[12rem] font-black z-10 animate-in zoom-in spin-in-12 duration-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
                     {startupCountdown}
+                </div>
+            </div>
+        );
+    }
+
+    if (viewMode === 'leaderboard' && isGameMode) {
+        const myIndex = leaderboardData.findIndex(d => d.student_id === user?.id);
+        const myRank = myIndex >= 0 ? myIndex + 1 : '-';
+        const myScore = leaderboardData.find(d => d.student_id === user?.id)?.score || 0;
+
+        return (
+            <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
+                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none z-0" />
+                <div className="z-10 relative flex flex-col h-full items-center p-8 w-full max-w-5xl mx-auto flex-1">
+                    <h1 className="text-4xl md:text-5xl font-black mb-12 tracking-tight drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] text-yellow-400">Top Crewmates</h1>
+                    
+                    <div className="flex-1 flex items-end justify-center gap-4 md:gap-8 max-h-[500px] w-full">
+                        {/* 2nd Place */}
+                        {leaderboardData[1] && (
+                            <div className="flex flex-col items-center animate-in slide-in-from-bottom-32 duration-700 delay-300 fill-mode-both w-1/3 max-w-[150px]">
+                                <span className="text-lg md:text-xl font-bold mb-2 truncate max-w-full text-center">{leaderboardData[1].name}</span>
+                                {getCharacterSrc(leaderboardData[1].avatarUrl) && <img src={getCharacterSrc(leaderboardData[1].avatarUrl)!} className="w-20 md:w-24 h-20 md:h-24 object-contain mb-[-10px] z-10 drop-shadow-lg" />}
+                                <div className="w-full h-32 md:h-40 bg-slate-300 drop-shadow-xl text-slate-800 flex flex-col items-center justify-start pt-4 rounded-t-xl border-x-4 border-t-4 border-slate-200">
+                                    <span className="text-3xl font-black">2</span>
+                                    <span className="font-bold">{leaderboardData[1].score}</span>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* 1st Place */}
+                        {leaderboardData[0] && (
+                            <div className="flex flex-col items-center animate-in slide-in-from-bottom-48 duration-1000 delay-700 fill-mode-both z-20 w-1/3 max-w-[150px] mx-[-10px]">
+                                <span className="text-xl md:text-2xl font-bold mb-2 text-yellow-300 truncate max-w-full text-center drop-shadow-md">{leaderboardData[0].name}</span>
+                                {getCharacterSrc(leaderboardData[0].avatarUrl) && <img src={getCharacterSrc(leaderboardData[0].avatarUrl)!} className="w-28 md:w-36 h-28 md:h-36 object-contain mb-[-15px] z-10 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]" />}
+                                <div className="w-full h-40 md:h-52 bg-yellow-400 drop-shadow-2xl text-yellow-900 flex flex-col items-center justify-start pt-4 rounded-t-xl border-x-4 border-t-4 border-yellow-300">
+                                    <span className="text-5xl font-black">1</span>
+                                    <span className="font-bold text-lg">{leaderboardData[0].score}</span>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* 3rd Place */}
+                        {leaderboardData[2] && (
+                            <div className="flex flex-col items-center animate-in slide-in-from-bottom-16 duration-500 delay-100 fill-mode-both w-1/3 max-w-[150px]">
+                                <span className="text-md md:text-lg font-bold mb-2 truncate max-w-full text-center">{leaderboardData[2].name}</span>
+                                {getCharacterSrc(leaderboardData[2].avatarUrl) && <img src={getCharacterSrc(leaderboardData[2].avatarUrl)!} className="w-16 md:w-20 h-16 md:h-20 object-contain mb-[-10px] z-10 drop-shadow-md" />}
+                                <div className="w-full h-24 md:h-28 bg-amber-600 drop-shadow-xl text-amber-100 flex flex-col items-center justify-start pt-4 rounded-t-xl border-x-4 border-t-4 border-amber-500">
+                                    <span className="text-3xl font-black">3</span>
+                                    <span className="font-bold">{leaderboardData[2].score}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Personal Rank */}
+                    <div className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl w-full max-w-2xl p-6 flex justify-between items-center text-xl font-bold border border-white/20 animate-in fade-in zoom-in delay-1000 fill-mode-both shadow-2xl">
+                        <span className="text-indigo-200">Your Position: <span className="text-white text-2xl ml-2">#{myRank}</span></span>
+                        <span className="text-indigo-200">Score: <span className="text-yellow-400 text-2xl ml-2">{myScore}</span></span>
+                    </div>
+
                 </div>
             </div>
         );

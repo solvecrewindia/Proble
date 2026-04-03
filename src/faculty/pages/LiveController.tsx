@@ -13,7 +13,7 @@ export default function LiveController() {
     const navigate = useNavigate();
     const [quiz, setQuiz] = useState<Quiz | null>(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [viewMode, setViewMode] = useState<'voting' | 'results'>('voting');
+    const [viewMode, setViewMode] = useState<'voting' | 'results' | 'leaderboard'>('voting');
     const [loading, setLoading] = useState(true);
 
     // Dummy voting stats for now
@@ -211,7 +211,7 @@ export default function LiveController() {
         }
     };
 
-    const updateQuizState = async (index: number, mode: 'voting' | 'results' = 'voting') => {
+    const updateQuizState = async (index: number, mode: 'voting' | 'results' | 'leaderboard' = 'voting') => {
         if (!quiz) return;
 
         let questionExpiresAt = null;
@@ -252,6 +252,7 @@ export default function LiveController() {
 
     // Calculate total votes for percentages
     const totalVotes = Object.values(stats).reduce((a, b) => a + b, 0) || 1;
+    const isGameMode = (quiz.settings as any)?.gameMode === true;
 
     return (
         <div className="max-w-5xl mx-auto space-y-6 h-[calc(100vh-100px)] flex flex-col">
@@ -346,9 +347,13 @@ export default function LiveController() {
                             <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                         </Button>
                         <Button
-                            onClick={() => {
+                            onClick={async () => {
                                 if (viewMode === 'voting') {
                                     setViewMode('results');
+                                    await updateQuizState(currentQuestionIndex, 'results');
+                                } else if (viewMode === 'results' && isGameMode) {
+                                    setViewMode('leaderboard');
+                                    await updateQuizState(currentQuestionIndex, 'leaderboard');
                                 } else {
                                     handleNext();
                                 }
@@ -357,12 +362,18 @@ export default function LiveController() {
                                 "h-14 text-lg text-white transition-all",
                                 viewMode === 'voting'
                                     ? "bg-red-500 hover:bg-red-600"
-                                    : "bg-primary hover:bg-primary/90"
+                                    : viewMode === 'results' && isGameMode
+                                        ? "bg-indigo-600 hover:bg-indigo-700 shadow-md"
+                                        : "bg-primary hover:bg-primary/90"
                             )}
                         >
                             {viewMode === 'voting' ? (
                                 <>
                                     <Pause className="mr-2 h-5 w-5" /> Stop Voting & Show Results
+                                </>
+                            ) : viewMode === 'results' && isGameMode ? (
+                                <>
+                                    Show Leaderboard <ChevronRight className="ml-2 h-5 w-5" />
                                 </>
                             ) : (
                                 <>
@@ -384,9 +395,13 @@ export default function LiveController() {
                                         <span className="flex items-center justify-center gap-2 text-primary animate-pulse">
                                             <span className="w-2 h-2 rounded-full bg-primary"></span> Voting Active
                                         </span>
-                                    ) : (
+                                    ) : viewMode === 'results' ? (
                                         <span className="flex items-center justify-center gap-2 text-orange-500">
                                             <Pause className="w-3 h-3" /> Results Shown
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center justify-center gap-2 text-indigo-500">
+                                            Leaderboard Active
                                         </span>
                                     )}
                                 </div>
