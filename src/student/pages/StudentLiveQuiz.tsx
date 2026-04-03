@@ -9,6 +9,7 @@ import { useTheme } from '../../shared/context/ThemeContext';
 import { MathText } from '../../shared/components/MathText';
 import { CHARACTERS, getCharacterSrc } from '../../shared/utils/characters';
 import { User, Clock, CheckCircle, Loader2, WifiOff } from 'lucide-react';
+import gameBgVideo from '../../characters/videoplayback (1).mp4';
 
 const GAME_COLORS = [
     "bg-red-500 hover:bg-red-600 border-red-700 shadow-[0_6px_0_rgb(185,28,28)] active:translate-y-1.5 active:shadow-none text-white",
@@ -450,15 +451,18 @@ export default function StudentLiveQuiz() {
     const currentQuestion = questions[currentQuestionIndex];
     if (isGameMode && !selectedCharacter) {
         return (
-            <div className="min-h-screen bg-indigo-950 flex flex-col items-center justify-center p-6 text-white font-sans">
-                <h1 className="text-4xl font-extrabold mb-8 tracking-tight animate-bounce">Choose Your Character!</h1>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-2xl">
-                    {CHARACTERS.map(char => (
-                        <button key={char.id} onClick={() => handleSelectCharacter(char.id)} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border-4 border-white/20 hover:border-white transition-all transform hover:scale-105 flex flex-col items-center gap-4">
-                            <img src={char.src} alt={char.name} className="w-24 h-24 object-contain drop-shadow-xl" />
-                            <span className="font-bold text-lg">{char.name}</span>
-                        </button>
-                    ))}
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white font-sans relative overflow-hidden">
+                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none z-0" />
+                <div className="z-10 relative flex flex-col items-center w-full max-w-2xl">
+                    <h1 className="text-4xl font-extrabold mb-8 tracking-tight animate-bounce drop-shadow-xl text-center">Choose Your Character!</h1>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full">
+                        {CHARACTERS.map(char => (
+                            <button key={char.id} onClick={() => handleSelectCharacter(char.id)} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border-4 border-white/20 hover:border-white transition-all transform hover:scale-105 flex flex-col items-center gap-4">
+                                <img src={char.src} alt={char.name} className="w-24 h-24 object-contain drop-shadow-xl" />
+                                <span className="font-bold text-lg">{char.name}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
         );
@@ -467,31 +471,34 @@ export default function StudentLiveQuiz() {
     if (!currentQuestion) {
         if (isGameMode) {
             return (
-                <div className="min-h-screen bg-indigo-950 p-6 text-white font-sans flex flex-col">
-                    <div className="text-center mb-8 pt-8">
-                        <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-lg">Game Lobby</h1>
-                        <p className="text-xl text-indigo-200">Waiting for {quizTitle || 'Quiz'} to start...</p>
-                    </div>
-                    <div className="max-w-5xl mx-auto w-full flex-1">
-                        <div className="flex items-center justify-center gap-2 mb-8 bg-white/10 mx-auto w-fit px-6 py-3 rounded-full font-bold text-xl">
-                            <User className="w-6 h-6" /> {participants.length} Players Waiting
+                <div className="min-h-screen bg-black p-6 text-white font-sans flex flex-col relative overflow-hidden">
+                    <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none z-0" />
+                    <div className="z-10 relative flex flex-col h-full items-center justify-center pt-8 w-full">
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-lg">Game Lobby</h1>
+                            <p className="text-xl text-indigo-200 drop-shadow-md">Waiting for {quizTitle || 'Quiz'} to start...</p>
                         </div>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
-                            {participants.map(p => (
-                                <div key={p.id} className="bg-white/10 rounded-3xl p-4 flex flex-col items-center justify-center h-[120px] animate-in zoom-in duration-300 hover:scale-110 transition-transform group relative cursor-help">
-                                    {getCharacterSrc(p.avatarUrl) ? (
-                                        <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-20 h-20 object-contain drop-shadow-md relative z-10 block" />
-                                    ) : (
-                                        <div className="w-20 h-20 rounded-full bg-indigo-500 border-4 border-indigo-400 flex items-center justify-center font-bold text-2xl shadow-inner relative z-10">
-                                            {p.avatarText}
+                        <div className="max-w-5xl mx-auto w-full flex-1">
+                            <div className="flex items-center justify-center gap-2 mb-8 bg-white/10 mx-auto w-fit px-6 py-3 rounded-full font-bold text-xl">
+                                <User className="w-6 h-6" /> {participants.length} Players Waiting
+                            </div>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
+                                {participants.map(p => (
+                                    <div key={p.id} className="bg-white/10 rounded-3xl p-4 flex flex-col items-center justify-center h-[120px] animate-in zoom-in duration-300 hover:scale-110 transition-transform group relative cursor-help">
+                                        {getCharacterSrc(p.avatarUrl) ? (
+                                            <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-20 h-20 object-contain drop-shadow-md relative z-10 block" />
+                                        ) : (
+                                            <div className="w-20 h-20 rounded-full bg-indigo-500 border-4 border-indigo-400 flex items-center justify-center font-bold text-2xl shadow-inner relative z-10">
+                                                {p.avatarText}
+                                            </div>
+                                        )}
+                                        <div className="absolute -top-12 scale-0 group-hover:scale-100 transition-transform origin-bottom bg-black/90 text-white text-sm font-bold py-2 px-4 rounded-xl z-20 whitespace-nowrap drop-shadow-lg shadow-black/50">
+                                            {p.name}
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-solid border-t-black/90 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
                                         </div>
-                                    )}
-                                    <div className="absolute -top-12 scale-0 group-hover:scale-100 transition-transform origin-bottom bg-black/90 text-white text-sm font-bold py-2 px-4 rounded-xl z-20 whitespace-nowrap drop-shadow-lg shadow-black/50">
-                                        {p.name}
-                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-solid border-t-black/90 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -519,7 +526,10 @@ export default function StudentLiveQuiz() {
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-[150vw] h-[150vw] bg-indigo-600/20 rounded-full animate-ping absolute" style={{ animationDuration: '1s' }} />
                 </div>
-                <h2 className="text-4xl font-extrabold text-indigo-300 mb-8 z-10 tracking-widest uppercase">Get Ready!</h2>
+                {isGameMode && (
+                    <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none z-0" />
+                )}
+                <h2 className="text-4xl font-extrabold text-indigo-300 mb-8 z-10 tracking-widest uppercase drop-shadow-lg">Get Ready!</h2>
                 <div key={startupCountdown} className="text-[12rem] font-black z-10 animate-in zoom-in spin-in-12 duration-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
                     {startupCountdown}
                 </div>
@@ -528,7 +538,11 @@ export default function StudentLiveQuiz() {
     }
 
     return (
-        <div className={cn("min-h-screen font-sans flex flex-col", isGameMode ? "bg-indigo-950 text-white" : "bg-background text-text")}>
+        <div className={cn("min-h-screen font-sans flex flex-col relative", isGameMode ? "text-white bg-black" : "bg-background text-text")}>
+            {isGameMode && (
+                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none z-0 disabled" />
+            )}
+            
             {/* --- OFFLINE PROTECTION OVERLAY --- */}
             {isOffline && status === 'active' && (
                 <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
@@ -580,8 +594,8 @@ export default function StudentLiveQuiz() {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 container mx-auto max-w-4xl p-6 flex flex-col justify-center">
-                <div className={cn("rounded-xl p-6 md:p-8 flex flex-col gap-6", isGameMode ? "bg-white/10 backdrop-blur-sm border border-white/20 shadow-xl" : "bg-surface border border-neutral-200 dark:border-neutral-800 shadow-sm")}>
+            <main className="flex-1 container mx-auto max-w-4xl p-6 flex flex-col justify-center relative z-10">
+                <div className={cn("rounded-xl p-6 md:p-8 flex flex-col gap-6", isGameMode ? "bg-black/40 backdrop-blur-md border border-white/20 shadow-2xl" : "bg-surface border border-neutral-200 dark:border-neutral-800 shadow-sm")}>
 
                     {/* Question Header */}
                     <div className="flex justify-between items-center">
