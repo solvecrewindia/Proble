@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { User, Copy, Play, ArrowLeft } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { QRCodeModal } from '../components/quiz/QRCodeModal';
+import { getCharacterSrc } from '../../shared/utils/characters';
 
 export default function LiveLobby() {
     const { id } = useParams();
@@ -60,7 +61,8 @@ export default function LiveLobby() {
                     id: profile.id,
                     name: profile.full_name || 'Unknown Student',
                     regNo: profile.registration_number,
-                    avatar: (profile.full_name || profile.email || 'U').substring(0, 2).toUpperCase()
+                    avatarText: (profile.full_name || profile.email || 'U').substring(0, 2).toUpperCase(),
+                    avatarUrl: profile.avatar_url
                 }));
                 // Sort by name for better UX
                 mapped.sort((a, b) => a.name.localeCompare(b.name));
@@ -108,6 +110,13 @@ export default function LiveLobby() {
             clearInterval(pollInterval);
         };
     }, [id]);
+
+    const toggleGameMode = async () => {
+        if (!quiz) return;
+        const newSettings = { ...quiz.settings, gameMode: !quiz.settings?.gameMode };
+        setQuiz({ ...quiz, settings: newSettings });
+        await supabase.from('quizzes').update({ settings: newSettings }).eq('id', id);
+    };
 
     const handleStartQuiz = () => {
         navigate(`/faculty/live/${id}/host`);
@@ -173,9 +182,19 @@ export default function LiveLobby() {
                         <User className="mr-2 h-5 w-5" />
                         Participants ({participants.length})
                     </h2>
-                    <Button onClick={handleStartQuiz} className="bg-green-600 hover:bg-green-700 text-white px-8">
-                        <Play className="mr-2 h-4 w-4" /> Start Quiz
-                    </Button>
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={toggleGameMode}
+                            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${quiz.settings?.gameMode ? 'bg-primary' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+                        >
+                            <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${quiz.settings?.gameMode ? 'translate-x-7' : 'translate-x-1'}`} />
+                        </button>
+                        <span className="text-sm font-bold text-muted mr-4">Game Mode {quiz.settings?.gameMode ? 'ON' : 'OFF'}</span>
+
+                        <Button onClick={handleStartQuiz} className="bg-green-600 hover:bg-green-700 text-white px-8">
+                            <Play className="mr-2 h-4 w-4" /> Start Quiz
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="space-y-2">
@@ -183,9 +202,13 @@ export default function LiveLobby() {
                         <div key={p.id} className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${index * 50}ms` }}>
                             <div className="flex items-center gap-4">
                                 <span className="text-muted text-sm w-6">#{index + 1}</span>
-                                <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-                                    {p.avatar}
-                                </div>
+                                {getCharacterSrc(p.avatarUrl) ? (
+                                    <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-10 h-10 object-contain rounded-full shadow-sm bg-neutral-200 dark:bg-neutral-800" />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                                        {p.avatarText}
+                                    </div>
+                                )}
                                 <div>
                                     <p className="font-medium text-text">{p.name}</p>
                                     <p className="text-xs text-muted">

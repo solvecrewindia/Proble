@@ -4,10 +4,20 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../shared/context/AuthContext';
 import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
-import { Loader2, CheckCircle, Clock, WifiOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { MathText } from '../../shared/components/MathText';
+import { CHARACTERS, getCharacterSrc } from '../../shared/utils/characters';
+import { User, Clock, CheckCircle, Loader2, WifiOff } from 'lucide-react';
+
+const GAME_COLORS = [
+    "bg-red-500 hover:bg-red-600 border-red-700 shadow-[0_6px_0_rgb(185,28,28)] active:translate-y-1.5 active:shadow-none text-white",
+    "bg-blue-500 hover:bg-blue-600 border-blue-700 shadow-[0_6px_0_rgb(29,78,216)] active:translate-y-1.5 active:shadow-none text-white",
+    "bg-yellow-500 hover:bg-yellow-600 border-yellow-700 shadow-[0_6px_0_rgb(161,98,7)] active:translate-y-1.5 active:shadow-none text-white",
+    "bg-green-500 hover:bg-green-600 border-green-700 shadow-[0_6px_0_rgb(21,128,61)] active:translate-y-1.5 active:shadow-none text-white",
+    "bg-purple-500 hover:bg-purple-600 border-purple-700 shadow-[0_6px_0_rgb(126,34,206)] active:translate-y-1.5 active:shadow-none text-white",
+    "bg-pink-500 hover:bg-pink-600 border-pink-700 shadow-[0_6px_0_rgb(190,24,93)] active:translate-y-1.5 active:shadow-none text-white"
+];
 
 export default function StudentLiveQuiz() {
     const { id } = useParams();
@@ -23,6 +33,10 @@ export default function StudentLiveQuiz() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [status, setStatus] = useState<'waiting' | 'active' | 'completed'>('waiting');
     const [viewMode, setViewMode] = useState<'voting' | 'results'>('voting');
+    const [isGameMode, setIsGameMode] = useState(false);
+    const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
+    const [participants, setParticipants] = useState<any[]>([]);
+    const [quizTitle, setQuizTitle] = useState('');
 
     // Timer State
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -46,6 +60,26 @@ export default function StudentLiveQuiz() {
         };
     }, []);
 
+    const fetchParticipants = async () => {
+        if (!id) return;
+        const { data: attemptsData } = await supabase.from('attempts').select('student_id').eq('quiz_id', id).eq('status', 'in-progress');
+        if (!attemptsData || attemptsData.length === 0) { setParticipants([]); return; }
+        
+        const studentIds = attemptsData.map(a => a.student_id);
+        const { data: profilesData } = await supabase.from('profiles').select('id, full_name, avatar_url').in('id', studentIds);
+        
+        if (profilesData) {
+            const mapped = profilesData.map((profile: any) => ({
+                id: profile.id,
+                name: profile.full_name || 'Unknown Student',
+                avatarText: (profile.full_name || 'U').substring(0, 2).toUpperCase(),
+                avatarUrl: profile.avatar_url
+            }));
+            mapped.sort((a, b) => a.name.localeCompare(b.name));
+            setParticipants(mapped);
+        }
+    };
+
     const fetchQuizState = async () => {
         if (!id || !user) return;
         try {
@@ -59,8 +93,15 @@ export default function StudentLiveQuiz() {
             if (quizError) throw quizError;
 
 
+            if (quizData) {
+                setQuizTitle(quizData.title);
+            }
+
             // Update Local State based on settings
             if (quizData.settings) {
+                if (quizData.settings.gameMode) {
+                    setIsGameMode(true);
+                }
                 if (typeof quizData.settings.currentQuestionIndex === 'number') {
                     setCurrentQuestionIndex((prev) => {
                         if (prev !== quizData.settings.currentQuestionIndex) {
@@ -164,6 +205,7 @@ export default function StudentLiveQuiz() {
             }
 
             setLoading(false);
+            fetchParticipants();
 
         } catch (err) {
             console.error("Failed to sync session:", err);
@@ -184,6 +226,7 @@ export default function StudentLiveQuiz() {
         // Polling Fallback (every 3 seconds)
         const pollInterval = setInterval(() => {
             fetchQuizState();
+            fetchParticipants();
         }, 3000);
 
         // Realtime Subscription
@@ -210,6 +253,9 @@ export default function StudentLiveQuiz() {
                             }
 
                             if (newSettings) {
+                                if (newSettings.gameMode !== undefined) {
+                                    setIsGameMode(newSettings.gameMode);
+                                }
                                 if (typeof newSettings.currentQuestionIndex === 'number') {
                                     setCurrentQuestionIndex((prev) => {
                                         if (prev !== newSettings.currentQuestionIndex) {
@@ -280,6 +326,14 @@ export default function StudentLiveQuiz() {
 
         return () => clearInterval(timer);
     }, [timeLeft]);
+
+    const handleSelectCharacter = async (charId: string) => {
+        setSelectedCharacter(charId);
+        if (user) {
+            await supabase.from('profiles').update({ avatar_url: charId }).eq('id', user.id);
+            fetchParticipants();
+        }
+    };
 
     const handleSubmitAnswer = async () => {
         if (selectedOption === null || !user || !id) return;
@@ -379,7 +433,52 @@ export default function StudentLiveQuiz() {
     }
 
     const currentQuestion = questions[currentQuestionIndex];
+    if (isGameMode && !selectedCharacter) {
+        return (
+            <div className="min-h-screen bg-indigo-950 flex flex-col items-center justify-center p-6 text-white font-sans">
+                <h1 className="text-4xl font-extrabold mb-8 tracking-tight animate-bounce">Choose Your Character!</h1>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-2xl">
+                    {CHARACTERS.map(char => (
+                        <button key={char.id} onClick={() => handleSelectCharacter(char.id)} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border-4 border-white/20 hover:border-white transition-all transform hover:scale-105 flex flex-col items-center gap-4">
+                            <img src={char.src} alt={char.name} className="w-24 h-24 object-contain drop-shadow-xl" />
+                            <span className="font-bold text-lg">{char.name}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     if (!currentQuestion) {
+        if (isGameMode) {
+            return (
+                <div className="min-h-screen bg-indigo-950 p-6 text-white font-sans flex flex-col">
+                    <div className="text-center mb-8 pt-8">
+                        <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-lg">Game Lobby</h1>
+                        <p className="text-xl text-indigo-200">Waiting for {quizTitle || 'Quiz'} to start...</p>
+                    </div>
+                    <div className="max-w-5xl mx-auto w-full flex-1">
+                        <div className="flex items-center justify-center gap-2 mb-8 bg-white/10 mx-auto w-fit px-6 py-3 rounded-full font-bold text-xl">
+                            <User className="w-6 h-6" /> {participants.length} Players Waiting
+                        </div>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
+                            {participants.map(p => (
+                                <div key={p.id} className="bg-white/10 rounded-3xl p-4 flex flex-col items-center gap-3 animate-in zoom-in duration-300 hover:scale-105 transition-transform">
+                                    {getCharacterSrc(p.avatarUrl) ? (
+                                        <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-20 h-20 object-contain drop-shadow-md" />
+                                    ) : (
+                                        <div className="w-20 h-20 rounded-full bg-indigo-500 border-4 border-indigo-400 flex items-center justify-center font-bold text-2xl shadow-inner">
+                                            {p.avatarText}
+                                        </div>
+                                    )}
+                                    <span className="font-bold text-center text-sm truncate w-full">{p.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
                 <Card className="max-w-md w-full p-8 text-center space-y-6 animate-pulse">
@@ -397,7 +496,7 @@ export default function StudentLiveQuiz() {
     const isLocked = isSubmitted || isTimeUp || viewMode === 'results';
 
     return (
-        <div className="min-h-screen bg-background text-text font-sans flex flex-col">
+        <div className={cn("min-h-screen font-sans flex flex-col", isGameMode ? "bg-indigo-950 text-white" : "bg-background text-text")}>
             {/* --- OFFLINE PROTECTION OVERLAY --- */}
             {isOffline && status === 'active' && (
                 <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
@@ -411,7 +510,7 @@ export default function StudentLiveQuiz() {
             )}
 
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 px-6 py-3 flex items-center justify-between">
+            <header className={cn("sticky top-0 z-50 px-6 py-3 flex items-center justify-between", isGameMode ? "bg-indigo-900/50 backdrop-blur-md border-b border-indigo-500/20" : "bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800")}>
                 <div className="flex items-center gap-4">
                     <img src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg" />
                     <div className="flex items-center gap-2 px-3 py-1 bg-surface rounded-full border border-neutral-200 dark:border-neutral-800">
@@ -450,11 +549,11 @@ export default function StudentLiveQuiz() {
 
             {/* Main Content */}
             <main className="flex-1 container mx-auto max-w-4xl p-6 flex flex-col justify-center">
-                <div className="bg-surface border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 md:p-8 shadow-sm flex flex-col gap-6">
+                <div className={cn("rounded-xl p-6 md:p-8 flex flex-col gap-6", isGameMode ? "bg-white/10 backdrop-blur-sm border border-white/20 shadow-xl" : "bg-surface border border-neutral-200 dark:border-neutral-800 shadow-sm")}>
 
                     {/* Question Header */}
                     <div className="flex justify-between items-center">
-                        <span className="font-medium text-muted bg-neutral-100 dark:bg-neutral-800 px-3 py-1 rounded-full text-xs">
+                        <span className={cn("font-medium px-3 py-1 rounded-full text-xs", isGameMode ? "bg-indigo-500/30 text-indigo-100" : "bg-neutral-100 dark:bg-neutral-800 text-muted")}>
                             Question {currentQuestionIndex + 1}
                         </span>
 
@@ -481,20 +580,24 @@ export default function StudentLiveQuiz() {
                             // Check similarity if options are strings or indices. Assuming strings based on earlier context.
                             const isCorrectCheck = viewMode === 'results' && (currentQuestion.correct === option || String(currentQuestion.correct) === String(idx) || currentQuestion.correct === idx);
 
-                            let stateStyles = "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900";
+                            let stateStyles = isGameMode 
+                                ? GAME_COLORS[idx % GAME_COLORS.length] 
+                                : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900";
 
                             if (viewMode === 'results') {
                                 if (isCorrectCheck) {
-                                    stateStyles = "border-green-500 bg-green-50 dark:bg-green-900/20";
+                                    stateStyles = "border-green-500 bg-green-500 text-white shadow-[0_4px_0_rgb(21,128,61)]";
                                 } else if (isSelected && !isCorrectCheck) {
-                                    stateStyles = "border-red-500 bg-red-50 dark:bg-red-900/20";
+                                    stateStyles = "border-red-500 bg-red-500 text-white shadow-[0_4px_0_rgb(185,28,28)] opacity-70";
                                 } else {
-                                    stateStyles = "opacity-50 grayscale";
+                                    stateStyles = isGameMode ? stateStyles + " opacity-30 grayscale" : "opacity-50 grayscale";
                                 }
-                            } else if (isSelected) {
+                            } else if (isSelected && !isGameMode) {
                                 stateStyles = "border-primary bg-primary/5 shadow-md shadow-primary/10";
+                            } else if (isSelected && isGameMode) {
+                                stateStyles = stateStyles + " ring-4 ring-white ring-offset-4 ring-offset-indigo-950 scale-[1.02] transform transition-transform";
                             } else if (isLocked && !isSelected) {
-                                stateStyles = "opacity-60 cursor-not-allowed";
+                                stateStyles = isGameMode ? stateStyles + " opacity-50 grayscale cursor-not-allowed" : "opacity-60 cursor-not-allowed";
                             }
 
                             return (
@@ -503,25 +606,27 @@ export default function StudentLiveQuiz() {
                                     disabled={isLocked}
                                     onClick={() => setSelectedOption(idx)}
                                     className={cn(
-                                        "w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 group relative",
+                                        "w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 group relative min-h-[5rem]",
                                         stateStyles
                                     )}
                                 >
                                     <div className={cn(
-                                        "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors shrink-0",
+                                        "w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg transition-colors shrink-0 shadow-sm",
                                         viewMode === 'results' && isCorrectCheck
-                                            ? "bg-green-500 text-white"
+                                            ? "bg-white text-green-600"
                                             : viewMode === 'results' && isSelected && !isCorrectCheck
-                                                ? "bg-red-500 text-white"
+                                                ? "bg-white text-red-600"
                                                 : isSelected
-                                                    ? "bg-primary text-white"
-                                                    : "bg-neutral-100 dark:bg-neutral-800 text-muted group-hover:bg-neutral-200"
+                                                    ? "bg-white text-primary"
+                                                    : isGameMode 
+                                                        ? "bg-white/20 text-white border border-white/40 group-hover:bg-white/30"
+                                                        : "bg-neutral-100 dark:bg-neutral-800 text-muted group-hover:bg-neutral-200"
                                     )}>
                                         {String.fromCharCode(65 + idx)}
                                     </div>
                                     <MathText text={option} className={cn(
-                                        "font-medium text-base",
-                                        viewMode === 'results' && isCorrectCheck ? "text-green-700 dark:text-green-400" : "text-text"
+                                        "font-bold text-lg leading-tight",
+                                        isGameMode ? "text-white drop-shadow-sm" : viewMode === 'results' && isCorrectCheck ? "text-green-700 dark:text-green-400" : "text-text"
                                     )} />
                                 </button>
                             );
