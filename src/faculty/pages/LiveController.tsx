@@ -81,7 +81,7 @@ export default function LiveController() {
                         // We need to call updateQuizState but we can't because quiz is not set in state yet.
                         // So we do a direct update here.
                         const timePerQuestion = Number(quizData.settings?.timePerQuestion) || 60;
-                        const questionExpiresAt = new Date(Date.now() + (timePerQuestion + 2) * 1000).toISOString();
+                        const questionExpiresAt = new Date(Date.now() + (timePerQuestion + 5) * 1000).toISOString();
 
                         const newSettings = {
                             ...quizData.settings,
@@ -219,8 +219,8 @@ export default function LiveController() {
         // Only set expiration if we are entering voting mode
         if (mode === 'voting') {
             const timePerQuestion = Number(quiz.settings?.timePerQuestion) || 60; // Default 60s
-            // Add slight buffer (e.g. 2s) for network latency so students get full time
-            questionExpiresAt = new Date(Date.now() + (timePerQuestion + 2) * 1000).toISOString();
+            // Add slight buffer (e.g. 5s) to account for 3s game mode countdown so students get full time
+            questionExpiresAt = new Date(Date.now() + (timePerQuestion + 5) * 1000).toISOString();
         }
 
         // We update the settings json to include currentQuestionIndex and viewMode

@@ -34,6 +34,7 @@ export default function StudentLiveQuiz() {
     const [status, setStatus] = useState<'waiting' | 'active' | 'completed'>('waiting');
     const [viewMode, setViewMode] = useState<'voting' | 'results'>('voting');
     const [isGameMode, setIsGameMode] = useState(false);
+    const [startupCountdown, setStartupCountdown] = useState(0);
     const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
     const [quizTitle, setQuizTitle] = useState('');
@@ -105,6 +106,9 @@ export default function StudentLiveQuiz() {
                 if (typeof quizData.settings.currentQuestionIndex === 'number') {
                     setCurrentQuestionIndex((prev) => {
                         if (prev !== quizData.settings.currentQuestionIndex) {
+                            if (quizData.settings.gameMode) {
+                                setStartupCountdown(3);
+                            }
                             // New Question: Reset state
                             setSelectedOption(null);
                             setIsSubmitted(false);
@@ -259,6 +263,9 @@ export default function StudentLiveQuiz() {
                                 if (typeof newSettings.currentQuestionIndex === 'number') {
                                     setCurrentQuestionIndex((prev) => {
                                         if (prev !== newSettings.currentQuestionIndex) {
+                                            if (newSettings.gameMode) {
+                                                setStartupCountdown(3);
+                                            }
                                             // New Question: Reset entire state
                                             setSelectedOption(null);
                                             setIsSubmitted(false);
@@ -308,6 +315,14 @@ export default function StudentLiveQuiz() {
         };
 
     }, [id, user, authLoading]);
+
+    // Countdown Interval
+    useEffect(() => {
+        if (startupCountdown > 0) {
+            const timer = setTimeout(() => setStartupCountdown(c => c - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [startupCountdown]);
 
     // Timer Interval
     useEffect(() => {
@@ -463,15 +478,18 @@ export default function StudentLiveQuiz() {
                         </div>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
                             {participants.map(p => (
-                                <div key={p.id} className="bg-white/10 rounded-3xl p-4 flex flex-col items-center gap-3 animate-in zoom-in duration-300 hover:scale-105 transition-transform">
+                                <div key={p.id} className="bg-white/10 rounded-3xl p-4 flex flex-col items-center justify-center h-[120px] animate-in zoom-in duration-300 hover:scale-110 transition-transform group relative cursor-help">
                                     {getCharacterSrc(p.avatarUrl) ? (
-                                        <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-20 h-20 object-contain drop-shadow-md" />
+                                        <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-20 h-20 object-contain drop-shadow-md relative z-10 block" />
                                     ) : (
-                                        <div className="w-20 h-20 rounded-full bg-indigo-500 border-4 border-indigo-400 flex items-center justify-center font-bold text-2xl shadow-inner">
+                                        <div className="w-20 h-20 rounded-full bg-indigo-500 border-4 border-indigo-400 flex items-center justify-center font-bold text-2xl shadow-inner relative z-10">
                                             {p.avatarText}
                                         </div>
                                     )}
-                                    <span className="font-bold text-center text-sm truncate w-full">{p.name}</span>
+                                    <div className="absolute -top-12 scale-0 group-hover:scale-100 transition-transform origin-bottom bg-black/90 text-white text-sm font-bold py-2 px-4 rounded-xl z-20 whitespace-nowrap drop-shadow-lg shadow-black/50">
+                                        {p.name}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-solid border-t-black/90 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -494,6 +512,20 @@ export default function StudentLiveQuiz() {
 
     // Determine detailed status
     const isLocked = isSubmitted || isTimeUp || viewMode === 'results';
+
+    if (startupCountdown > 0) {
+        return (
+            <div className="min-h-screen bg-indigo-950 flex flex-col items-center justify-center text-white font-sans relative overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-[150vw] h-[150vw] bg-indigo-600/20 rounded-full animate-ping absolute" style={{ animationDuration: '1s' }} />
+                </div>
+                <h2 className="text-4xl font-extrabold text-indigo-300 mb-8 z-10 tracking-widest uppercase">Get Ready!</h2>
+                <div key={startupCountdown} className="text-[12rem] font-black z-10 animate-in zoom-in spin-in-12 duration-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                    {startupCountdown}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={cn("min-h-screen font-sans flex flex-col", isGameMode ? "bg-indigo-950 text-white" : "bg-background text-text")}>
