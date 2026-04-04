@@ -167,7 +167,7 @@ export default function StudentLiveQuiz() {
                 .select('*')
                 .eq('quiz_id', id)
                 .eq('student_id', user.id)
-                .single();
+                .maybeSingle();
 
             if (!existingAttempt) {
                 await supabase.from('attempts').insert({
@@ -458,18 +458,30 @@ export default function StudentLiveQuiz() {
                 .eq('quiz_id', id)
                 .eq('student_id', user.id);
 
-            // 4. Upsert into 'quiz_results' for Faculty real-time visibility
-            // If Game Mode, we force cumulativeGamePoints into the 'score' field to act as the Leaderboard metric.
-            await supabase
+            // 4. Safely Upsert into 'quiz_results' without relying on database constraints
+            const { data: existingQR } = await supabase
                 .from('quiz_results')
-                .upsert({
+                .select('id')
+                .eq('quiz_id', id)
+                .eq('student_id', user.id)
+                .maybeSingle();
+
+            if (existingQR) {
+                await supabase.from('quiz_results').update({
+                    score: isGameMode ? cumulativeGamePoints : totalCorrect,
+                    total_questions: questions.length,
+                    percentage: percentage
+                }).eq('id', existingQR.id);
+            } else {
+                await supabase.from('quiz_results').insert({
                     quiz_id: id,
                     student_id: user.id,
                     score: isGameMode ? cumulativeGamePoints : totalCorrect,
                     total_questions: questions.length,
                     percentage: percentage,
                     created_at: new Date().toISOString()
-                }, { onConflict: 'student_id, quiz_id' });
+                });
+            }
 
             if (isGameMode) {
                 setViewMode('leaderboard');
@@ -595,11 +607,49 @@ export default function StudentLiveQuiz() {
         );
     }
 
-    if ((viewMode === 'leaderboard' || status === 'completed') && isGameMode) {
+    if (viewMode === 'leaderboard' && status !== 'completed' && isGameMode) {
         const myIndex = leaderboardData.findIndex(d => d.student_id === user?.id);
         const myRank = myIndex >= 0 ? myIndex + 1 : '-';
         const myScore = leaderboardData.find(d => d.student_id === user?.id)?.score || 0;
 
+        return (
+            <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
+                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none z-0" />
+                <div className="z-10 relative flex flex-col h-full items-center p-8 w-full max-w-3xl mx-auto flex-1">
+                    <h1 className="text-4xl md:text-5xl font-black mb-8 tracking-wider drop-shadow-md text-white font-[AmongUs]">Live Rankings</h1>
+                    
+                    <div className="w-full flex-1 overflow-y-auto space-y-4 px-2 pb-32 animate-in slide-in-from-bottom-16 duration-500">
+                        {leaderboardData.map((d, i) => (
+                            <div key={d.student_id} className={cn(
+                                "flex items-center justify-between p-4 rounded-2xl backdrop-blur-md border transition-all transform hover:scale-105",
+                                d.student_id === user?.id ? "border-yellow-400 bg-yellow-500/20 shadow-[0_0_15px_rgba(250,204,21,0.2)]" : "border-white/10 bg-white/10"
+                            )}>
+                                <div className="flex items-center gap-4">
+                                    <span className={cn("text-2xl font-black w-8 text-center", i === 0 ? "text-yellow-400" : i === 1 ? "text-slate-300" : i === 2 ? "text-amber-600" : "text-white/50")}>{i + 1}</span>
+                                    {getCharacterSrc(d.avatarUrl) ? (
+                                        <img src={getCharacterSrc(d.avatarUrl)!} className="w-12 h-12 object-contain drop-shadow-md" />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full bg-indigo-500 border-2 border-indigo-400 flex items-center justify-center font-bold">{d.name.substring(0, 2).toUpperCase()}</div>
+                                    )}
+                                    <span className="text-xl font-bold truncate max-w-[150px] sm:max-w-[300px]">{d.name}</span>
+                                </div>
+                                <span className={cn("text-2xl font-bold", d.student_id === user?.id ? "text-yellow-400" : "text-white")}>{d.score}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center">
+                        <div className="bg-white/10 backdrop-blur-lg rounded-2xl w-full max-w-md p-5 flex justify-between items-center text-xl font-bold border border-white/20 shadow-2xl">
+                            <span className="text-indigo-200 flex items-center">Rank <span className="text-white text-3xl ml-3">#{myRank}</span></span>
+                            <span className="text-indigo-200 flex items-center">Score <span className="text-yellow-400 text-3xl ml-3">{myScore}</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (status === 'completed' && isGameMode) {
         return (
             <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
                 <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none z-0" />
@@ -644,21 +694,11 @@ export default function StudentLiveQuiz() {
                         )}
                     </div>
 
-                    {/* Personal Rank */}
-                    {status !== 'completed' && (
-                        <div className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl w-full max-w-2xl p-6 flex justify-between items-center text-xl font-bold border border-white/20 animate-in fade-in zoom-in delay-1000 fill-mode-both shadow-2xl">
-                            <span className="text-indigo-200">Your Position: <span className="text-white text-2xl ml-2">#{myRank}</span></span>
-                            <span className="text-indigo-200">Score: <span className="text-yellow-400 text-2xl ml-2">{myScore}</span></span>
-                        </div>
-                    )}
-                    
-                    {status === 'completed' && (
-                        <div className="mt-12 animate-in fade-in zoom-in delay-1000 fill-mode-both">
-                            <Button onClick={() => navigate('/student/dashboard')} className="px-8 h-12 text-lg font-bold bg-white/20 hover:bg-white/30 text-white border border-white/40 backdrop-blur-md">
-                                Return to Dashboard
-                            </Button>
-                        </div>
-                    )}
+                    <div className="mt-12 animate-in fade-in zoom-in delay-1000 fill-mode-both">
+                        <Button onClick={() => navigate('/student/dashboard')} className="px-8 h-12 text-lg font-bold bg-white/20 hover:bg-white/30 text-white border border-white/40 backdrop-blur-md">
+                            Return to Dashboard
+                        </Button>
+                    </div>
 
                 </div>
             </div>
