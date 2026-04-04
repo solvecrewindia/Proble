@@ -15,6 +15,7 @@ export default function LiveController() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [viewMode, setViewMode] = useState<'voting' | 'results' | 'leaderboard'>('voting');
     const [loading, setLoading] = useState(true);
+    const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
     // Dummy voting stats for now
     const [stats, setStats] = useState<Record<string, number>>({});
@@ -184,6 +185,33 @@ export default function LiveController() {
         };
     }, [id, quiz, currentQuestionIndex]);
 
+    // Timer Sync & Auto-transition
+    useEffect(() => {
+        const settings = quiz?.settings as any;
+        if (!settings || !settings.questionExpiresAt || viewMode !== 'voting') {
+            setTimeLeft(null);
+            return;
+        }
+
+        const expiresAt = new Date(settings.questionExpiresAt).getTime();
+
+        const timer = setInterval(async () => {
+            const now = Date.now();
+            const diff = Math.max(0, Math.ceil((expiresAt - now) / 1000));
+            setTimeLeft(diff);
+
+            if (diff <= 0) {
+                clearInterval(timer);
+                if (settings.gameMode === true) {
+                    setViewMode('leaderboard');
+                    await updateQuizState(currentQuestionIndex, 'leaderboard');
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [(quiz?.settings as any)?.questionExpiresAt, viewMode, currentQuestionIndex]);
+
     const handleNext = async () => {
         if (!quiz?.questions) return;
         if (currentQuestionIndex < quiz.questions.length - 1) {
@@ -349,8 +377,13 @@ export default function LiveController() {
                         <Button
                             onClick={async () => {
                                 if (viewMode === 'voting') {
-                                    setViewMode('results');
-                                    await updateQuizState(currentQuestionIndex, 'results');
+                                    if (isGameMode) {
+                                        setViewMode('leaderboard');
+                                        await updateQuizState(currentQuestionIndex, 'leaderboard');
+                                    } else {
+                                        setViewMode('results');
+                                        await updateQuizState(currentQuestionIndex, 'results');
+                                    }
                                 } else if (viewMode === 'results' && isGameMode) {
                                     setViewMode('leaderboard');
                                     await updateQuizState(currentQuestionIndex, 'leaderboard');
@@ -369,7 +402,10 @@ export default function LiveController() {
                         >
                             {viewMode === 'voting' ? (
                                 <>
-                                    <Pause className="mr-2 h-5 w-5" /> Stop Voting & Show Results
+                                    <Pause className="mr-2 h-5 w-5" /> 
+                                    {isGameMode 
+                                        ? (timeLeft !== null ? `Time Left: ${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')} - Skip to Leaderboard` : "Skip to Leaderboard")
+                                        : "Stop Voting & Show Results"}
                                 </>
                             ) : viewMode === 'results' && isGameMode ? (
                                 <>
