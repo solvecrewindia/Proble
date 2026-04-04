@@ -165,7 +165,8 @@ function AppContent() {
         location.pathname.startsWith('/admin') ||
         location.pathname.includes('/practice/test') ||
         location.pathname.includes('/practice/mcq') ||
-        location.pathname.includes('/student/test');
+        location.pathname.includes('/student/test') ||
+        location.pathname.includes('/student/live');
 
     return (
         <div className="app-container">

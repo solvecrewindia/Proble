@@ -323,7 +323,7 @@ export default function StudentLiveQuiz() {
 
     // Leaderboard Fetcher
     useEffect(() => {
-        if (viewMode === 'leaderboard' && isGameMode) {
+        if ((viewMode === 'leaderboard' || status === 'completed') && isGameMode) {
             const fetchLeaderboard = async () => {
                 const { data } = await supabase
                     .from('quiz_results')
@@ -471,6 +471,9 @@ export default function StudentLiveQuiz() {
                     created_at: new Date().toISOString()
                 }, { onConflict: 'student_id, quiz_id' });
 
+            if (isGameMode) {
+                setViewMode('leaderboard');
+            }
         } catch (err) {
             console.error("Failed to submit answer:", err);
         }
@@ -490,7 +493,7 @@ export default function StudentLiveQuiz() {
         );
     }
 
-    if (status === 'completed') {
+    if (status === 'completed' && !isGameMode) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
                 <Card className="max-w-md w-full p-8 text-center space-y-6">
@@ -511,7 +514,7 @@ export default function StudentLiveQuiz() {
             <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white font-sans relative overflow-hidden">
                 <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none z-0" />
                 <div className="z-10 relative flex flex-col items-center w-full max-w-2xl">
-                    <h1 className="text-4xl font-extrabold mb-8 tracking-tight animate-bounce drop-shadow-xl text-center">Choose Your Character!</h1>
+                    <h1 className="text-5xl font-extrabold mb-8 tracking-wider animate-bounce drop-shadow-xl text-center font-[AmongUs]">Choose Your Character!</h1>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full">
                         {CHARACTERS.map(char => (
                             <button key={char.id} onClick={() => handleSelectCharacter(char.id)} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border-4 border-white/20 hover:border-white transition-all transform hover:scale-105 flex flex-col items-center justify-center">
@@ -531,7 +534,7 @@ export default function StudentLiveQuiz() {
                     <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none z-0" />
                     <div className="z-10 relative flex flex-col h-full items-center justify-center pt-8 w-full">
                         <div className="text-center mb-8">
-                            <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-lg">Game Lobby</h1>
+                            <h1 className="text-5xl md:text-6xl font-black mb-4 tracking-wider drop-shadow-lg font-[AmongUs]">Game Lobby</h1>
                             <p className="text-xl text-indigo-200 drop-shadow-md">Waiting for {quizTitle || 'Quiz'} to start...</p>
                         </div>
                         <div className="max-w-5xl mx-auto w-full flex-1">
@@ -585,15 +588,15 @@ export default function StudentLiveQuiz() {
                 {isGameMode && (
                     <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none z-0" />
                 )}
-                <h2 className="text-4xl font-extrabold text-indigo-300 mb-8 z-10 tracking-widest uppercase drop-shadow-lg">Get Ready!</h2>
-                <div key={startupCountdown} className="text-[12rem] font-black z-10 animate-in zoom-in spin-in-12 duration-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                <h2 className="text-6xl text-indigo-300 mb-8 z-10 tracking-widest uppercase drop-shadow-lg font-[AmongUs]">Get Ready!</h2>
+                <div key={startupCountdown} className="text-[12rem] font-black z-10 animate-in zoom-in spin-in-12 duration-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] font-[AmongUs]">
                     {startupCountdown}
                 </div>
             </div>
         );
     }
 
-    if (viewMode === 'leaderboard' && isGameMode) {
+    if ((viewMode === 'leaderboard' || status === 'completed') && isGameMode) {
         const myIndex = leaderboardData.findIndex(d => d.student_id === user?.id);
         const myRank = myIndex >= 0 ? myIndex + 1 : '-';
         const myScore = leaderboardData.find(d => d.student_id === user?.id)?.score || 0;
@@ -602,7 +605,7 @@ export default function StudentLiveQuiz() {
             <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
                 <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none z-0" />
                 <div className="z-10 relative flex flex-col h-full items-center p-8 w-full max-w-5xl mx-auto flex-1">
-                    <h1 className="text-4xl md:text-5xl font-black mb-12 tracking-tight drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] text-yellow-400">Top Crewmates</h1>
+                    <h1 className="text-5xl md:text-6xl font-black mb-12 tracking-wider drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] text-yellow-400 font-[AmongUs]">Top Crewmates</h1>
                     
                     <div className="flex-1 flex items-end justify-center gap-4 md:gap-8 max-h-[500px] w-full">
                         {/* 2nd Place */}
@@ -643,10 +646,20 @@ export default function StudentLiveQuiz() {
                     </div>
 
                     {/* Personal Rank */}
-                    <div className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl w-full max-w-2xl p-6 flex justify-between items-center text-xl font-bold border border-white/20 animate-in fade-in zoom-in delay-1000 fill-mode-both shadow-2xl">
-                        <span className="text-indigo-200">Your Position: <span className="text-white text-2xl ml-2">#{myRank}</span></span>
-                        <span className="text-indigo-200">Score: <span className="text-yellow-400 text-2xl ml-2">{myScore}</span></span>
-                    </div>
+                    {status !== 'completed' && (
+                        <div className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl w-full max-w-2xl p-6 flex justify-between items-center text-xl font-bold border border-white/20 animate-in fade-in zoom-in delay-1000 fill-mode-both shadow-2xl">
+                            <span className="text-indigo-200">Your Position: <span className="text-white text-2xl ml-2">#{myRank}</span></span>
+                            <span className="text-indigo-200">Score: <span className="text-yellow-400 text-2xl ml-2">{myScore}</span></span>
+                        </div>
+                    )}
+                    
+                    {status === 'completed' && (
+                        <div className="mt-12 animate-in fade-in zoom-in delay-1000 fill-mode-both">
+                            <Button onClick={() => navigate('/student/dashboard')} className="px-8 h-12 text-lg font-bold bg-white/20 hover:bg-white/30 text-white border border-white/40 backdrop-blur-md">
+                                Return to Dashboard
+                            </Button>
+                        </div>
+                    )}
 
                 </div>
             </div>
@@ -702,10 +715,6 @@ export default function StudentLiveQuiz() {
                             {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                         </div>
                     )}
-
-                    <div className="text-sm font-medium text-muted">
-                        Q{currentQuestionIndex + 1} / {questions.length}
-                    </div>
                 </div>
             </header>
 
@@ -733,7 +742,7 @@ export default function StudentLiveQuiz() {
                     </div>
 
                     {/* Question Text */}
-                    <MathText text={currentQuestion.stem} className="text-xl md:text-2xl font-semibold leading-relaxed text-text" as="h2" />
+                    <MathText text={currentQuestion.stem} className={cn("text-xl md:text-2xl font-semibold leading-relaxed", isGameMode ? "text-white" : "text-text")} as="h2" />
 
                     {/* Options */}
                     <div className="flex flex-col gap-3">

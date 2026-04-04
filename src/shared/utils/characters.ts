@@ -1,6 +1,6 @@
 import char1 from '../../characters/1.webp';
-import char2 from '../../characters/2.webp';
-import char3 from '../../characters/3.webp';
+import char2 from '../../characters/2.png';
+import char3 from '../../characters/3.png';
 import char4 from '../../characters/4.webp';
 import char5 from '../../characters/5.png';
 
