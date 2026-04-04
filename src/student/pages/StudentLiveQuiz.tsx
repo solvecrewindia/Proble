@@ -543,18 +543,17 @@ export default function StudentLiveQuiz() {
                             </div>
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
                                 {participants.map(p => (
-                                    <div key={p.id} className="bg-white/10 rounded-3xl p-4 flex flex-col items-center justify-center h-[120px] animate-in zoom-in duration-300 hover:scale-110 transition-transform group relative cursor-help">
+                                    <div key={p.id} className="bg-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 animate-in zoom-in duration-300 hover:scale-105 transition-transform group relative">
                                         {getCharacterSrc(p.avatarUrl) ? (
-                                            <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-20 h-20 object-contain drop-shadow-md relative z-10 block" />
+                                            <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-16 h-16 object-contain drop-shadow-md relative z-10 block" />
                                         ) : (
-                                            <div className="w-20 h-20 rounded-full bg-indigo-500 border-4 border-indigo-400 flex items-center justify-center font-bold text-2xl shadow-inner relative z-10">
+                                            <div className="w-16 h-16 rounded-full bg-indigo-500 border-4 border-indigo-400 flex items-center justify-center font-bold text-xl shadow-inner relative z-10">
                                                 {p.avatarText}
                                             </div>
                                         )}
-                                        <div className="absolute -top-12 scale-0 group-hover:scale-100 transition-transform origin-bottom bg-black/90 text-white text-sm font-bold py-2 px-4 rounded-xl z-20 whitespace-nowrap drop-shadow-lg shadow-black/50">
+                                        <span className="text-white text-sm font-bold text-center truncate w-full drop-shadow-md">
                                             {p.name}
-                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-solid border-t-black/90 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
-                                        </div>
+                                        </span>
                                     </div>
                                 ))}
                             </div>
