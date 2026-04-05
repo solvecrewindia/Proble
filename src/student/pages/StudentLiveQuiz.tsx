@@ -323,7 +323,7 @@ export default function StudentLiveQuiz() {
 
     // Leaderboard Fetcher
     useEffect(() => {
-        if ((viewMode === 'leaderboard' || status === 'completed') && isGameMode) {
+        if ((viewMode === 'leaderboard' || status === 'completed')) {
             const fetchLeaderboard = async () => {
                 const { data } = await supabase
                     .from('quiz_results')
@@ -483,9 +483,7 @@ export default function StudentLiveQuiz() {
                 });
             }
 
-            if (isGameMode) {
-                setViewMode('leaderboard');
-            }
+            setViewMode('leaderboard');
         } catch (err) {
             console.error("Failed to submit answer:", err);
         }
@@ -607,7 +605,7 @@ export default function StudentLiveQuiz() {
         );
     }
 
-    if (viewMode === 'leaderboard' && status !== 'completed' && isGameMode) {
+    if (viewMode === 'leaderboard' && status !== 'completed') {
         const myIndex = leaderboardData.findIndex(d => d.student_id === user?.id);
         const myRank = myIndex >= 0 ? myIndex + 1 : '-';
         const myScore = leaderboardData.find(d => d.student_id === user?.id)?.score || 0;

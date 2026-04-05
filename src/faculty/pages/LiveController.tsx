@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
-import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause, Download } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MathText } from '../../shared/components/MathText';
 import type { Quiz } from '../types';
@@ -16,9 +16,29 @@ export default function LiveController() {
     const [viewMode, setViewMode] = useState<'voting' | 'results' | 'leaderboard'>('voting');
     const [loading, setLoading] = useState(true);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
+    const [quizStatus, setQuizStatus] = useState<'active' | 'completed'>('active');
+    const [finalResults, setFinalResults] = useState<any[]>([]);
 
     // Dummy voting stats for now
     const [stats, setStats] = useState<Record<string, number>>({});
+
+    const fetchFinalResults = async (quizId: string) => {
+        const { data, error } = await supabase
+            .from('quiz_results')
+            .select(`
+                score,
+                student_id,
+                profiles:student_id (
+                    full_name
+                )
+            `)
+            .eq('quiz_id', quizId)
+            .order('score', { ascending: false });
+
+        if (data && !error) {
+            setFinalResults(data);
+        }
+    };
 
     useEffect(() => {
         const fetchQuiz = async () => {
@@ -58,6 +78,11 @@ export default function LiveController() {
                     }));
 
                     setQuiz({ ...quizData, questions: mappedQuestions });
+
+                    if (quizData.status === 'completed') {
+                        setQuizStatus('completed');
+                        fetchFinalResults(id);
+                    }
 
                     // Initialize state from DB settings if available
                     if (quizData.settings?.currentQuestionIndex !== undefined) {
@@ -202,10 +227,8 @@ export default function LiveController() {
 
             if (diff <= 0) {
                 clearInterval(timer);
-                if (settings.gameMode === true) {
-                    setViewMode('leaderboard');
-                    await updateQuizState(currentQuestionIndex, 'leaderboard');
-                }
+                setViewMode('leaderboard');
+                await updateQuizState(currentQuestionIndex, 'leaderboard');
             }
         }, 1000);
 
@@ -223,8 +246,9 @@ export default function LiveController() {
             await updateQuizState(nextIndex, 'voting');
         } else {
             // End quiz
-            navigate('/faculty/live');
             await supabase.from('quizzes').update({ status: 'completed' }).eq('id', id);
+            setQuizStatus('completed');
+            fetchFinalResults(id || '');
         }
     };
 
@@ -280,7 +304,81 @@ export default function LiveController() {
 
     // Calculate total votes for percentages
     const totalVotes = Object.values(stats).reduce((a, b) => a + b, 0) || 1;
-    const isGameMode = (quiz.settings as any)?.gameMode === true;
+
+    if (quizStatus === 'completed') {
+        const downloadCSV = () => {
+            const headers = ['Rank', 'Name', 'Score'];
+            const rows = finalResults.map((r, i) => [
+                i + 1,
+                // Handle case where profile might be an array or object
+                Array.isArray(r.profiles) ? r.profiles[0]?.full_name || 'Unknown' : r.profiles?.full_name || 'Unknown',
+                r.score
+            ]);
+            const csvContent = "data:text/csv;charset=utf-8," 
+                + [headers.join(','), ...rows.map(e => e.map(item => `"${item}"`).join(','))].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${quiz.title.replace(/\s+/g, '_')}_Results.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        return (
+            <div className="max-w-4xl mx-auto p-6 space-y-6 animate-in fade-in zoom-in duration-300">
+                <div className="flex justify-between items-center bg-surface p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                    <div>
+                        <h1 className="text-2xl font-bold text-text mb-2">Quiz Completed: {quiz.title}</h1>
+                        <p className="text-muted">Final Results for all players</p>
+                    </div>
+                    <div className="flex gap-4">
+                        <Button variant="outline" onClick={downloadCSV}>
+                            <Download className="w-4 h-4 mr-2" /> Download CSV
+                        </Button>
+                        <Button onClick={() => navigate('/faculty/live')}>Return to Dashboard</Button>
+                    </div>
+                </div>
+
+                <Card className="border-neutral-200 dark:border-neutral-800">
+                    <CardContent className="p-0">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900">
+                                    <th className="p-4 font-bold text-muted">Rank</th>
+                                    <th className="p-4 font-bold text-muted">Student Name</th>
+                                    <th className="p-4 font-bold text-muted text-right">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {finalResults.map((r, i) => {
+                                    const rawProfileName = Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name;
+                                    const studentName = rawProfileName || 'Unknown Student';
+                                    return (
+                                        <tr key={r.student_id} className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors">
+                                            <td className="p-4 font-medium text-text">#{i + 1}</td>
+                                            <td className="p-4 text-text flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-xs">
+                                                    {studentName.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                {studentName}
+                                            </td>
+                                            <td className="p-4 font-bold text-primary text-right">{r.score}</td>
+                                        </tr>
+                                    );
+                                })}
+                                {finalResults.length === 0 && (
+                                    <tr>
+                                        <td colSpan={3} className="p-8 text-center text-muted">No results found for this quiz.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-5xl mx-auto space-y-6 h-[calc(100vh-100px)] flex flex-col">
@@ -329,7 +427,7 @@ export default function LiveController() {
                                     return (
                                         <div key={idx} className="relative group">
                                             {/* Background Bar */}
-                                            {viewMode === 'results' && (
+                                            {viewMode === 'leaderboard' && (
                                                 <div
                                                     className="absolute inset-0 bg-primary/10 rounded-lg transition-all duration-1000 ease-out"
                                                     style={{ width: `${percentage}%` }}
@@ -338,7 +436,7 @@ export default function LiveController() {
 
                                             <div className={cn(
                                                 "relative p-4 rounded-lg border-2 flex justify-between items-center transition-all",
-                                                viewMode === 'results'
+                                                viewMode === 'leaderboard'
                                                     ? "border-transparent"
                                                     : "border-neutral-200 dark:border-neutral-800"
                                             )}>
@@ -349,7 +447,7 @@ export default function LiveController() {
                                                     <MathText text={option} className="font-medium text-text" />
                                                 </div>
 
-                                                {viewMode === 'results' && (
+                                                {viewMode === 'leaderboard' && (
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-bold text-primary">{percentage}%</span>
                                                         <span className="text-xs text-muted">({voteCount})</span>
@@ -377,14 +475,6 @@ export default function LiveController() {
                         <Button
                             onClick={async () => {
                                 if (viewMode === 'voting') {
-                                    if (isGameMode) {
-                                        setViewMode('leaderboard');
-                                        await updateQuizState(currentQuestionIndex, 'leaderboard');
-                                    } else {
-                                        setViewMode('results');
-                                        await updateQuizState(currentQuestionIndex, 'results');
-                                    }
-                                } else if (viewMode === 'results' && isGameMode) {
                                     setViewMode('leaderboard');
                                     await updateQuizState(currentQuestionIndex, 'leaderboard');
                                 } else {
@@ -395,21 +485,13 @@ export default function LiveController() {
                                 "h-14 text-lg text-white transition-all",
                                 viewMode === 'voting'
                                     ? "bg-red-500 hover:bg-red-600"
-                                    : viewMode === 'results' && isGameMode
-                                        ? "bg-indigo-600 hover:bg-indigo-700 shadow-md"
-                                        : "bg-primary hover:bg-primary/90"
+                                    : "bg-primary hover:bg-primary/90"
                             )}
                         >
                             {viewMode === 'voting' ? (
                                 <>
                                     <Pause className="mr-2 h-5 w-5" /> 
-                                    {isGameMode 
-                                        ? (timeLeft !== null ? `Time Left: ${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')} - Skip to Leaderboard` : "Skip to Leaderboard")
-                                        : "Stop Voting & Show Results"}
-                                </>
-                            ) : viewMode === 'results' && isGameMode ? (
-                                <>
-                                    Show Leaderboard <ChevronRight className="ml-2 h-5 w-5" />
+                                    {timeLeft !== null ? `Time Left: ${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')} - Skip to Leaderboard` : "Skip to Leaderboard"}
                                 </>
                             ) : (
                                 <>
@@ -430,10 +512,6 @@ export default function LiveController() {
                                     {viewMode === 'voting' ? (
                                         <span className="flex items-center justify-center gap-2 text-primary animate-pulse">
                                             <span className="w-2 h-2 rounded-full bg-primary"></span> Voting Active
-                                        </span>
-                                    ) : viewMode === 'results' ? (
-                                        <span className="flex items-center justify-center gap-2 text-orange-500">
-                                            <Pause className="w-3 h-3" /> Results Shown
                                         </span>
                                     ) : (
                                         <span className="flex items-center justify-center gap-2 text-indigo-500">
