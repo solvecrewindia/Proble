@@ -328,8 +328,8 @@ export default function StudentLiveQuiz() {
     useEffect(() => {
         if ((viewMode === 'leaderboard' || status === 'completed')) {
             const fetchLeaderboard = async () => {
-                // Fetch quiz_results with direct profile join so names always appear
-                const { data } = await supabase
+                // ── PRIMARY: quiz_results with profiles join ──────────────────
+                const { data: qrData } = await supabase
                     .from('quiz_results')
                     .select(`
                         score,
@@ -344,22 +344,58 @@ export default function StudentLiveQuiz() {
                     .order('score', { ascending: false })
                     .limit(10);
 
-                if (data) {
-                    const enriched = data.map((d: any) => {
-                        // profiles can be returned as array or object depending on Supabase version
-                        const profile = Array.isArray(d.profiles) ? d.profiles[0] : d.profiles;
-                        const name = profile?.full_name || 'Unknown Player';
-                        const avatarUrl = profile?.avatar_url;
-                        const regNo = profile?.registration_number || null;
+                // ── FALLBACK: attempts table ───────────────────────────────────
+                // If RLS is blocking quiz_results (only own row returned),
+                // fall back to attempts which everyone can read their own row from.
+                // We merge all unique student_ids from both sources.
+                const { data: attemptsData } = await supabase
+                    .from('attempts')
+                    .select('student_id, score')
+                    .eq('quiz_id', id)
+                    .eq('status', 'in-progress');
+
+                // Build a map: student_id → { score, source }
+                const scoreMap: Record<string, number> = {};
+
+                // Seed from attempts (available to everyone for own row, faculty for all)
+                (attemptsData || []).forEach((a: any) => {
+                    scoreMap[a.student_id] = a.score ?? 0;
+                });
+
+                // Override/add from quiz_results (authoritative if accessible)
+                (qrData || []).forEach((r: any) => {
+                    scoreMap[r.student_id] = r.score ?? 0;
+                });
+
+                // Collect all unique student ids
+                const allStudentIds = Object.keys(scoreMap);
+                if (allStudentIds.length === 0) return;
+
+                // Fetch profiles for all student ids in one request
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, avatar_url, registration_number')
+                    .in('id', allStudentIds);
+
+                const profileMap: Record<string, any> = {};
+                (profilesData || []).forEach((p: any) => { profileMap[p.id] = p; });
+
+                // Build enriched leaderboard sorted by score desc
+                const enriched = allStudentIds
+                    .map(sid => {
+                        const profile = profileMap[sid];
                         return {
-                            ...d,
-                            name,
-                            avatarUrl,
-                            regNo
+                            student_id: sid,
+                            score: scoreMap[sid],
+                            name: profile?.full_name || 'Unknown Player',
+                            avatarUrl: profile?.avatar_url || null,
+                            regNo: profile?.registration_number || null,
                         };
-                    });
-                    setLeaderboardData(enriched);
-                }
+                    })
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
+
+                setLeaderboardData(enriched);
             };
             
             fetchLeaderboard();
