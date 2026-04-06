@@ -29,7 +29,8 @@ export default function LiveController() {
                 score,
                 student_id,
                 profiles:student_id (
-                    full_name
+                    full_name,
+                    registration_number
                 )
             `)
             .eq('quiz_id', quizId)
@@ -361,7 +362,10 @@ export default function LiveController() {
                                                 <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-xs">
                                                     {studentName.substring(0, 2).toUpperCase()}
                                                 </div>
-                                                {studentName}
+                                                <div className="flex flex-col">
+                                                    <span>{studentName}</span>
+                                                    {(() => { const rawReg = Array.isArray(r.profiles) ? r.profiles[0]?.registration_number : r.profiles?.registration_number; return rawReg ? <span className="text-xs text-muted font-mono">{rawReg}</span> : null; })()}
+                                                </div>
                                             </td>
                                             <td className="p-4 font-bold text-primary text-right">{r.score}</td>
                                         </tr>

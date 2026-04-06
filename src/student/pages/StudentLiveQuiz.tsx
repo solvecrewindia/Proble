@@ -23,7 +23,7 @@ const GAME_COLORS = [
 export default function StudentLiveQuiz() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user, isLoading: authLoading } = useAuth();
+    const { user, isLoading: authLoading, refreshUser } = useAuth();
     const { theme } = useTheme();
 
     // State
@@ -40,6 +40,11 @@ export default function StudentLiveQuiz() {
     const [participants, setParticipants] = useState<any[]>([]);
     const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
     const [quizTitle, setQuizTitle] = useState('');
+
+    // Name prompt state
+    const [nameInput, setNameInput] = useState('');
+    const [nameSaving, setNameSaving] = useState(false);
+    const [nameError, setNameError] = useState('');
 
     // Timer State
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -108,9 +113,8 @@ export default function StudentLiveQuiz() {
                 if (typeof quizData.settings.currentQuestionIndex === 'number') {
                     setCurrentQuestionIndex((prev) => {
                         if (prev !== quizData.settings.currentQuestionIndex) {
-                            if (quizData.settings.gameMode) {
-                                setStartupCountdown(3);
-                            }
+                            // Always show 3-2-1 countdown on every new question
+                            setStartupCountdown(3);
                             // New Question: Reset state
                             setSelectedOption(null);
                             setIsSubmitted(false);
@@ -268,9 +272,8 @@ export default function StudentLiveQuiz() {
                                 if (typeof newSettings.currentQuestionIndex === 'number') {
                                     setCurrentQuestionIndex((prev) => {
                                         if (prev !== newSettings.currentQuestionIndex) {
-                                            if (newSettings.gameMode) {
-                                                setStartupCountdown(3);
-                                            }
+                                            // Always show 3-2-1 countdown on every new question
+                                            setStartupCountdown(3);
                                             // New Question: Reset entire state
                                             setSelectedOption(null);
                                             setIsSubmitted(false);
@@ -325,20 +328,34 @@ export default function StudentLiveQuiz() {
     useEffect(() => {
         if ((viewMode === 'leaderboard' || status === 'completed')) {
             const fetchLeaderboard = async () => {
+                // Fetch quiz_results with direct profile join so names always appear
                 const { data } = await supabase
                     .from('quiz_results')
-                    .select('score, student_id')
+                    .select(`
+                        score,
+                        student_id,
+                        profiles:student_id (
+                            full_name,
+                            avatar_url,
+                            registration_number
+                        )
+                    `)
                     .eq('quiz_id', id)
                     .order('score', { ascending: false })
                     .limit(10);
 
                 if (data) {
                     const enriched = data.map((d: any) => {
-                        const p = participants.find(p => p.id === d.student_id);
+                        // profiles can be returned as array or object depending on Supabase version
+                        const profile = Array.isArray(d.profiles) ? d.profiles[0] : d.profiles;
+                        const name = profile?.full_name || 'Unknown Player';
+                        const avatarUrl = profile?.avatar_url;
+                        const regNo = profile?.registration_number || null;
                         return {
                             ...d,
-                            name: p?.name || 'Crewmate',
-                            avatarUrl: p?.avatarUrl
+                            name,
+                            avatarUrl,
+                            regNo
                         };
                     });
                     setLeaderboardData(enriched);
@@ -349,7 +366,7 @@ export default function StudentLiveQuiz() {
             const polling = setInterval(fetchLeaderboard, 2000);
             return () => clearInterval(polling);
         }
-    }, [viewMode, isGameMode, id, participants]);
+    }, [viewMode, status, id]);
 
     // Countdown Interval
     useEffect(() => {
@@ -483,7 +500,8 @@ export default function StudentLiveQuiz() {
                 });
             }
 
-            setViewMode('leaderboard');
+            // Stay in voting mode — the leaderboard appears when the teacher pushes viewMode='leaderboard'
+            // This keeps all students in sync rather than each jumping to leaderboard individually
         } catch (err) {
             console.error("Failed to submit answer:", err);
         }
@@ -499,6 +517,57 @@ export default function StudentLiveQuiz() {
                     <p className="text-muted">You must be logged in to join a live quiz.</p>
                     <Button onClick={() => navigate('/login')} className="w-full">Go to Login</Button>
                 </Card>
+            </div>
+        );
+    }
+
+    // --- NAME PROMPT GATE ---
+    // Show a name entry screen if the user hasn't set their full name yet
+    if (!user.full_name || user.full_name.trim() === '') {
+        const handleSaveName = async () => {
+            const trimmed = nameInput.trim();
+            if (!trimmed) { setNameError('Please enter your name.'); return; }
+            setNameSaving(true);
+            setNameError('');
+            try {
+                await supabase.from('profiles').update({ full_name: trimmed }).eq('id', user.id);
+                await refreshUser();
+            } catch (err) {
+                setNameError('Failed to save name. Please try again.');
+            } finally {
+                setNameSaving(false);
+            }
+        };
+
+        return (
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white font-sans relative overflow-hidden">
+                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none z-0" />
+                <div className="z-10 relative flex flex-col items-center w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
+                    <div className="w-20 h-20 rounded-full bg-indigo-500/30 border-4 border-indigo-400 flex items-center justify-center mb-6">
+                        <User className="w-10 h-10 text-indigo-200" />
+                    </div>
+                    <h1 className="text-3xl font-black mb-2 tracking-wide text-center">What's your name?</h1>
+                    <p className="text-indigo-200 text-center mb-8 text-sm">Your name will appear on the leaderboard for everyone to see.</p>
+                    <div className="w-full space-y-4">
+                        <input
+                            type="text"
+                            value={nameInput}
+                            onChange={e => { setNameInput(e.target.value); setNameError(''); }}
+                            onKeyDown={e => e.key === 'Enter' && handleSaveName()}
+                            placeholder="Enter your full name..."
+                            autoFocus
+                            className="w-full px-5 py-4 rounded-2xl bg-white/10 border-2 border-white/20 text-white placeholder-white/40 text-xl font-bold outline-none focus:border-indigo-400 focus:bg-white/20 transition-all"
+                        />
+                        {nameError && <p className="text-red-400 text-sm text-center">{nameError}</p>}
+                        <button
+                            onClick={handleSaveName}
+                            disabled={nameSaving}
+                            className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-400 active:scale-95 transition-all font-black text-xl text-white shadow-[0_6px_0_rgb(67,56,202)] active:shadow-none active:translate-y-1.5 disabled:opacity-60 flex items-center justify-center gap-3"
+                        >
+                            {nameSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Continue →'}
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -591,16 +660,27 @@ export default function StudentLiveQuiz() {
     if (startupCountdown > 0) {
         return (
             <div className="min-h-screen bg-indigo-950 flex flex-col items-center justify-center text-white font-sans relative overflow-hidden">
+                {/* Pulsing ring */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-[150vw] h-[150vw] bg-indigo-600/20 rounded-full animate-ping absolute" style={{ animationDuration: '1s' }} />
                 </div>
                 {isGameMode && (
                     <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none z-0" />
                 )}
-                <h2 className="text-6xl text-indigo-300 mb-8 z-10 tracking-widest uppercase drop-shadow-lg font-[AmongUs]">Get Ready!</h2>
-                <div key={startupCountdown} className="text-[12rem] font-black z-10 animate-in zoom-in spin-in-12 duration-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] font-[AmongUs]">
+                <h2 className={cn(
+                    "text-4xl md:text-6xl mb-8 z-10 tracking-widest uppercase drop-shadow-lg",
+                    isGameMode ? "font-[AmongUs] text-indigo-300" : "font-black text-white"
+                )}>Get Ready!</h2>
+                <div
+                    key={startupCountdown}
+                    className={cn(
+                        "text-[10rem] md:text-[12rem] font-black z-10 animate-in zoom-in spin-in-12 duration-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]",
+                        isGameMode ? "font-[AmongUs] text-white" : "text-indigo-300"
+                    )}
+                >
                     {startupCountdown}
                 </div>
+                <p className="z-10 mt-6 text-white/50 text-lg tracking-widest uppercase">Question {(currentQuestionIndex ?? 0) + 1}</p>
             </div>
         );
     }
@@ -629,7 +709,10 @@ export default function StudentLiveQuiz() {
                                     ) : (
                                         <div className="w-12 h-12 rounded-full bg-indigo-500 border-2 border-indigo-400 flex items-center justify-center font-bold">{d.name.substring(0, 2).toUpperCase()}</div>
                                     )}
-                                    <span className="text-xl font-bold truncate max-w-[150px] sm:max-w-[300px]">{d.name}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-xl font-bold truncate max-w-[150px] sm:max-w-[300px]">{d.name}</span>
+                                        {d.regNo && <span className="text-xs text-white/50 font-mono">{d.regNo}</span>}
+                                    </div>
                                 </div>
                                 <span className={cn("text-2xl font-bold", d.student_id === user?.id ? "text-yellow-400" : "text-white")}>{d.score}</span>
                             </div>
@@ -847,22 +930,34 @@ export default function StudentLiveQuiz() {
                             isTimeUp ? (
                                 <div className="text-center w-full p-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg">
                                     <p className="font-bold">Time's Up!</p>
-                                    <p className="text-xs">Waiting for results...</p>
+                                    <p className="text-xs">Waiting for leaderboard...</p>
+                                </div>
+                            ) : isSubmitted ? (
+                                <div className="w-full flex flex-col items-center gap-3 animate-in fade-in">
+                                    <div className={cn(
+                                        "w-full p-3 rounded-xl flex items-center justify-center gap-3 font-bold text-base",
+                                        isGameMode
+                                            ? "bg-green-500/20 border border-green-500/40 text-green-300"
+                                            : "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400"
+                                    )}>
+                                        <CheckCircle className="w-5 h-5 shrink-0" />
+                                        Answer Submitted!
+                                    </div>
+                                    <div className={cn(
+                                        "w-full p-2 rounded-lg flex items-center justify-center gap-2 text-sm animate-pulse",
+                                        isGameMode ? "text-indigo-300" : "text-muted"
+                                    )}>
+                                        <span className="w-2 h-2 rounded-full bg-current inline-block" />
+                                        Waiting for leaderboard...
+                                    </div>
                                 </div>
                             ) : (
                                 <Button
                                     onClick={handleSubmitAnswer}
-                                    disabled={selectedOption === null || isSubmitted}
-                                    className={cn(
-                                        "w-full sm:w-auto h-12 text-lg px-8 transition-all font-bold",
-                                        isSubmitted ? "bg-green-600 hover:bg-green-700 text-white cursor-default" : ""
-                                    )}
+                                    disabled={selectedOption === null}
+                                    className="w-full sm:w-auto h-12 text-lg px-8 transition-all font-bold"
                                 >
-                                    {isSubmitted ? (
-                                        <span className="flex items-center gap-2">
-                                            Answer Submitted <CheckCircle className="w-5 h-5" />
-                                        </span>
-                                    ) : "Submit Answer"}
+                                    Submit Answer
                                 </Button>
                             )
                         ) : (
