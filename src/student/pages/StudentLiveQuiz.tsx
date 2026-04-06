@@ -545,31 +545,36 @@ export default function StudentLiveQuiz() {
 
     if (loading || authLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
 
-    if (!user) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
-                <Card className="max-w-md w-full p-8 text-center space-y-6">
-                    <h1 className="text-2xl font-bold text-text">Access Denied</h1>
-                    <p className="text-muted">You must be logged in to join a live quiz.</p>
-                    <Button onClick={() => navigate('/login')} className="w-full">Go to Login</Button>
-                </Card>
-            </div>
-        );
-    }
-
-    // --- NAME PROMPT GATE ---
-    // Show a name entry screen if the user hasn't set their full name yet
-    if (!user.full_name || user.full_name.trim() === '') {
+    // --- GUEST / NAME GATE ---
+    // If not logged in OR no name set: show name-only entry (no email required for live test)
+    if (!user || !user.full_name || user.full_name.trim() === '') {
         const handleSaveName = async () => {
             const trimmed = nameInput.trim();
             if (!trimmed) { setNameError('Please enter your name.'); return; }
             setNameSaving(true);
             setNameError('');
             try {
-                await supabase.from('profiles').update({ full_name: trimmed }).eq('id', user.id);
+                if (!user) {
+                    // Sign in anonymously — creates a real Supabase UUID, no email needed
+                    const { data: anonData, error: anonErr } = await (supabase.auth as any).signInAnonymously();
+                    if (anonErr) throw anonErr;
+                    const anonId = anonData?.user?.id;
+                    if (!anonId) throw new Error('Anonymous sign-in failed');
+                    // Create/upsert profile with just the name
+                    await supabase.from('profiles').upsert([{
+                        id: anonId,
+                        full_name: trimmed,
+                        role: 'student',
+                        email: `anon_${anonId.slice(0, 8)}@live.proble`,
+                    }], { onConflict: 'id' });
+                } else {
+                    // Logged-in user just needs their name saved
+                    await supabase.from('profiles').update({ full_name: trimmed }).eq('id', user.id);
+                }
                 await refreshUser();
-            } catch (err) {
-                setNameError('Failed to save name. Please try again.');
+            } catch (err: any) {
+                console.error('Guest sign-in error:', err);
+                setNameError(err?.message || 'Something went wrong. Please try again.');
             } finally {
                 setNameSaving(false);
             }
@@ -583,7 +588,7 @@ export default function StudentLiveQuiz() {
                         <User className="w-10 h-10 text-indigo-200" />
                     </div>
                     <h1 className="text-3xl font-black mb-2 tracking-wide text-center">What's your name?</h1>
-                    <p className="text-indigo-200 text-center mb-8 text-sm">Your name will appear on the leaderboard for everyone to see.</p>
+                    <p className="text-indigo-200 text-center mb-8 text-sm">Your name will appear on the leaderboard.<br/>No login required — just enter your name!</p>
                     <div className="w-full space-y-4">
                         <input
                             type="text"
@@ -600,13 +605,14 @@ export default function StudentLiveQuiz() {
                             disabled={nameSaving}
                             className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-400 active:scale-95 transition-all font-black text-xl text-white shadow-[0_6px_0_rgb(67,56,202)] active:shadow-none active:translate-y-1.5 disabled:opacity-60 flex items-center justify-center gap-3"
                         >
-                            {nameSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Continue →'}
+                            {nameSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Join Quiz →'}
                         </button>
                     </div>
                 </div>
             </div>
         );
     }
+
 
     if (status === 'completed' && !isGameMode) {
         return (

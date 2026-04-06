@@ -222,6 +222,8 @@ function AppContent() {
                             </ProtectedRoute>
                         }
                     />
+                    {/* Live quiz is PUBLIC — students join by name only, no login required */}
+                    <Route path="/student/live/:id" element={<StudentApp />} />
                 </Routes>
             </Suspense>
         </div>
