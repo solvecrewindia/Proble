@@ -446,31 +446,47 @@ const MCQTest = () => {
     // Realtime Subscriptions
     useEffect(() => {
         if (!id || loading || showResults || id === 'combined') return;
-        const channel = supabase.channel(`quiz_session:${id} `, {
-            config: { presence: { key: (supabase.auth.getSession() as any)?.user?.id || 'anon' } },
-        });
+        // Skip on iOS/Safari — WebSocket throws "The operation is insecure"
+        if (typeof WebSocket === 'undefined') return;
 
-        channel
-            .on('broadcast', { event: 'test_ended' }, () => {
-                alert('The teacher has ended this test session.');
-                calculateAndShowResults();
-            })
-            .on('broadcast', { event: 'test_paused' }, () => {
-                setTestActive(false);
-                setIsPaused(true);
-            })
-            .on('broadcast', { event: 'test_resumed' }, () => {
-                setIsPaused(false);
-                setTestActive(true);
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (user) await channel.track({ student_id: user.id, online_at: new Date().toISOString() });
-                }
+        let channel: any = null;
+        try {
+            channel = supabase.channel(`quiz_session:${id}`, {
+                config: { presence: { key: 'student' } },
             });
 
-        return () => { supabase.removeChannel(channel); };
+            channel
+                .on('broadcast', { event: 'test_ended' }, () => {
+                    alert('The teacher has ended this test session.');
+                    calculateAndShowResults();
+                })
+                .on('broadcast', { event: 'test_paused' }, () => {
+                    setTestActive(false);
+                    setIsPaused(true);
+                })
+                .on('broadcast', { event: 'test_resumed' }, () => {
+                    setIsPaused(false);
+                    setTestActive(true);
+                })
+                .subscribe(async (status: string) => {
+                    if (status === 'SUBSCRIBED') {
+                        try {
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (user) await channel.track({ student_id: user.id, online_at: new Date().toISOString() });
+                        } catch (e) {
+                            console.warn('Presence tracking failed:', e);
+                        }
+                    }
+                });
+        } catch (err) {
+            console.warn('Realtime subscription failed (will use polling fallback):', err);
+        }
+
+        return () => {
+            if (channel) {
+                try { supabase.removeChannel(channel); } catch (_) {}
+            }
+        };
     }, [id, loading, showResults, calculateAndShowResults]);
 
     const handleOptionSelect = useCallback((optionIndex: number) => {

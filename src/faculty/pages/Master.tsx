@@ -81,26 +81,37 @@ export default function Master() {
     // Realtime Presence Subscription
     useEffect(() => {
         if (quizzes.length === 0) return;
+        // Skip realtime on iOS/Safari (WebSocket is insecure) - polling handles updates
+        if (typeof WebSocket === 'undefined') return;
 
-        const channels = quizzes.map(quiz => {
-            const channel = supabase.channel(`quiz_session:${quiz.id}`, {
-                config: { presence: { key: 'faculty' } }
-            });
-
-            channel.on('presence', { event: 'sync' }, () => {
-                const state = channel.presenceState();
-                let count = 0;
-                Object.values(state).forEach((presences: any) => {
-                    count += presences.length;
+        const channels: any[] = [];
+        try {
+            quizzes.forEach(quiz => {
+                const channel = supabase.channel(`quiz_session:${quiz.id}`, {
+                    config: { presence: { key: 'faculty' } }
                 });
-                setActiveStudents(prev => ({ ...prev, [quiz.id]: count }));
-            }).subscribe();
 
-            return channel;
-        });
+                channel.on('presence', { event: 'sync' }, () => {
+                    try {
+                        const state = channel.presenceState();
+                        let count = 0;
+                        Object.values(state).forEach((presences: any) => {
+                            count += presences.length;
+                        });
+                        setActiveStudents(prev => ({ ...prev, [quiz.id]: count }));
+                    } catch (e) {
+                        console.warn('Presence state error:', e);
+                    }
+                }).subscribe();
+
+                channels.push(channel);
+            });
+        } catch (err) {
+            console.warn('Realtime presence subscription failed (non-critical):', err);
+        }
 
         return () => {
-            channels.forEach(c => supabase.removeChannel(c));
+            channels.forEach(c => { try { supabase.removeChannel(c); } catch(_) {} });
         };
     }, [quizzes]);
 
@@ -285,18 +296,22 @@ export default function Master() {
             'active': 'test_resumed'
         };
 
-        if (eventMap[newStatus]) {
-            const channel = supabase.channel(`quiz_session:${quizId}`);
-            channel.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await channel.send({
-                        type: 'broadcast',
-                        event: eventMap[newStatus],
-                        payload: { at: new Date(), by: 'faculty' }
-                    });
-                    supabase.removeChannel(channel);
-                }
-            });
+        if (eventMap[newStatus] && typeof WebSocket !== 'undefined') {
+            try {
+                const channel = supabase.channel(`quiz_session:${quizId}`);
+                channel.subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        await channel.send({
+                            type: 'broadcast',
+                            event: eventMap[newStatus],
+                            payload: { at: new Date(), by: 'faculty' }
+                        });
+                        try { supabase.removeChannel(channel); } catch(_) {}
+                    }
+                });
+            } catch (err) {
+                console.warn('Broadcast failed (non-critical):', err);
+            }
         }
     };
 
