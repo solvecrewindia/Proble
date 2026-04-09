@@ -13,6 +13,7 @@ interface AuthContextType {
     signInWithGoogle: () => Promise<void>;
     signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
     verifyOtp: (email: string, token: string) => Promise<{ user: any; error: Error | null }>;
+    signInAnonymously: () => Promise<{ user: User | null; error: Error | null }>;
     checkProfileExists: (userId: string) => Promise<{ exists: boolean; hasRegNo: boolean }>;
     finalizeSignup: (userId: string, email: string, password: string, username: string, role: User['role'], registrationNumber?: string) => Promise<{ user: User | null; error: Error | null }>;
     updateRegistrationNumber: (userId: string, registrationNumber: string) => Promise<{ error: Error | null }>;
@@ -466,6 +467,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
 
+    const signInAnonymously = async () => {
+        try {
+            const { data, error } = await supabase.auth.signInAnonymously();
+            if (error) throw error;
+            if (!data.user) throw new Error('No user data returned');
+
+            const userData = await fetchProfile(data.user.id, 'guest@example.com');
+            if (userData) {
+                setUser(userData);
+                return { user: userData, error: null };
+            }
+            return { user: null, error: new Error('Failed to create guest profile') };
+        } catch (error: any) {
+            console.error("Anonymous Sign-In Error:", error);
+            return { user: null, error };
+        }
+    };
+
+
     const finalizeSignup = async (userId: string, email: string, password: string, username: string, role: User['role'], registrationNumber?: string) => {
         try {
             // 1. Update password
@@ -540,7 +560,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, loadSessionUser, signInWithGoogle, signInWithOtp, verifyOtp, checkProfileExists, finalizeSignup, updateRegistrationNumber, getServerTime }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, loadSessionUser, signInWithGoogle, signInWithOtp, verifyOtp, signInAnonymously, checkProfileExists, finalizeSignup, updateRegistrationNumber, getServerTime }}>
             {children}
         </AuthContext.Provider>
     );

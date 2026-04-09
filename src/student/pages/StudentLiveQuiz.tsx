@@ -23,7 +23,7 @@ const GAME_COLORS = [
 export default function StudentLiveQuiz() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user, isLoading: authLoading, refreshUser } = useAuth();
+    const { user, isLoading: authLoading, refreshUser, signInAnonymously } = useAuth();
     const { theme } = useTheme();
 
     // State
@@ -43,6 +43,7 @@ export default function StudentLiveQuiz() {
 
     // Name prompt state
     const [nameInput, setNameInput] = useState('');
+    const [regNoInput, setRegNoInput] = useState('');
     const [nameSaving, setNameSaving] = useState(false);
     const [nameError, setNameError] = useState('');
 
@@ -545,31 +546,49 @@ export default function StudentLiveQuiz() {
 
     if (loading || authLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
 
-    if (!user) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
-                <Card className="max-w-md w-full p-8 text-center space-y-6">
-                    <h1 className="text-2xl font-bold text-text">Access Denied</h1>
-                    <p className="text-muted">You must be logged in to join a live quiz.</p>
-                    <Button onClick={() => navigate('/login')} className="w-full">Go to Login</Button>
-                </Card>
-            </div>
-        );
-    }
+    // --- QUICK JOIN / NAME PROMPT GATE ---
+    // Show a simplified entry screen if the user is not logged in or missing details
+    if (!user || !user.full_name || !user.registration_number) {
+        const handleQuickJoin = async () => {
+            const name = nameInput.trim();
+            const regNo = regNoInput.trim();
 
-    // --- NAME PROMPT GATE ---
-    // Show a name entry screen if the logged-in user hasn't set their full name yet
-    if (!user.full_name || user.full_name.trim() === '') {
-        const handleSaveName = async () => {
-            const trimmed = nameInput.trim();
-            if (!trimmed) { setNameError('Please enter your name.'); return; }
+            if (!name) { setNameError('Please enter your name.'); return; }
+            if (!regNo) { setNameError('Please enter your registration number.'); return; }
+
             setNameSaving(true);
             setNameError('');
+
             try {
-                await supabase.from('profiles').update({ full_name: trimmed }).eq('id', user.id);
-                await refreshUser();
-            } catch (err) {
-                setNameError('Failed to save name. Please try again.');
+                let currentUser = user;
+
+                // 1. If not logged in, perform anonymous sign-in
+                if (!currentUser) {
+                    const { user: newUser, error } = await signInAnonymously();
+                    if (error) throw error;
+                    currentUser = newUser;
+                }
+
+                if (currentUser) {
+                    // 2. Upsert profile with name and registration number
+                    const { error: upsertError } = await supabase
+                        .from('profiles')
+                        .upsert({
+                            id: currentUser.id,
+                            full_name: name,
+                            registration_number: regNo,
+                            role: 'student',
+                            updated_at: new Date().toISOString()
+                        });
+
+                    if (upsertError) throw upsertError;
+
+                    // 3. Refresh user context to proceed
+                    await refreshUser();
+                }
+            } catch (err: any) {
+                console.error('Failed to join quiz:', err);
+                setNameError(err.message || 'Failed to join. Please try again.');
             } finally {
                 setNameSaving(false);
             }
@@ -582,26 +601,54 @@ export default function StudentLiveQuiz() {
                     <div className="w-20 h-20 rounded-full bg-indigo-500/30 border-4 border-indigo-400 flex items-center justify-center mb-6">
                         <User className="w-10 h-10 text-indigo-200" />
                     </div>
-                    <h1 className="text-3xl font-black mb-2 tracking-wide text-center">What's your name?</h1>
-                    <p className="text-indigo-200 text-center mb-8 text-sm">Your name will appear on the leaderboard for everyone to see.</p>
+                    <h1 className="text-3xl font-black mb-2 tracking-wide text-center">Quick Join</h1>
+                    <p className="text-indigo-200 text-center mb-8 text-sm">Enter your details to attend the live test.</p>
+
                     <div className="w-full space-y-4">
-                        <input
-                            type="text"
-                            value={nameInput}
-                            onChange={e => { setNameInput(e.target.value); setNameError(''); }}
-                            onKeyDown={e => e.key === 'Enter' && handleSaveName()}
-                            placeholder="Enter your full name..."
-                            autoFocus
-                            className="w-full px-5 py-4 rounded-2xl bg-white/10 border-2 border-white/20 text-white placeholder-white/40 text-xl font-bold outline-none focus:border-indigo-400 focus:bg-white/20 transition-all"
-                        />
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-indigo-300 uppercase tracking-widest px-1">Full Name</label>
+                            <input
+                                type="text"
+                                value={nameInput}
+                                onChange={e => { setNameInput(e.target.value); setNameError(''); }}
+                                placeholder="Enter your full name..."
+                                className="w-full px-5 py-4 rounded-2xl bg-white/10 border-2 border-white/20 text-white placeholder-white/40 text-xl font-bold outline-none focus:border-indigo-400 focus:bg-white/20 transition-all font-sans"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-indigo-300 uppercase tracking-widest px-1">Registration Number</label>
+                            <input
+                                type="text"
+                                value={regNoInput}
+                                onChange={e => { setRegNoInput(e.target.value); setNameError(''); }}
+                                onKeyDown={e => e.key === 'Enter' && handleQuickJoin()}
+                                placeholder="Enter registration number..."
+                                className="w-full px-5 py-4 rounded-2xl bg-white/10 border-2 border-white/20 text-white placeholder-white/40 text-xl font-bold outline-none focus:border-indigo-400 focus:bg-white/20 transition-all font-sans"
+                            />
+                        </div>
+
                         {nameError && <p className="text-red-400 text-sm text-center">{nameError}</p>}
+
                         <button
-                            onClick={handleSaveName}
+                            onClick={handleQuickJoin}
                             disabled={nameSaving}
-                            className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-400 active:scale-95 transition-all font-black text-xl text-white shadow-[0_6px_0_rgb(67,56,202)] active:shadow-none active:translate-y-1.5 disabled:opacity-60 flex items-center justify-center gap-3"
+                            className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-400 active:scale-95 transition-all font-black text-xl text-white shadow-[0_6px_0_rgb(67,56,202)] active:shadow-none active:translate-y-1.5 disabled:opacity-60 flex items-center justify-center gap-3 mt-4"
                         >
-                            {nameSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Continue →'}
+                            {nameSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Start Test →'}
                         </button>
+
+                        {!user && (
+                            <div className="text-center mt-6">
+                                <p className="text-white/40 text-xs">Or if you have an account:</p>
+                                <button
+                                    onClick={() => navigate('/login')}
+                                    className="text-indigo-300 hover:text-white text-sm font-bold underline mt-1"
+                                >
+                                    Login with Email/Google
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
