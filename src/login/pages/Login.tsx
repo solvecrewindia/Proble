@@ -272,7 +272,6 @@ export default function Login() {
                                         </div>
                                         <span className="text-sm text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors">Remember Me</span>
                                     </label>
-                                    <Link to="/forgot-password" className="text-sm font-semibold text-primary hover:text-blue-600 transition-colors">Forgot Password?</Link>
                                 </div>
 
                                 <Button

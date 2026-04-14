@@ -318,14 +318,7 @@ export default function QuizLogin() {
                                             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                         </button>
                                     </div>
-                                    <div className="flex justify-end pr-1">
-                                        <Link 
-                                            to="/forgot-password" 
-                                            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
-                                        >
-                                            Forgot password?
-                                        </Link>
-                                    </div>
+
                                 </div>
                                 <Button
                                     type="submit"

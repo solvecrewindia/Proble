@@ -16,7 +16,7 @@ interface AuthContextType {
     checkProfileExists: (userId: string) => Promise<{ exists: boolean; hasRegNo: boolean }>;
     finalizeSignup: (userId: string, email: string, password: string, username: string, role: User['role'], registrationNumber?: string) => Promise<{ user: User | null; error: Error | null }>;
     updateRegistrationNumber: (userId: string, registrationNumber: string) => Promise<{ error: Error | null }>;
-    resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
+
     getServerTime: () => Promise<Date>;
 }
 
@@ -312,16 +312,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const resetPasswordForEmail = async (email: string) => {
-        try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password`,
-            });
-            return { error };
-        } catch (error: any) {
-            return { error };
-        }
-    };
+
 
     const signInWithOtp = async (email: string) => {
         try {
@@ -415,7 +406,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, loadSessionUser, signInWithOtp, verifyOtp, signInAnonymously, checkProfileExists, finalizeSignup, updateRegistrationNumber, resetPasswordForEmail, getServerTime }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, loadSessionUser, signInWithOtp, verifyOtp, signInAnonymously, checkProfileExists, finalizeSignup, updateRegistrationNumber, getServerTime }}>
             {children}
         </AuthContext.Provider>
     );

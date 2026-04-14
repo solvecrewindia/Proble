@@ -22,10 +22,10 @@ const ModuleDetails = lazyRetry(() => import('./homepage/ModuleDetails'), 'Modul
 
 const AboutUs = lazyRetry(() => import('./homepage/AboutUs'), 'AboutUs');
 const StudentApp = lazyRetry(() => import('./student/App'), 'StudentApp');
-const ForgotPassword = lazyRetry(() => import('./login/pages/ForgotPassword'), 'ForgotPassword');
+
 const SharedQuizHandler = lazyRetry(() => import('./shared/components/SharedQuizHandler'), 'SharedQuizHandler');
 const Onboarding = lazyRetry(() => import('./login/pages/Onboarding'), 'Onboarding');
-const ResetPassword = lazyRetry(() => import('./login/pages/ResetPassword'), 'ResetPassword');
+
 const AdminApp = lazyRetry(() => import('./admin/App'), 'AdminApp');
 
 // Loading Screen Component
@@ -159,8 +159,6 @@ function AppContent() {
     }
 
     const isHeaderHidden = location.pathname === '/login' ||
-        location.pathname === '/forgot-password' ||
-        location.pathname === '/reset-password' ||
         location.pathname.startsWith('/faculty') ||
         location.pathname.startsWith('/admin') ||
         location.pathname.includes('/practice/test') ||
@@ -181,8 +179,7 @@ function AppContent() {
                     <Route path="/about" element={<AboutUs />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/quiz-login" element={<QuizLogin />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
+
                     <Route path="/course/:module" element={<CourseList />} />
                     <Route path="/course/details/:id" element={<QuizDetails />} />
                     <Route path="/module/:id" element={<ModuleDetails />} />
