@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, ShieldCheck, ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -19,6 +19,25 @@ export default function ResetPassword() {
     const navigate = useNavigate();
 
     const password = watch('password');
+
+    useEffect(() => {
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                // Check if we have a recovery token in URL (legacy/link flow)
+                const isRecoveryFlow = window.location.hash.includes('type=recovery') || 
+                                     window.location.search.includes('type=recovery') ||
+                                     window.location.hash.includes('access_token');
+                
+                if (!isRecoveryFlow) {
+                    setStatus('error');
+                    setErrorMessage('Invalid or expired reset session. Please request a new code.');
+                }
+            }
+        };
+        checkSession();
+    }, []);
+
 
     const onSubmit = async (data: any) => {
         setIsLoading(true);

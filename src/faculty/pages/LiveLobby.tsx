@@ -32,7 +32,6 @@ export default function LiveLobby() {
         const fetchParticipants = async () => {
             if (!id) return;
 
-            // 1. Fetch active attempts for this quiz
             const { data: attemptsData, error: attemptsError } = await supabase
                 .from('attempts')
                 .select('id, student_id, status')
@@ -46,7 +45,6 @@ export default function LiveLobby() {
                 return;
             }
 
-            // 2. Fetch profiles for these students
             const studentIds = attemptsData.map(a => a.student_id);
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
@@ -56,7 +54,6 @@ export default function LiveLobby() {
             if (profilesError) console.error("Error fetching profiles:", profilesError);
 
             if (profilesData) {
-                // Map profiles to participants
                 const mapped = profilesData.map((profile: any) => ({
                     id: profile.id,
                     name: profile.full_name || 'Unknown Student',
@@ -64,7 +61,6 @@ export default function LiveLobby() {
                     avatarText: (profile.full_name || profile.email || 'U').substring(0, 2).toUpperCase(),
                     avatarUrl: profile.avatar_url
                 }));
-                // Sort by name for better UX
                 mapped.sort((a, b) => a.name.localeCompare(b.name));
                 setParticipants(mapped);
             }
@@ -73,12 +69,10 @@ export default function LiveLobby() {
         fetchQuiz();
         fetchParticipants();
 
-        // Polling Fallback (every 5 seconds)
         const pollInterval = setInterval(() => {
             fetchParticipants();
         }, 5000);
 
-        // Real-time subscription for new joiners
         let channel: any = null;
         try {
             if (typeof WebSocket !== 'undefined') {
@@ -94,12 +88,10 @@ export default function LiveLobby() {
                         },
                         (payload) => {
                             console.log('New participant joined:', payload);
-                            fetchParticipants(); // Refetch to get student details safely
+                            fetchParticipants();
                         }
                     )
                     .subscribe();
-            } else {
-                console.warn("WebSockets not supported. Using polling fallback for lobby.");
             }
         } catch (err) {
             console.error("Failed to establish Realtime connection for lobby:", err);
@@ -110,13 +102,6 @@ export default function LiveLobby() {
             clearInterval(pollInterval);
         };
     }, [id]);
-
-    const toggleGameMode = async () => {
-        if (!quiz) return;
-        const newSettings = { ...quiz.settings, gameMode: !quiz.settings?.gameMode };
-        setQuiz({ ...quiz, settings: newSettings });
-        await supabase.from('quizzes').update({ settings: newSettings }).eq('id', id);
-    };
 
     const handleStartQuiz = () => {
         navigate(`/faculty/live/${id}/host`);
@@ -183,14 +168,6 @@ export default function LiveLobby() {
                         Participants ({participants.length})
                     </h2>
                     <div className="flex items-center gap-4">
-                        <button 
-                            onClick={toggleGameMode}
-                            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${quiz.settings?.gameMode ? 'bg-primary' : 'bg-neutral-300 dark:bg-neutral-700'}`}
-                        >
-                            <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${quiz.settings?.gameMode ? 'translate-x-7' : 'translate-x-1'}`} />
-                        </button>
-                        <span className="text-sm font-bold text-muted mr-4">Game Mode {quiz.settings?.gameMode ? 'ON' : 'OFF'}</span>
-
                         <Button onClick={handleStartQuiz} className="bg-green-600 hover:bg-green-700 text-white px-8">
                             <Play className="mr-2 h-4 w-4" /> Start Quiz
                         </Button>
