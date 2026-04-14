@@ -10,7 +10,6 @@ interface AuthContextType {
     isLoading: boolean;
     refreshUser: () => Promise<void>;
     loadSessionUser: () => Promise<User | null>;
-    signInWithGoogle: () => Promise<void>;
     signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
     verifyOtp: (email: string, token: string) => Promise<{ user: any; error: Error | null }>;
     signInAnonymously: () => Promise<{ user: User | null; error: Error | null }>;
@@ -64,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (error) {
                 console.warn('AuthContext: Supabase profile error:', error.message);
                 if (error.code === 'PGRST116') {
-                    // Code for "no rows found". This is a NEW USER from Google Sign In.
+                    // Code for "no rows found". This happens when a user profile hasn't been created yet.
                     // Return a partial user object so we can redirect to Onboarding.
                     console.log("AuthContext: Profile not found (New User). Returning partial user for onboarding.");
                     return {
@@ -229,7 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const userEmail = session.user.email || `user-${session.user.id}@example.com`;
 
                     // For SIGNED_IN: ALWAYS refetch from DB to ensure fresh state.
-                    // Old Google users going through OTP will have same user.id in cache,
+                    // Users going through OTP will have same user.id in cache,
                     // so the skip-on-same-ID check would wrongly skip the refresh.
                     // For TOKEN_REFRESHED / INITIAL_SESSION: skip if we already have the user loaded.
                     const shouldRefetch = event === 'SIGNED_IN' || !user || user.id !== session.user.id;
@@ -414,17 +413,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const signInWithGoogle = async () => {
-        try {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-            });
-            if (error) throw error;
-        } catch (error) {
-            console.error("Google Sign-In Error:", error);
-            throw error;
-        }
-    };
 
     const signInWithOtp = async (email: string) => {
         try {
@@ -560,7 +548,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, loadSessionUser, signInWithGoogle, signInWithOtp, verifyOtp, signInAnonymously, checkProfileExists, finalizeSignup, updateRegistrationNumber, getServerTime }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading, refreshUser, loadSessionUser, signInWithOtp, verifyOtp, signInAnonymously, checkProfileExists, finalizeSignup, updateRegistrationNumber, getServerTime }}>
             {children}
         </AuthContext.Provider>
     );

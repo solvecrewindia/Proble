@@ -42,7 +42,7 @@ export default function Onboarding() {
             setStep(2);
         }
 
-        // Try to pre-fill data from Google metadata if available
+        // Try to pre-fill data from user metadata if available (social login/OAuth)
         const fetchMetadata = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.user_metadata) {

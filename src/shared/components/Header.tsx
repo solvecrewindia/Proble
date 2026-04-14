@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { Search, Sun, Moon, Gamepad2, Download } from 'lucide-react';
+import React from 'react';
+import { Search, Sun, Moon, Download } from 'lucide-react';
 import UserProfileDropdown from './UserProfileDropdown';
 
 interface HeaderProps {
@@ -66,7 +66,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
             </div>
 
             <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 justify-center px-2 w-full max-w-[480px]">
-                {!location.pathname.startsWith('/student') && !location.pathname.includes('/game') && (
+                {!location.pathname.startsWith('/student') && (
                     <div className="hidden md:flex w-full bg-background rounded-[50px] px-3 py-1.5 items-center border border-neutral-300 dark:border-neutral-600">
                         <input
                             type="text"
@@ -86,7 +86,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                 {!location.pathname.includes('/practice/setup') && (
                     <>
                         {/* Mobile Search Toggle */}
-                        {!location.pathname.includes('/game') && (
+                        {true && (
                             <button
                                 onClick={() => setIsSearchOpen(true)}
                                 className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden text-text"
@@ -99,13 +99,6 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
                             <>
                                 {user?.role === 'student' && (
                                     <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => navigate('/student/game')}
-                                            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-text transition-colors hover:animate-wiggle"
-                                            title="Game Mode"
-                                        >
-                                            <Gamepad2 className="w-5 h-5" />
-                                        </button>
                                         <button
                                             onClick={() => navigate('/student/practice')}
                                             className="hidden md:block bg-transparent border-none text-xs md:text-sm font-medium cursor-pointer px-2 py-1 rounded-md text-text hover:text-muted transition-colors whitespace-nowrap"

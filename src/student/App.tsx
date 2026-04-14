@@ -1,4 +1,3 @@
-import DailyGame from './pages/games/DailyGame';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import StudentLayout from './components/layout/Layout';
 import StudentDashboard from './pages/Dashboard';
@@ -9,11 +8,6 @@ import PracticeTest from './pages/PracticeTest';
 import TestSetup from './pages/TestSetup';
 import JoinTest from './pages/JoinTest';
 import ProfileSettings from '../shared/pages/ProfileSettings';
-import StudentGame from './pages/StudentGame';
-import FlashCardGame from './pages/games/FlashCardGame';
-import PuzzleGame from './pages/games/PuzzleGame';
-import DebuggerGame from './pages/games/DebuggerGame';
-import RapidFireGame from './pages/games/RapidFireGame';
 import FlashCards from './pages/FlashCards';
 import StudentLiveQuiz from './pages/StudentLiveQuiz';
 const NoSidebarLayout = () => (
@@ -42,12 +36,6 @@ const StudentApp = () => {
                 <Route path="dashboard" element={<StudentDashboard />} />
                 <Route path="practice" element={<PracticeList />} />
                 <Route path="join" element={<JoinTest />} />
-                <Route path="game" element={<StudentGame />} />
-                <Route path="game/daily" element={<DailyGame />} />
-                <Route path="game/flashcards" element={<FlashCardGame />} />
-                <Route path="game/puzzle" element={<PuzzleGame />} />
-                <Route path="game/debugger" element={<DebuggerGame />} />
-                <Route path="game/rapid-fire" element={<RapidFireGame />} />
                 <Route path="profile-settings" element={<ProfileSettings />} />
             </Route>
 
