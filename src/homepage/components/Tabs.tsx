@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import type { TabType } from '../types';
 
 interface TabsProps {
@@ -9,7 +9,6 @@ interface TabsProps {
 const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab }) => {
     const tabs: { id: TabType; label: string }[] = [
         { id: 'nptel', label: 'NPTEL' },
-        { id: 'gate', label: 'GATE' },
         { id: 'srm', label: 'SRMIST' },
         { id: 'course', label: 'COURSE' },
         { id: 'placement', label: 'PLACEMENT' },

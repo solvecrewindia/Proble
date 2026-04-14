@@ -27,12 +27,6 @@ function App({ searchQuery = '' }: AppProps) {
         let moduleCategory = 'NPTEL';
 
         if (activeTab === 'srm') {
-          dbType = 'srmist';
-          moduleCategory = 'SRMIST';
-        } else if (activeTab === 'gate') {
-          dbType = 'gate';
-          moduleCategory = 'GATE';
-        } else if (activeTab === 'nptel') {
           dbType = 'nptel';
           moduleCategory = 'NPTEL';
         } else if (activeTab === 'placement') {
@@ -162,7 +156,6 @@ function App({ searchQuery = '' }: AppProps) {
   const getTabLabel = (tab: TabType) => {
     switch (tab) {
       case 'nptel': return 'NPTEL';
-      case 'gate': return 'GATE';
       case 'srm': return 'SRMIST';
       case 'placement': return 'Placement Preparation';
       case 'global': return 'Global Challenges';

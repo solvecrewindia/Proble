@@ -14,7 +14,7 @@ const QuizList = () => {
     const [currentModule, setCurrentModule] = useState<Module | null>(null);
 
     const categoryTitle = category ? category.toUpperCase() : (currentModule?.category || 'Global');
-    const isModuleSupported = ['NPTEL', 'GATE', 'SRMIST', 'PLACEMENT', 'COURSE'].includes(categoryTitle);
+    const isModuleSupported = ['NPTEL', 'SRMIST', 'PLACEMENT', 'COURSE'].includes(categoryTitle);
 
     useEffect(() => {
         fetchData();
@@ -114,7 +114,7 @@ const QuizList = () => {
                     <button
                         onClick={() => {
                             if (moduleId) {
-                                navigate(`/admin/quizzes/${currentModule?.category || 'GATE'}`);
+                                navigate(`/admin/quizzes/${currentModule?.category || 'Global'}`);
                             } else {
                                 navigate('/admin/quizzes');
                             }

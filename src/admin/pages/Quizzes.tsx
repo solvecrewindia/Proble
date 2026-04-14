@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, GraduationCap, Server, Globe, Briefcase } from 'lucide-react';
+import { BookOpen, Server, Globe, Briefcase } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 const Quizzes = () => {
@@ -9,7 +9,6 @@ const Quizzes = () => {
     // Static definition of modules
     const [modules, setModules] = useState([
         { id: 'nptel', title: 'NPTEL', description: 'National Programme on Technology Enhanced Learning', icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10', count: 0 },
-        { id: 'gate', title: 'GATE', description: 'Graduate Aptitude Test in Engineering', icon: GraduationCap, color: 'text-green-500', bg: 'bg-green-500/10', count: 0 },
         { id: 'srmist', title: 'SRMIST', description: 'SRM Institute of Science and Technology', icon: Server, color: 'text-purple-500', bg: 'bg-purple-500/10', count: 0 },
         { id: 'placement', title: 'Placement', description: 'Campus Placement Preparation & Tests', icon: Briefcase, color: 'text-pink-500', bg: 'bg-pink-500/10', count: 0 },
         { id: 'course', title: 'Course', description: 'General Subject Courses & Topics', icon: BookOpen, color: 'text-cyan-500', bg: 'bg-cyan-500/10', count: 0 },
@@ -23,12 +22,6 @@ const Quizzes = () => {
                 .from('quizzes')
                 .select('*', { count: 'exact', head: true })
                 .contains('settings', { category: 'NPTEL' });
-
-            // GATE
-            const { count: gateCount } = await supabase
-                .from('quizzes')
-                .select('*', { count: 'exact', head: true })
-                .contains('settings', { category: 'GATE' });
 
             // SRMIST
             const { count: srmistCount } = await supabase
@@ -57,7 +50,6 @@ const Quizzes = () => {
 
             setModules(prev => prev.map(m => {
                 if (m.title === 'NPTEL') return { ...m, count: nptelCount || 0 };
-                if (m.title === 'GATE') return { ...m, count: gateCount || 0 };
                 if (m.title === 'SRMIST') return { ...m, count: srmistCount || 0 };
                 if (m.title === 'Placement') return { ...m, count: placementCount || 0 };
                 if (m.title === 'Course') return { ...m, count: courseCount || 0 };

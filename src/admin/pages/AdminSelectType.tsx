@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, GraduationCap, Server, Briefcase, FileText, FolderPlus, X } from 'lucide-react';
+import { BookOpen, Server, Briefcase, FileText, FolderPlus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminSelectType() {
@@ -14,14 +14,6 @@ export default function AdminSelectType() {
             icon: BookOpen,
             color: 'text-blue-400',
             gradient: 'from-blue-500/20 to-blue-600/5',
-        },
-        {
-            id: 'GATE',
-            title: 'GATE',
-            description: 'Graduate Aptitude Test in Engineering preparation tests.',
-            icon: GraduationCap,
-            color: 'text-emerald-400',
-            gradient: 'from-emerald-500/20 to-emerald-600/5',
         },
         {
             id: 'SRMIST',
@@ -43,7 +35,7 @@ export default function AdminSelectType() {
 
     const handleSelect = (id: string) => {
         // Categories that support modules
-        const moduleSupported = ['NPTEL', 'GATE', 'SRMIST', 'PLACEMENT'];
+        const moduleSupported = ['NPTEL', 'SRMIST', 'PLACEMENT'];
 
         if (moduleSupported.includes(id)) {
             setSelectedType(id);
