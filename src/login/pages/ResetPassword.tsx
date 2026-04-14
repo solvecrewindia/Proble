@@ -26,20 +26,30 @@ export default function ResetPassword() {
         setErrorMessage('');
 
         try {
-            const { error } = await supabase.auth.updateUser({
+            // 1. Update the password
+            const { error: updateError } = await supabase.auth.updateUser({
                 password: data.password
             });
 
-            if (error) throw error;
+            if (updateError) throw updateError;
 
-            // Sync auth state
-            await loadSessionUser();
+            // 2. Sync auth state immediately so the app knows we are logged in
+            const freshUser = await loadSessionUser();
 
+            // 3. Update status to success to show the "Success" UI
             setStatus('success');
-            // Redirect to dashboard after a short delay
+
+            // 4. Redirect to home/dashboard based on role after a short delay
             setTimeout(() => {
-                navigate('/');
-            }, 3000);
+                let path = '/';
+                if (freshUser) {
+                    const role = freshUser.role?.toLowerCase();
+                    if (role === 'admin') path = '/admin';
+                    else if (role === 'faculty' || role === 'teacher') path = '/faculty/dashboard';
+                }
+                navigate(path, { replace: true });
+            }, 2500);
+
         } catch (error: any) {
             console.error('Update password error:', error);
             setStatus('error');
@@ -48,6 +58,7 @@ export default function ResetPassword() {
             setIsLoading(false);
         }
     };
+
 
     if (status === 'success') {
         return (

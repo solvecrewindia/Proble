@@ -3,16 +3,17 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft, Send } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useTheme } from '../../shared/context/ThemeContext';
+import { useAuth } from '../../shared/context/AuthContext';
 
 export default function ForgotPassword() {
     const { register, handleSubmit, formState: { errors } } = useForm<{ email: string }>();
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const { theme } = useTheme();
+    const { resetPasswordForEmail } = useAuth();
     const navigate = useNavigate();
 
     const onSubmit = async ({ email }: { email: string }) => {
@@ -20,18 +21,9 @@ export default function ForgotPassword() {
         setMessage(null);
 
         try {
-            // Note: Since you are in development with email confirmation likely disabled or unable to actually send emails without SMTP setup,
-            // Supabase will still return a success response but the email might not arrive unless SMTP is configured.
-            // However, this is the correct code implementation.
+            const { error } = await resetPasswordForEmail(email);
 
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password`,
-            });
-
-            if (error) {
-                // Rate limit or other error
-                throw error;
-            }
+            if (error) throw error;
 
             setMessage({
                 type: 'success',
@@ -47,6 +39,7 @@ export default function ForgotPassword() {
             setIsLoading(false);
         }
     };
+
 
     return (
         <div className="min-h-screen flex flex-col justify-center items-center p-6 sm:p-12 relative bg-background transition-colors duration-500 overflow-hidden">
