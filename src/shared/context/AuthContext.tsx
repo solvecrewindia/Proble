@@ -11,7 +11,7 @@ interface AuthContextType {
     refreshUser: () => Promise<void>;
     loadSessionUser: () => Promise<User | null>;
     signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
-    verifyOtp: (email: string, token: string) => Promise<{ user: any; error: Error | null }>;
+    verifyOtp: (email: string, token: string, type?: 'signup' | 'magiclink' | 'recovery' | 'invite') => Promise<{ user: any; error: Error | null }>;
     signInAnonymously: () => Promise<{ user: User | null; error: Error | null }>;
     checkProfileExists: (userId: string) => Promise<{ exists: boolean; hasRegNo: boolean }>;
     finalizeSignup: (userId: string, email: string, password: string, username: string, role: User['role'], registrationNumber?: string) => Promise<{ user: User | null; error: Error | null }>;
@@ -335,24 +335,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const verifyOtp = async (email: string, token: string) => {
+    const verifyOtp = async (email: string, token: string, type: 'signup' | 'magiclink' | 'recovery' | 'invite' = 'signup') => {
         try {
             const { data, error } = await supabase.auth.verifyOtp({
                 email,
                 token,
-                type: 'signup'
+                type: type as any
             });
 
             if (error) {
-                const { data: data2, error: error2 } = await supabase.auth.verifyOtp({
-                    email,
-                    token,
-                    type: 'magiclink'
-                });
-                if (error2) return { user: null, error: error2 };
-                const userData = await fetchProfile(data2.user!.id, email);
-                setUser(userData);
-                return { user: userData, error: null };
+                // For 'signup', fallback to 'magiclink' as a courtesy
+                if (type === 'signup') {
+                    const { data: data2, error: error2 } = await supabase.auth.verifyOtp({
+                        email,
+                        token,
+                        type: 'magiclink'
+                    });
+                    if (error2) return { user: null, error: error2 };
+                    const userData = await fetchProfile(data2.user!.id, email);
+                    setUser(userData);
+                    return { user: userData, error: null };
+                }
+                return { user: null, error };
             }
 
             const userData = await fetchProfile(data.user!.id, email);
