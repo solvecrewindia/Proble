@@ -27,8 +27,8 @@ function App({ searchQuery = '' }: AppProps) {
         let moduleCategory = 'NPTEL';
 
         if (activeTab === 'srm') {
-          dbType = 'nptel';
-          moduleCategory = 'NPTEL';
+          dbType = 'srmist';
+          moduleCategory = 'SRMIST';
         } else if (activeTab === 'placement') {
           dbType = 'placement';
           moduleCategory = 'PLACEMENT';

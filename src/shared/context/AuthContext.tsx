@@ -98,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error("AuthContext: Cache recovery failed", e);
         }
 
+        // --- SECURITY REVERT: RESTORED HARDCODED ROLE FALLBACK ---
         console.warn("AuthContext: Using fallback profile (Student default).");
         let fallbackRole: User['role'] = 'student';
         if (email === 'explorewithmadan@gmail.com') {
