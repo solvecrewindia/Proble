@@ -204,60 +204,7 @@ const AdminModuleCreate = () => {
                         />
                     </div>
 
-                    {/* Thumbnail Upload */}
-                    <div>
-                        <label className="block text-sm font-medium text-text-secondary mb-2">
-                            Module Thumbnail
-                        </label>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleImageUpload}
-                            accept="image/*"
-                            className="hidden"
-                        />
 
-                        {imageUrl ? (
-                            <div className="relative w-full h-48 rounded-xl overflow-hidden border border-white/10 group">
-                                <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                                    <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-                                    >
-                                        <Upload className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={() => setImageUrl('')}
-                                        className="p-2 bg-red-500/20 hover:bg-red-500/40 rounded-lg text-red-500 transition-colors"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-full h-48 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-white/5 transition-all group"
-                            >
-                                <div className="p-3 bg-white/5 rounded-full group-hover:scale-110 transition-transform">
-                                    {uploadingImage ? (
-                                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        <Upload className="w-6 h-6 text-text-secondary group-hover:text-primary" />
-                                    )}
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-sm font-medium text-text-secondary group-hover:text-text">
-                                        Click to upload thumbnail
-                                    </p>
-                                    <p className="text-xs text-muted mt-1">
-                                        Max 100KB (Automatically compressed)
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
                 </div>
 
                 {/* Footer */}

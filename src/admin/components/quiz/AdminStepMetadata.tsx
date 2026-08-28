@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Input } from '../../../faculty/components/ui/Input';
 import { supabase } from '../../../lib/supabase';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
@@ -57,61 +57,7 @@ export function AdminStepMetadata({ data, update }: any) {
             </div>
 
             <div className="space-y-6">
-                {/* Banner Image Upload */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-text">Quiz Banner</label>
-                    <div className="flex items-start gap-6">
-                        {/* Preview Area */}
-                        <div className={`relative w-40 h-24 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center overflow-hidden bg-surface group transition-all ${!data.image_url ? 'hover:border-primary/50' : 'border-none'}`}>
-                            {data.image_url ? (
-                                <>
-                                    <img src={data.image_url} alt="Banner" className="w-full h-full object-cover" />
-                                    <button
-                                        onClick={() => update({ image_url: '' })}
-                                        className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                </>
-                            ) : (
-                                <ImageIcon className="w-8 h-8 text-muted/50" />
-                            )}
-                        </div>
 
-                        {/* Upload Controls */}
-                        <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-3">
-                                <label className="cursor-pointer">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={handleImageUpload}
-                                        disabled={uploading}
-                                    />
-                                    <span className="btn-primary inline-flex items-center gap-2 text-sm px-4 py-2 rounded-xl">
-                                        {uploading ? (
-                                            <>
-                                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                Compressing...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Upload className="w-4 h-4" />
-                                                Upload Thumbnail
-                                            </>
-                                        )}
-                                    </span>
-                                </label>
-                                <span className="text-xs text-muted">Max 100KB (Auto-compressed)</span>
-                            </div>
-                            <p className="text-xs text-muted leading-relaxed">
-                                Upload a thumbnail for the home page.
-                                Recommended aspect ratio 16:9.
-                            </p>
-                        </div>
-                    </div>
-                </div>
 
                 <Input
                     label="Quiz Title"

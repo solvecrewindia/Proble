@@ -24,6 +24,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, showDate }) => {
             }}
             className="group bg-surface rounded-xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-neutral-200/80 dark:border-neutral-800 cursor-pointer overflow-hidden flex flex-col h-full"
         >
+
             {/* Image / Placeholder Area */}
             <div className="relative w-full h-[60px] overflow-hidden bg-neutral-100 dark:bg-neutral-900">
                 {course.image && !course.image.includes('ui-avatars') ? (
