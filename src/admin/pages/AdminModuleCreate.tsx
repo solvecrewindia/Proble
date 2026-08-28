@@ -127,7 +127,7 @@ const AdminModuleCreate = () => {
                         title,
                         description,
                         image_url: imageUrl,
-                        category: category?.toUpperCase(),
+                        category: category?.toUpperCase() === 'PROBLE ORIGINALS' ? 'ORIGINALS' : category?.toUpperCase(),
                         created_by: user?.id
                     })
                     .select()

@@ -8,4 +8,4 @@ export interface Course {
     type?: 'quiz' | 'module';
 }
 
-export type TabType = 'nptel' | 'gate' | 'srm' | 'placement' | 'global' | 'course';
+export type TabType = 'originals' | 'nptel' | 'gate' | 'srm' | 'placement' | 'global' | 'course';

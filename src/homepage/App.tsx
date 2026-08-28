@@ -12,7 +12,7 @@ interface AppProps {
 }
 
 function App({ searchQuery = '' }: AppProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('nptel');
+  const [activeTab, setActiveTab] = useState<TabType>('originals');
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [joinCode, setJoinCode] = useState('');
@@ -26,7 +26,10 @@ function App({ searchQuery = '' }: AppProps) {
         let dbType: string = activeTab;
         let moduleCategory = 'NPTEL';
 
-        if (activeTab === 'srm') {
+        if (activeTab === 'originals') {
+          dbType = 'originals';
+          moduleCategory = 'ORIGINALS';
+        } else if (activeTab === 'srm') {
           dbType = 'srmist';
           moduleCategory = 'SRMIST';
         } else if (activeTab === 'placement') {
@@ -155,12 +158,13 @@ function App({ searchQuery = '' }: AppProps) {
 
   const getTabLabel = (tab: TabType) => {
     switch (tab) {
+      case 'originals': return 'Proble Originals';
       case 'nptel': return 'NPTEL';
       case 'srm': return 'SRMIST';
       case 'placement': return 'Placement Preparation';
       case 'global': return 'Global Challenges';
       case 'course': return 'Course Modules';
-      default: return 'NPTEL';
+      default: return 'Proble Originals';
     }
   };
 

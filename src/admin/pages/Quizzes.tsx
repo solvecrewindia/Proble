@@ -8,6 +8,7 @@ const Quizzes = () => {
 
     // Static definition of modules
     const [modules, setModules] = useState([
+        { id: 'originals', title: 'Proble Originals', description: 'Exclusive original Proble courses & assessments', icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10', count: 0 },
         { id: 'nptel', title: 'NPTEL', description: 'National Programme on Technology Enhanced Learning', icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10', count: 0 },
         { id: 'srmist', title: 'SRMIST', description: 'SRM Institute of Science and Technology', icon: Server, color: 'text-purple-500', bg: 'bg-purple-500/10', count: 0 },
         { id: 'placement', title: 'Placement', description: 'Campus Placement Preparation & Tests', icon: Briefcase, color: 'text-pink-500', bg: 'bg-pink-500/10', count: 0 },
@@ -17,6 +18,12 @@ const Quizzes = () => {
 
     const fetchCounts = async () => {
         try {
+            // ORIGINALS
+            const { count: originalsCount } = await supabase
+                .from('quizzes')
+                .select('*', { count: 'exact', head: true })
+                .or('type.eq.originals,settings->>category.eq.ORIGINALS');
+
             // NPTEL
             const { count: nptelCount } = await supabase
                 .from('quizzes')
@@ -49,6 +56,7 @@ const Quizzes = () => {
                 .or(`type.eq.global,settings->>category.eq.Global`);
 
             setModules(prev => prev.map(m => {
+                if (m.title === 'Proble Originals') return { ...m, count: originalsCount || 0 };
                 if (m.title === 'NPTEL') return { ...m, count: nptelCount || 0 };
                 if (m.title === 'SRMIST') return { ...m, count: srmistCount || 0 };
                 if (m.title === 'Placement') return { ...m, count: placementCount || 0 };

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
@@ -34,14 +34,14 @@ export default function AdminQuizCreate() {
         title: '',
         description: '',
         image_url: '',
-        type: category ? category.toLowerCase() : 'global',
+        type: category?.toLowerCase() === 'proble originals' ? 'originals' : (category ? category.toLowerCase() : 'global'),
         settings: {
             duration: 60,
             passingScore: 40,
             antiCheatLevel: 'standard',
             allowRetake: false,
             modes: ['practice'],
-            category: category ? category.toUpperCase() : 'GLOBAL'
+            category: category?.toUpperCase() === 'PROBLE ORIGINALS' ? 'ORIGINALS' : (category ? category.toUpperCase() : 'GLOBAL')
         }
     });
 

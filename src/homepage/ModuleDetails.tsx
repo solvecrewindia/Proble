@@ -176,18 +176,6 @@ const ModuleDetails = () => {
                     </button>
 
                     <div className="flex flex-col md:flex-row gap-10 items-start">
-                        {/* Thumbnail with Glass Effect */}
-                        <div className="shrink-0 relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-2xl opacity-20 blur group-hover:opacity-40 transition-opacity duration-500" />
-                            <div className="relative w-full md:w-[300px] aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-white">
-                                <img
-                                    src={displayImage}
-                                    alt={moduleData.title}
-                                    className={`w-full h-full ${imgError || !moduleData.image_url ? 'object-cover' : 'object-contain p-4'}`}
-                                    onError={() => setImgError(true)}
-                                />
-                            </div>
-                        </div>
 
                         {/* Content */}
                         <div className="flex-1 space-y-6">

@@ -14,7 +14,7 @@ const QuizList = () => {
     const [currentModule, setCurrentModule] = useState<Module | null>(null);
 
     const categoryTitle = category ? category.toUpperCase() : (currentModule?.category || 'Global');
-    const isModuleSupported = ['NPTEL', 'SRMIST', 'PLACEMENT', 'COURSE'].includes(categoryTitle);
+    const isModuleSupported = ['NPTEL', 'SRMIST', 'PLACEMENT', 'COURSE', 'PROBLE ORIGINALS'].includes(categoryTitle);
 
     useEffect(() => {
         fetchData();
@@ -50,7 +50,8 @@ const QuizList = () => {
                 // Fetch Modules List
                 let query = supabase.from('modules').select('*');
                 if (categoryTitle !== 'GLOBAL') {
-                    query = query.eq('category', categoryTitle);
+                    const dbCat = categoryTitle === 'PROBLE ORIGINALS' ? 'ORIGINALS' : categoryTitle;
+                    query = query.eq('category', dbCat);
                 }
                 const { data, error } = await query;
                 if (error) throw error;
@@ -61,6 +62,8 @@ const QuizList = () => {
 
                 if (categoryTitle === 'GLOBAL') {
                     query = query.eq('type', 'global');
+                } else if (categoryTitle === 'PROBLE ORIGINALS') {
+                    query = query.contains('settings', { category: 'ORIGINALS' });
                 } else {
                     query = query.contains('settings', { category: categoryTitle });
                 }

@@ -8,6 +8,14 @@ export default function AdminSelectType() {
 
     const options = [
         {
+            id: 'ORIGINALS',
+            title: 'PROBLE ORIGINALS',
+            description: 'Exclusive original Proble courses & assessments.',
+            icon: BookOpen,
+            color: 'text-primary',
+            gradient: 'from-primary/20 to-primary/5',
+        },
+        {
             id: 'NPTEL',
             title: 'NPTEL',
             description: 'National Programme on Technology Enhanced Learning assessments.',
@@ -35,7 +43,7 @@ export default function AdminSelectType() {
 
     const handleSelect = (id: string) => {
         // Categories that support modules
-        const moduleSupported = ['NPTEL', 'SRMIST', 'PLACEMENT'];
+        const moduleSupported = ['ORIGINALS', 'PROBLE ORIGINALS', 'NPTEL', 'SRMIST', 'PLACEMENT'];
 
         if (moduleSupported.includes(id)) {
             setSelectedType(id);
