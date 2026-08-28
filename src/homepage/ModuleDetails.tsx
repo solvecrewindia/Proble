@@ -16,6 +16,7 @@ const ModuleDetails = () => {
     const [isAddedToPractice, setIsAddedToPractice] = useState(false);
     const [practiceLoading, setPracticeLoading] = useState(false);
     const [imgError, setImgError] = useState(false);
+    const [completedStudents, setCompletedStudents] = useState(0);
 
     useEffect(() => {
         const fetchModuleData = async () => {
@@ -50,6 +51,20 @@ const ModuleDetails = () => {
                 });
 
                 setQuizzes(sortedQuizzes);
+
+                // Fetch completed students count
+                if (sortedQuizzes.length > 0) {
+                    const quizIds = sortedQuizzes.map(q => q.id);
+                    const { data: resultsData } = await supabase
+                        .from('quiz_results')
+                        .select('student_id')
+                        .in('quiz_id', quizIds);
+                    
+                    if (resultsData) {
+                        const uniqueStudents = new Set(resultsData.map(r => r.student_id));
+                        setCompletedStudents(uniqueStudents.size);
+                    }
+                }
 
                 // 3. Check if added to practice
                 if (user) {
@@ -207,6 +222,17 @@ const ModuleDetails = () => {
                                     <div>
                                         <p className="text-xs uppercase tracking-wider font-semibold opacity-70">Assessments</p>
                                         <p className="font-bold text-text">{quizzes.length} Tests</p>
+                                    </div>
+                                </div>
+
+                                <div className="w-px h-10 bg-gray-200 dark:bg-white/5" />
+                                <div className="flex items-center gap-3 text-muted">
+                                    <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+                                        <Activity className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs uppercase tracking-wider font-semibold opacity-70">Students Finished</p>
+                                        <p className="font-bold text-text">{completedStudents} Students</p>
                                     </div>
                                 </div>
 
