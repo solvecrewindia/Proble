@@ -8,8 +8,8 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Outfit', 'sans-serif'],
-                display: ['Outfit', 'sans-serif'],
+                sans: ['Montserrat', 'sans-serif'],
+                display: ['Montserrat', 'sans-serif'],
             },
             colors: {
                 primary: {
@@ -59,11 +59,16 @@ export default {
                 wiggle: {
                     '0%, 100%': { transform: 'rotate(-3deg)' },
                     '50%': { transform: 'rotate(3deg)' },
+                },
+                breathe: {
+                    '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+                    '50%': { opacity: '0.2', transform: 'scale(0.92)' },
                 }
             },
             animation: {
                 fadeInScale: 'fadeInScale 0.2s ease-out forwards',
                 wiggle: 'wiggle 0.3s ease-in-out infinite',
+                breathe: 'breathe 1.5s ease-in-out infinite',
             },
         },
     },

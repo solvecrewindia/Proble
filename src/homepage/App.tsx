@@ -89,7 +89,7 @@ function App({ searchQuery = '' }: AppProps) {
             author: authorDetails.name,
             author_avatar_url: authorDetails.avatar,
             date: new Date(m.created_at).toLocaleDateString(),
-            image: m.image_url || `https://ui-avatars.com/api/?name=${m.title}&background=random&size=400`,
+            image: m.image_url || null,
             type: 'module'
           };
         });
@@ -102,7 +102,7 @@ function App({ searchQuery = '' }: AppProps) {
             author: authorDetails.name,
             author_avatar_url: authorDetails.avatar,
             date: new Date(q.created_at).toLocaleDateString(),
-            image: q.image_url || `https://ui-avatars.com/api/?name=${q.title}&background=random&size=400`,
+            image: q.image_url || null,
             type: 'quiz'
           };
         });
@@ -168,24 +168,30 @@ function App({ searchQuery = '' }: AppProps) {
     <div className="min-h-screen bg-background font-sans text-text transition-colors duration-200">
 
       {/* Join Code Section */}
-      <div className="bg-gradient-to-r from-primary to-primary-600 py-8 px-5 text-white">
-        <div className="max-w-7xl px-5 lg:px-8 mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="relative py-12 px-5 text-white overflow-hidden">
+        {/* Abstract Background */}
+        <div className="absolute inset-0 bg-primary z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary-600 via-primary to-[#00d4ff] opacity-80 z-0"></div>
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/20 rounded-full blur-3xl z-0"></div>
+        <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-white/10 rounded-full blur-2xl z-0"></div>
+
+        <div className="relative z-10 max-w-7xl px-5 lg:px-8 mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="text-center md:text-left">
-            <h2 className="text-2xl font-bold mb-2">Have a Quiz Code?</h2>
-            <p className="text-blue-100">Enter the code shared by your faculty to access private assessments.</p>
+            <h2 className="text-3xl font-display font-bold mb-3 tracking-tight">Have a Quiz Code?</h2>
+            <p className="text-primary-foreground/90 text-lg max-w-md">Enter the code shared by your faculty to securely access your private assessments.</p>
           </div>
-          <form onSubmit={handleJoin} className="flex w-full md:w-auto bg-white p-1 rounded-lg shadow-lg items-center overflow-hidden">
+          <form onSubmit={handleJoin} className="relative flex w-full md:w-[450px] items-center mt-4 z-10 shadow-glass group">
             <input
               type="text"
-              placeholder="Enter Code"
-              className="flex-1 min-w-0 px-3 py-2 text-gray-900 outline-none rounded-l-md text-left text-sm md:text-base"
+              placeholder="Enter Code..."
+              className="w-full h-14 pl-6 pr-[140px] bg-white/10 backdrop-blur-md rounded-xl border border-white/30 focus:border-white/60 focus:ring-4 focus:ring-white/10 outline-none text-white transition-all font-bold tracking-wide placeholder:text-white/60 placeholder:font-medium placeholder:tracking-normal"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             />
             <button
               type="submit"
               disabled={joining}
-              className="bg-primary text-white px-4 md:px-6 py-2 rounded-md font-bold hover:bg-blue-700 transition flex items-center gap-2 whitespace-nowrap text-sm md:text-base"
+              className="absolute right-1.5 top-1.5 bottom-1.5 px-6 rounded-lg bg-white text-primary font-bold hover:bg-gray-50 transition-all flex items-center gap-2 text-sm active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {joining ? '...' : 'Join'} <ArrowRight className="w-4 h-4" />
             </button>

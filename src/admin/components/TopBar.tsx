@@ -64,11 +64,9 @@ const TopBar = ({ onMenuClick }: TopBarProps) => {
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         className="flex items-center gap-2 rounded-full bg-surface p-1 pr-3 hover:bg-surface/80 transition-colors"
                     >
-                        <img
-                            src="https://ui-avatars.com/api/?name=Admin+User&background=random"
-                            alt="Admin"
-                            className="h-8 w-8 rounded-full border border-surface"
-                        />
+                        <div className="h-8 w-8 rounded-full border border-surface bg-primary/10 flex items-center justify-center text-primary">
+                            <User className="h-4 w-4" />
+                        </div>
                         <ChevronDown className={`h-4 w-4 text-muted transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
 

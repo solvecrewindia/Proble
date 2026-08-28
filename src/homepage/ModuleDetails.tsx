@@ -144,7 +144,7 @@ const ModuleDetails = () => {
         </div>
     );
 
-    const fallbackImage = moduleData ? `https://ui-avatars.com/api/?name=${encodeURIComponent(moduleData.title)}&background=random&size=400` : '';
+    const fallbackImage = moduleData ? `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%230097b2"/><stop offset="100%" stop-color="%23a855f7"/></linearGradient></defs><rect width="100%" height="100%" fill="url(%23g)"/><text x="50%" y="50%" font-family="sans-serif" font-size="120" fill="white" font-weight="bold" dominant-baseline="middle" text-anchor="middle">${encodeURIComponent(moduleData.title.charAt(0).toUpperCase())}</text></svg>` : '';
     const displayImage = imgError || !moduleData?.image_url ? fallbackImage : moduleData.image_url;
 
     return (

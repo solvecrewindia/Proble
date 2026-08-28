@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User as UserIcon, Globe, Trash2, Edit, ChevronDown, Camera } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -38,7 +38,7 @@ const ProfileSettings = () => {
                         email: data?.email || user.email || '',
                         username: data?.username || '',
                         full_name: data?.full_name || '',
-                        photo: data?.avatar_url || `https://ui-avatars.com/api/?name=${data?.username || 'User'}&background=0D8ABC&color=fff`,
+                        photo: data?.avatar_url || '',
                         language: data?.preferred_language || 'English',
                         registration_number: data?.registration_number || ''
                     });
@@ -224,11 +224,17 @@ const ProfileSettings = () => {
                     {/* Profile Pic */}
                     <div className="flex-shrink-0">
                         <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-neutral-300 dark:border-neutral-600 relative group cursor-pointer">
-                            <img
-                                src={formData.photo}
-                                alt="Profile"
-                                className="w-full h-full object-cover"
-                            />
+                            {formData.photo ? (
+                                <img
+                                    src={formData.photo}
+                                    alt="Profile"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary">
+                                    <UserIcon className="w-10 h-10" />
+                                </div>
+                            )}
                             {isEditing && (
                                 <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                     <Camera className="w-6 h-6 text-white" />

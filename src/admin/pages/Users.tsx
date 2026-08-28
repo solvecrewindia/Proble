@@ -47,7 +47,7 @@ const Users = () => {
                     role: profile.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : 'Student',
                     status: 'Active', // Default as field is missing in DB
                     lastActive: 'Recently', // Default as field is missing in DB
-                    avatar: `https://ui-avatars.com/api/?name=${profile.username || 'User'}&background=random`
+                    avatar: profile.avatar_url || ''
                 }));
                 setUsers(mappedUsers);
             }
@@ -179,11 +179,17 @@ const Users = () => {
                                     <tr key={user.id} className="group hover:bg-background/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <img
-                                                    src={user.avatar}
-                                                    alt={user.name}
-                                                    className="h-10 w-10 rounded-full border border-surface"
-                                                />
+                                                {user.avatar && !user.avatar.includes('ui-avatars') ? (
+                                                    <img
+                                                        src={user.avatar}
+                                                        alt={user.name}
+                                                        className="h-10 w-10 rounded-full border border-surface object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="h-10 w-10 rounded-full border border-surface bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                                                        {user.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <p className="font-medium text-text">{user.name}</p>
                                                     <p className="text-xs text-muted">{user.email}</p>

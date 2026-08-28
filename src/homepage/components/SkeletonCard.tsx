@@ -4,7 +4,7 @@ const SkeletonCard = () => {
     return (
         <div className="bg-surface rounded-xl shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none overflow-hidden border border-neutral-300 dark:border-neutral-600 animate-pulse">
             {/* Image Placeholder */}
-            <div className="w-full h-[160px] bg-neutral-200 dark:bg-neutral-800" />
+            <div className="w-full h-[60px] bg-neutral-200 dark:bg-neutral-800" />
 
             <div className="p-3">
                 {/* Title Placeholders (2 lines to match line-clamp-2) */}

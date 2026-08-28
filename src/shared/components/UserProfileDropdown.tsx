@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Sun, Moon, LogOut, Home, Settings, LayoutDashboard, List, Link2, MessageCircle, Download } from 'lucide-react';
 import ReportProblemModal from './ReportProblemModal';
 import { useNavigate } from 'react-router-dom';
@@ -148,18 +148,7 @@ const UserProfileDropdown: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="px-2 py-1">
-                                <button
-                                    onClick={() => {
-                                        navigate('/student/dashboard');
-                                        setIsOpen(false);
-                                    }}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
-                                >
-                                    <LayoutDashboard className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
-                                    <span className="text-sm font-medium">Analysis</span>
-                                </button>
-                            </div>
+
 
                             <div className="px-2 py-1">
                                 <button
@@ -221,24 +210,7 @@ const UserProfileDropdown: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Dashboard Link - Hidden for students as they have Analysis */}
-                    {user.role !== 'student' && (
-                        <div className="px-2 py-1">
-                            <button
-                                onClick={() => {
-                                    let role = user.role.toLowerCase();
-                                    if (role === 'teacher') role = 'faculty';
 
-                                    navigate(`/${role}/dashboard`);
-                                    setIsOpen(false);
-                                }}
-                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
-                            >
-                                <LayoutDashboard className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
-                                <span className="text-sm font-medium">Dashboard</span>
-                            </button>
-                        </div>
-                    )}
 
                     {/* Profile Settings Link */}
                     <div className="px-2 py-1 border-b border-neutral-300 dark:border-neutral-600">

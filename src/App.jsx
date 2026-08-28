@@ -28,10 +28,12 @@ const Onboarding = lazyRetry(() => import('./login/pages/Onboarding'), 'Onboardi
 
 const AdminApp = lazyRetry(() => import('./admin/App'), 'AdminApp');
 
-// Loading Screen Component
 const FullScreenLoader = () => (
     <div className="flex items-center justify-center h-screen bg-background text-foreground">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="animate-breathe flex flex-col items-center gap-4">
+            <img src="/logo-dark.png" alt="Proble" className="h-12 hidden dark:block" />
+            <img src="/logo-light.png" alt="Proble" className="h-12 block dark:hidden" />
+        </div>
     </div>
 );
 

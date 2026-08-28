@@ -149,11 +149,7 @@ export default function Login() {
 
     return (
         <div className="min-h-screen flex flex-col lg:flex-row bg-background transition-colors duration-500 overflow-hidden relative">
-            {/* Background Decorations (Global) */}
-            <div className={`absolute inset-0 pointer-events-none overflow-hidden transition-opacity duration-700 ${theme === 'dark' ? 'opacity-20' : 'opacity-100'}`}>
-                <div className="absolute top-[-10%] left-[-10%] w-[50vh] h-[50vh] bg-primary/20 rounded-full blur-[100px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50vh] h-[50vh] bg-blue-500/20 rounded-full blur-[100px]" />
-            </div>
+
 
             {/* Back to Home Button */}
             <button
@@ -173,16 +169,14 @@ export default function Login() {
                     <div className="absolute inset-24 border-[1px] border-text/10 dark:border-white/10 rounded-full animate-[spin_20s_linear_infinite]" />
 
                     {/* Central Content */}
-                    <div className="text-center z-10 backdrop-blur-xl bg-surface/30 p-12 rounded-[3rem] border border-white/20 shadow-2xl flex flex-col items-center">
-                        <img
-                            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
-                            alt="Proble Logo"
-                            className="w-64 h-auto mb-8 hover:scale-105 transition-transform duration-300 drop-shadow-2xl"
-                        />
-                        <p className="text-xl font-medium text-muted dark:text-neutral-300 max-w-md mx-auto leading-relaxed">
-                            The ultimate platform for modern education. <br />
-                            <span className="text-primary">Empowering</span> teachers, <span className="text-blue-500">Elevating</span> students.
-                        </p>
+                    <div className="relative text-center z-10 flex flex-col items-center">
+                        <div className="relative">
+                            <img
+                                src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+                                alt="Proble Logo"
+                                className="relative w-56 sm:w-64 h-auto hover:scale-105 transition-transform duration-500 ease-out drop-shadow-2xl z-10"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../shared/components/Card';
 import { Button } from '../../shared/components/Button';
@@ -145,11 +145,19 @@ const PracticeList = () => {
                                 className="bg-surface rounded-xl shadow-[0_1px_4px_rgba(16,24,40,0.06)] dark:shadow-none overflow-hidden transition-transform duration-200 hover:-translate-y-1 border border-neutral-300 dark:border-neutral-600 cursor-pointer group relative"
                             >
                                 <div className="relative">
-                                    <img
-                                        src={displayData.imageUrl || `https://ui-avatars.com/api/?name=${displayData.fallbackName}&background=random&size=400`}
-                                        alt={displayData.title}
-                                        className="w-full h-[150px] object-cover"
-                                    />
+                                    {displayData.imageUrl && !displayData.imageUrl.includes('ui-avatars') ? (
+                                        <img
+                                            src={displayData.imageUrl}
+                                            alt={displayData.title}
+                                            className="w-full h-[150px] object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-[150px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                            <span className="text-5xl font-display font-bold text-white/90 drop-shadow-md">
+                                                {displayData.title ? displayData.title.charAt(0).toUpperCase() : 'C'}
+                                            </span>
+                                        </div>
+                                    )}
                                     {/* Delete Button Overlay */}
                                     <button
                                         onClick={(e) => removeFromPractice(item.id, e)}
@@ -163,11 +171,9 @@ const PracticeList = () => {
                                     <div className="text-sm font-bold mb-2 line-clamp-2 h-10 text-text">{displayData.title}</div>
                                     <div className="flex justify-between text-xs text-muted items-center">
                                         <div className="flex items-center gap-2">
-                                            <img
-                                                src={`https://ui-avatars.com/api/?name=Faculty&background=random`}
-                                                alt="Faculty"
-                                                className="w-[26px] h-[26px] rounded-full"
-                                            />
+                                            <div className="w-[26px] h-[26px] rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                                <span className="text-[10px] font-bold">F</span>
+                                            </div>
                                             <span>Faculty</span>
                                         </div>
                                         <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-[10px] uppercase">
