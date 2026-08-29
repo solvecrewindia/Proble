@@ -173,7 +173,7 @@ const QuizList = () => {
                         <ArrowLeft className="w-5 h-5 text-text-secondary group-hover:text-white" />
                     </button>
                     <div>
-                        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
+                        <h1 className="text-3xl font-bold text-text bg-clip-text">
                             {moduleId ? currentModule?.title : `${categoryTitle} Quizzes`}
                         </h1>
                         <p className="text-text-secondary mt-1">
@@ -347,15 +347,13 @@ const QuizList = () => {
                                     </span>
 
                                     <div className="flex items-center gap-2">
-                                        {categoryTitle === 'PROBLE ORIGINALS' && (
-                                            <button
-                                                onClick={(e) => handleDownloadExcel(e, quiz.id, quiz.title)}
-                                                className="p-2 text-text-secondary hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                title="Download Excel"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={(e) => handleDownloadExcel(e, quiz.id, quiz.title)}
+                                            className="p-2 text-text-secondary hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Download Excel"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                        </button>
                                         <button
                                             onClick={(e) => handleDeleteQuiz(e, quiz.id)}
                                             className="p-2 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"

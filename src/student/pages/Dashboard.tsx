@@ -164,7 +164,13 @@ const StudentDashboard = () => {
     if (loading) return <div className="p-8 text-center text-muted">Loading metrics...</div>;
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in duration-500 relative">
+            {/* Background Decorations */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
+                <div className="absolute top-[-10%] left-[-10%] w-[50vh] h-[50vh] bg-primary/10 dark:bg-primary/20 rounded-full blur-[100px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50vh] h-[50vh] bg-blue-500/10 dark:bg-blue-500/20 rounded-full blur-[100px]" />
+            </div>
+
             <header>
                 <h1 className="text-3xl font-bold text-text">Dashboard</h1>
                 <p className="text-muted mt-2">Track your progress and achievements.</p>
@@ -172,109 +178,23 @@ const StudentDashboard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {statCards.map((stat, index) => (
-                    <div key={index} className="bg-surface p-6 rounded-xl border border-neutral-300 dark:border-neutral-600 shadow-sm flex items-center gap-4 hover:border-primary/20 transition-colors">
-                        <div className={`p-3 rounded-full ${stat.bg} ${stat.color}`}>
+                    <div key={index} className="bg-surface/60 backdrop-blur-xl p-6 rounded-2xl border border-black/5 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center gap-4 hover:border-primary/30 transition-all hover:-translate-y-1">
+                        <div className={`p-4 rounded-xl ${stat.bg} ${stat.color}`}>
                             <stat.icon className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-text">{stat.value}</p>
-                            <p className="text-sm text-muted">{stat.label}</p>
+                            <p className="text-3xl font-bold text-text">{stat.value}</p>
+                            <p className="text-sm font-medium text-muted mt-1">{stat.label}</p>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Learning Modules Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 fill-mode-both">
-                {/* Placement Module */}
-                <div
-                    onClick={() => navigate('/course/placement')}
-                    className="group relative bg-surface border border-neutral-200 dark:border-neutral-700 hover:border-orange-500/50 rounded-2xl p-6 cursor-pointer transition-all hover:shadow-lg hover:shadow-orange-500/10 hover:-translate-y-1 overflow-hidden"
-                >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-opacity opacity-50 group-hover:opacity-100" />
-                    <div className="relative z-10">
-                        <div className="mb-4 p-3 w-fit rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
-                            <Building2 className="w-6 h-6" />
-                        </div>
-                        <div className="flex justify-between items-start mb-2">
-                            <h3 className="text-lg font-bold group-hover:text-orange-500 transition-colors">Placement</h3>
-                            <span className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded">
-                                {moduleStats.placement.completed}/{moduleStats.placement.total}
-                            </span>
-                        </div>
-                        <p className="text-sm text-muted">Aptitude, reasoning, and technical interview prep.</p>
-                        {moduleStats.placement.total > 0 && (
-                            <div className="mt-4 h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-orange-500 transition-all duration-500" 
-                                    style={{ width: `${(moduleStats.placement.completed / moduleStats.placement.total) * 100}%` }}
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* SRMIST Module */}
-                <div
-                    onClick={() => navigate('/course/srmist')}
-                    className="group relative bg-surface border border-neutral-200 dark:border-neutral-700 hover:border-blue-500/50 rounded-2xl p-6 cursor-pointer transition-all hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 overflow-hidden"
-                >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-opacity opacity-50 group-hover:opacity-100" />
-                    <div className="relative z-10">
-                        <div className="mb-4 p-3 w-fit rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                            <GraduationCap className="w-6 h-6" />
-                        </div>
-                        <div className="flex justify-between items-start mb-2">
-                            <h3 className="text-lg font-bold group-hover:text-blue-500 transition-colors">SRMIST</h3>
-                            <span className="text-xs font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded">
-                                {moduleStats.srmist.completed}/{moduleStats.srmist.total}
-                            </span>
-                        </div>
-                        <p className="text-sm text-muted">University specific courses and materials.</p>
-                        {moduleStats.srmist.total > 0 && (
-                            <div className="mt-4 h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-blue-500 transition-all duration-500" 
-                                    style={{ width: `${(moduleStats.srmist.completed / moduleStats.srmist.total) * 100}%` }}
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* NPTEL Module */}
-                <div
-                    onClick={() => navigate('/course/nptel')}
-                    className="group relative bg-surface border border-neutral-200 dark:border-neutral-700 hover:border-green-500/50 rounded-2xl p-6 cursor-pointer transition-all hover:shadow-lg hover:shadow-green-500/10 hover:-translate-y-1 overflow-hidden"
-                >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-opacity opacity-50 group-hover:opacity-100" />
-                    <div className="relative z-10">
-                        <div className="mb-4 p-3 w-fit rounded-xl bg-green-500/10 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
-                            <MonitorPlay className="w-6 h-6" />
-                        </div>
-                        <div className="flex justify-between items-start mb-2">
-                            <h3 className="text-lg font-bold group-hover:text-green-500 transition-colors">NPTEL</h3>
-                            <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded">
-                                {moduleStats.nptel.completed}/{moduleStats.nptel.total}
-                            </span>
-                        </div>
-                        <p className="text-sm text-muted">Online certification courses and assignments.</p>
-                        {moduleStats.nptel.total > 0 && (
-                            <div className="mt-4 h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-green-500 transition-all duration-500" 
-                                    style={{ width: `${(moduleStats.nptel.completed / moduleStats.nptel.total) * 100}%` }}
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Activity Chart */}
-                <div className="bg-surface p-6 rounded-xl border border-neutral-300 dark:border-neutral-600 shadow-sm flex flex-col">
-                    <h3 className="text-lg font-semibold text-text mb-6">Average Performance (Last 7 Days)</h3>
+                <div className="bg-surface/60 backdrop-blur-xl p-6 rounded-2xl border border-black/5 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
+                    <h3 className="text-lg font-bold text-text mb-6">Average Performance (Last 7 Days)</h3>
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={activityData}>
@@ -316,13 +236,13 @@ const StudentDashboard = () => {
                 </div>
 
                 {/* Recent Activity List */}
-                <div className="bg-surface p-6 rounded-xl border border-neutral-300 dark:border-neutral-600 shadow-sm flex flex-col">
-                    <h3 className="text-lg font-semibold text-text mb-6">Recent Activity</h3>
-                    <div className="space-y-4 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
+                <div className="bg-surface/60 backdrop-blur-xl p-6 rounded-2xl border border-black/5 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
+                    <h3 className="text-lg font-bold text-text mb-6">Recent Activity</h3>
+                    <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
                         {recentActivity.length > 0 ? (
                             recentActivity.map((activity) => (
-                                <div key={activity.id} className="flex items-center justify-between p-4 rounded-xl bg-neutral-900/50 border border-neutral-800 hover:bg-neutral-900 transition-colors">
-                                    <div className="flex items-center gap-3">
+                                <div key={activity.id} className="flex items-center justify-between p-4 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all hover:scale-[1.02]">
+                                    <div className="flex items-center gap-4">
                                         <div className={`p-2 rounded-full ${activity.percentage >= 80 ? 'bg-green-500/10 text-green-500' : activity.percentage >= 50 ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'}`}>
                                             <ActivityIcon className="w-4 h-4" />
                                         </div>

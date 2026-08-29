@@ -101,6 +101,22 @@ const UserProfileDropdown: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* Dashboard Link */}
+                    <div className="px-2 py-1">
+                        <button
+                            onClick={() => {
+                                let role = user.role?.toLowerCase() || 'student';
+                                if (role === 'teacher') role = 'faculty';
+                                navigate(`/${role}`);
+                                setIsOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background transition-all duration-200 hover:translate-x-1 group text-text"
+                        >
+                            <LayoutDashboard className="w-4 h-4 text-muted group-hover:text-primary transition-colors" />
+                            <span className="text-sm font-medium">Dashboard</span>
+                        </button>
+                    </div>
+
                     {/* Student Specific Links */}
                     {user.role === 'student' && (
                         <>
@@ -227,6 +243,7 @@ const UserProfileDropdown: React.FC = () => {
                             <span className="text-sm font-medium">Profile Settings</span>
                         </button>
                     </div>
+
 
                     {/* Homepage Link */}
                     {user.role?.toLowerCase() !== 'teacher' && (

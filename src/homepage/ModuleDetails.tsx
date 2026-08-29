@@ -327,33 +327,42 @@ const ModuleDetails = () => {
                                     className="group cursor-pointer"
                                     style={{ animationDelay: `${index * 100}ms` }}
                                 >
-                                    <div className={`h-full bg-surface border rounded-2xl p-6 transition-all duration-300 relative overflow-hidden ${isSelectionMode && selectedQuizzes.includes(quiz.id)
+                                    <div className={`h-full bg-surface border rounded-2xl flex flex-col transition-all duration-300 relative overflow-hidden ${isSelectionMode && selectedQuizzes.includes(quiz.id)
                                         ? 'border-primary bg-primary/5'
                                         : 'border-white/5 hover:border-primary/30 hover:bg-surface-highlight'
                                         }`}>
-                                        {/* Selection Checkbox Overlay */}
-                                        {isSelectionMode && (
-                                            <div className="absolute top-4 right-4 z-20">
-                                                {selectedQuizzes.includes(quiz.id) ? (
-                                                    <CheckCircle className="w-6 h-6 text-primary fill-primary/20" />
-                                                ) : (
-                                                    <Circle className="w-6 h-6 text-muted hover:text-white" />
-                                                )}
+                                        
+                                        {/* Image / Placeholder Area */}
+                                        <div className="relative w-full h-[60px] overflow-hidden bg-neutral-100 dark:bg-neutral-900 shrink-0">
+                                            <div className="w-full h-full bg-primary/5 dark:bg-primary/10 text-primary flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
+                                                {/* Subtle dotted pattern for premium feel */}
+                                                <div className="absolute inset-0 opacity-[0.15] dark:opacity-[0.2]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '12px 12px' }}></div>
                                             </div>
-                                        )}
+
+                                            {/* Duration Badge */}
+                                            {quiz.settings?.duration && (
+                                                <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/50 backdrop-blur-md border border-white/10 text-[11px] font-medium text-white shadow-sm">
+                                                    <Clock className="w-3 h-3" />
+                                                    <span>{quiz.settings.duration} min</span>
+                                                </div>
+                                            )}
+
+                                            {/* Selection Checkbox Overlay */}
+                                            {isSelectionMode && (
+                                                <div className="absolute top-3 left-3 z-20">
+                                                    {selectedQuizzes.includes(quiz.id) ? (
+                                                        <CheckCircle className="w-6 h-6 text-primary fill-primary/20 bg-black/50 rounded-full" />
+                                                    ) : (
+                                                        <Circle className="w-6 h-6 text-white/70 hover:text-white bg-black/20 rounded-full" />
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
 
                                         {/* Hover Gradient */}
                                         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                                        <div className="relative z-10 flex flex-col h-full">
-                                            <div className="flex justify-end items-start mb-6">
-                                                {quiz.settings?.duration && (
-                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background border border-white/5 text-xs font-medium text-muted">
-                                                        <Clock className="w-3.5 h-3.5" />
-                                                        <span>{quiz.settings.duration} min</span>
-                                                    </div>
-                                                )}
-                                            </div>
+                                        <div className="relative z-10 flex flex-col flex-1 p-5 pt-4">
 
                                             <h3 className="text-xl font-bold text-text mb-3 group-hover:text-primary transition-colors line-clamp-2">
                                                 {quiz.title}
