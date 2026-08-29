@@ -5,6 +5,7 @@ import { useTheme } from '../../shared/context/ThemeContext';
 import { useAuth } from '../../shared/context/AuthContext';
 import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2, WifiOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import FullScreenLoader from '../../shared/components/FullScreenLoader';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 import { QuizTimer } from '../components/QuizTimer';
 import { Calculator } from '../../shared/components/Calculator';
@@ -36,6 +37,7 @@ const MCQTest = () => {
     const [isPaused, setIsPaused] = useState(false);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     const [quizSettings, setQuizSettings] = useState<any>(null);
+    const [quizModuleId, setQuizModuleId] = useState<string | null>(null);
     const [showCalculator, setShowCalculator] = useState(false);
 
     // Security State
@@ -325,13 +327,14 @@ const MCQTest = () => {
 
                 const { data: quizData } = await supabase
                     .from('quizzes')
-                    .select('settings, type, id')
+                    .select('settings, type, id, module_id')
                     .in('id', targetQuizIds)
                     .limit(1)
                     .single();
 
                 if (quizData) {
                     if (quizData.settings) setQuizSettings(quizData.settings);
+                    if (quizData.module_id) setQuizModuleId(quizData.module_id);
 
                     // --- SERVER-SIDE RETAKE GUARD (cannot bypass with incognito/localStorage clear) ---
                     const { data: { user } } = await supabase.auth.getUser();
@@ -619,131 +622,133 @@ const MCQTest = () => {
         return () => clearInterval(interval);
     }, [testActive, showResults, quizSettings, calculateAndShowResults]);
 
-    if (loading) return <div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>;
+    if (loading) return <FullScreenLoader />;
 
     if (showResults) {
         const showScore = quizSettings?.showPercentage !== false; // Default true
         const showAnswers = quizSettings?.showAnswers !== false;   // Default true
 
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden bg-background">
-                {/* Background Decorative Elements */}
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/10 rounded-full blur-[120px] animate-pulse" />
-
-                <div className="glass-card p-8 md:p-12 max-w-4xl w-full text-center relative z-10 border-white/10 shadow-2xl">
-                    <div className="mb-8 relative inline-block">
-                        <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
-                        <div className="relative bg-primary text-white p-4 rounded-full shadow-lg shadow-primary/50 flex items-center justify-center animate-in zoom-in duration-500">
-                            <CheckCircle2 className="w-12 h-12" />
+            <div className="min-h-screen p-4 md:p-10 bg-slate-50 dark:bg-neutral-950">
+                <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    
+                    {/* Minimalist Header without Card */}
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-8">
+                        <div className="flex items-center gap-6 text-center md:text-left">
+                             <div className="w-16 h-16 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg shrink-0">
+                                <CheckCircle2 className="w-8 h-8" />
+                             </div>
+                             <div>
+                                 <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white mb-1 tracking-tight">Excellent Work!</h1>
+                                 <p className="text-slate-500 dark:text-neutral-400 font-medium">Your assessment has been recorded successfully.</p>
+                             </div>
                         </div>
+                        {showScore && (
+                            <div className="text-center md:text-right shrink-0">
+                                <div className="text-6xl md:text-7xl font-black text-primary tracking-tighter drop-shadow-sm">
+                                    {Math.round((score / questions.length) * 100)}%
+                                </div>
+                                <p className="text-xs font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest mt-1">Final Score ({score}/{questions.length})</p>
+                            </div>
+                        )}
                     </div>
 
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-                        <span className="text-gradient">Excellent Work!</span>
-                    </h1>
+                    {/* Detailed Question Review Table */}
+                    {showAnswers && (
+                        <div className="overflow-x-auto pb-10">
+                            <h3 className="font-bold text-xl text-slate-800 dark:text-white mb-6 px-2">Detailed Review</h3>
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b-2 border-slate-200 dark:border-neutral-800 text-xs font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest">
+                                        <th className="px-6 py-4 w-16">Q#</th>
+                                        <th className="px-6 py-4 w-1/2">Question</th>
+                                        <th className="px-6 py-4">Your Submission</th>
+                                        <th className="px-6 py-4">Correct Key</th>
+                                        <th className="px-6 py-4 text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-neutral-800/50">
+                                    {questions.map((q, index) => {
+                                        const userAnswer = answers[q.id];
 
-                    {!showScore && !showAnswers ? (
-                        <p className="text-xl text-text font-medium mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            Test completed successfully!
-                        </p>
-                    ) : (
-                        <p className="text-muted mb-8 text-lg font-medium">Your assessment has been recorded.</p>
-                    )}
+                                        // Determine correctness
+                                        let isCorrect = false;
+                                        const isSkipped = userAnswer === undefined || userAnswer === null || userAnswer === '' || (Array.isArray(userAnswer) && userAnswer.length === 0);
 
-                    {showScore && (
-                        <div className="mb-12 py-10 bg-surface/50 rounded-2xl border border-white/5 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both">
-                            <div className="text-7xl font-black text-primary mb-2 drop-shadow-sm">
-                                {Math.round((score / questions.length) * 100)}%
-                            </div>
-                            <p className="text-xs font-bold text-muted uppercase tracking-widest">Total Score Percentage</p>
-                            <p className="text-sm font-medium text-text mt-4">You scored {score} out of {questions.length}</p>
+                                        if (!isSkipped) {
+                                            if (q.type === 'msq') {
+                                                const correctArr = Array.isArray(q.correct) ? q.correct : [];
+                                                const userArr = Array.isArray(userAnswer) ? userAnswer : [];
+                                                if (userArr.length === correctArr.length &&
+                                                    userArr.every((val: any) => correctArr.includes(val))) {
+                                                    isCorrect = true;
+                                                }
+                                            } else if (q.type === 'range') {
+                                                const userVal = Number(userAnswer);
+                                                if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
+                                                    isCorrect = true;
+                                                }
+                                            } else if (q.type === 'code') {
+                                                isCorrect = codeExecutionStatus[q.id] || false;
+                                            } else {
+                                                if (userAnswer === q.correct) isCorrect = true;
+                                            }
+                                        }
+
+                                        // Format Helper
+                                        const formatAns = (ans: any, type: string) => {
+                                            if (ans === undefined || ans === null || ans === '' || (Array.isArray(ans) && ans.length === 0)) return <span className="text-slate-400 italic">Skipped</span>;
+                                            if (type === 'mcq' || type === 'true_false') {
+                                                if (q.options && q.options[ans]) return <MathText text={q.options[ans].text || q.options[ans]} />;
+                                                return `Option ${Number(ans) + 1}`;
+                                            }
+                                            if (type === 'msq' && Array.isArray(ans)) {
+                                                return ans.map((a: any, i: number) => <span key={i}>{i > 0 && ', '}<MathText text={q.options[a]?.text || q.options[a] || `Option ${Number(a) + 1}`} /></span>);
+                                            }
+                                            if (type === 'code') return <span className="font-mono text-xs">Code Solution</span>;
+                                            return ans;
+                                        };
+
+                                        return (
+                                            <tr key={q.id} className="hover:bg-white dark:hover:bg-neutral-900 transition-colors group">
+                                                <td className="px-6 py-6 text-sm font-bold text-slate-400 dark:text-neutral-500 align-top">{index + 1}</td>
+                                                <td className="px-6 py-6 text-sm text-slate-700 dark:text-neutral-300 font-medium align-top leading-relaxed max-w-md">
+                                                    <MathText text={q.question} as="span" />
+                                                </td>
+                                                <td className={cn("px-6 py-6 text-sm font-medium align-top", isCorrect ? "text-green-600 dark:text-green-400" : isSkipped ? "text-slate-500" : "text-red-600 dark:text-red-400")}>
+                                                    {formatAns(userAnswer, q.type)}
+                                                </td>
+                                                <td className="px-6 py-6 text-sm font-medium text-slate-800 dark:text-neutral-200 align-top">
+                                                    {formatAns(q.correct, q.type)}
+                                                </td>
+                                                <td className="px-6 py-6 align-top text-right">
+                                                    <span className={cn(
+                                                        "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                                                        isCorrect ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" : isSkipped ? "bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-400" : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                                                    )}>
+                                                        {isCorrect ? "Mastered" : isSkipped ? "Not Attended" : "Revision"}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     )}
 
-                    {/* Detailed Question Review */}
-                    {showAnswers ? (
-                        <div className="text-left mb-12 space-y-6 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
-                            {questions.map((q, index) => {
-                                const userAnswer = answers[q.id];
-
-                                // Determine correctness
-                                let isCorrect = false;
-                                if (q.type === 'msq') {
-                                    const correctArr = Array.isArray(q.correct) ? q.correct : [];
-                                    const userArr = Array.isArray(userAnswer) ? userAnswer : [];
-                                    if (userArr.length === correctArr.length &&
-                                        userArr.every((val: any) => correctArr.includes(val))) {
-                                        isCorrect = true;
-                                    }
-                                } else if (q.type === 'range') {
-                                    const userVal = Number(userAnswer);
-                                    if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
-                                        isCorrect = true;
-                                    }
-                                } else if (q.type === 'code') {
-                                    isCorrect = codeExecutionStatus[q.id] || false;
-                                } else {
-                                    if (userAnswer === q.correct) isCorrect = true;
-                                }
-
-                                // Format Helper
-                                const formatAns = (ans: any, type: string) => {
-                                    if (ans === undefined || ans === null || ans === '') return <span className="text-muted italic">Skipped</span>;
-                                    if (type === 'mcq' || type === 'true_false') {
-                                        if (q.options && q.options[ans]) return <MathText text={q.options[ans].text || q.options[ans]} />;
-                                        return `Option ${Number(ans) + 1}`;
-                                    }
-                                    if (type === 'msq' && Array.isArray(ans)) {
-                                        return ans.map((a: any, i: number) => <span key={i}>{i > 0 && ', '}<MathText text={q.options[a]?.text || q.options[a] || `Option ${Number(a) + 1}`} /></span>);
-                                    }
-                                    if (type === 'code') return <span className="font-mono text-xs">Code Solution</span>;
-                                    return ans;
-                                };
-
-                                return (
-                                    <div key={q.id} className={cn(
-                                        "p-6 rounded-2xl border transition-all duration-300",
-                                        isCorrect
-                                            ? "border-green-500/20 bg-green-500/5"
-                                            : "border-red-500/20 bg-red-500/5 shadow-inner"
-                                    )}>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <span className="text-xs font-bold uppercase tracking-widest text-muted">Question {index + 1}</span>
-                                            <div className={cn(
-                                                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter",
-                                                isCorrect ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-                                            )}>
-                                                {isCorrect ? "Mastered" : "Revision Needed"}
-                                            </div>
-                                        </div>
-                                        <MathText text={q.question} className="text-sm text-text font-semibold mb-6 leading-relaxed" as="p" />
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface/30 p-4 rounded-xl border border-white/5">
-                                            <div>
-                                                <span className="text-[10px] font-bold text-muted uppercase block mb-1">Your Submission</span>
-                                                <div className="text-sm font-medium text-text">{formatAns(userAnswer, q.type)}</div>
-                                            </div>
-                                            <div>
-                                                <span className="text-[10px] font-bold text-muted uppercase block mb-1">Correct Key</span>
-                                                <div className="text-sm font-medium text-primary">{formatAns(q.correct, q.type)}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        null
-                    )}
-
-                    <div className="flex flex-col items-center gap-4">
-                        {/* Violations Recorded text removed */}
+                    <div className="flex justify-center pb-12">
                         <button
-                            onClick={() => navigate('/student/dashboard')}
-                            className="btn-primary w-full py-4 text-lg rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all"
+                            onClick={() => {
+                                if (quizModuleId) {
+                                    navigate(`/module/${quizModuleId}`);
+                                } else {
+                                    navigate('/student/dashboard');
+                                }
+                            }}
+                            className="bg-primary hover:bg-primary-dark text-white font-bold w-full md:w-1/2 py-4 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all text-lg"
                         >
-                            Return to Dashboard
+                            {quizModuleId ? 'Return to Module Page' : 'Return to Dashboard'}
                         </button>
                     </div>
                 </div>
@@ -827,7 +832,7 @@ const MCQTest = () => {
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between transition-all">
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate(`/ student / practice / ${id} `)}>
-                        <img src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg group-hover:scale-105 transition-transform" />
+                        <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg group-hover:scale-105 transition-transform" />
                     </div>
                 </div>
 
@@ -860,17 +865,19 @@ const MCQTest = () => {
 
             {/* --- ANTI-CHEAT & PAUSE OVERLAYS (Keep Existing Logic) --- */}
             {!isSubmitting && (!testActive || !isFullScreen) && (
-                <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in">
-                    <div className="bg-surface border border-red-500/30 shadow-2xl rounded-2xl p-8 max-w-lg text-center">
-                        <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-6" />
-                        <h2 className="text-2xl font-bold mb-3 text-text">Exam Security Protocol</h2>
-                        <p className="text-muted leading-relaxed mb-8">
-                            This exam is monitored. Full screen mode is mandatory.
-                            Switching tabs or exiting full screen will result in strict penalties.
+                <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in">
+                    <div className="bg-white dark:bg-neutral-900 border-t-4 border-t-red-600 shadow-2xl rounded-xl p-8 max-w-lg w-full text-center">
+                        <div className="mx-auto w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mb-6">
+                            <ShieldAlert className="w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-bold mb-3 text-gray-900 dark:text-white">Exam Security Protocol</h2>
+                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-8 text-sm md:text-base">
+                            This exam is strictly monitored. Full screen mode is mandatory.
+                            Switching tabs, exiting full screen, or losing focus will result in immediate penalties.
                         </p>
                         <button
                             onClick={async () => { await enterFullScreen(); setTestActive(true); }}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-red-600/30"
+                            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-6 rounded-lg transition-colors"
                         >
                             {!testActive ? "I Understand, Start Exam" : "Resume Full Screen"}
                         </button>

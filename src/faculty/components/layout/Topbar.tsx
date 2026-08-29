@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Search, Plus, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
@@ -50,7 +50,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 {/* Logo Section */}
                 <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
                     <img
-                        src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
+                        src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"}
                         alt="Proble Logo"
                         className="h-[32px] md:h-[38px] w-auto rounded-md"
                     />

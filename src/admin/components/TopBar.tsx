@@ -39,7 +39,7 @@ const TopBar = ({ onMenuClick }: TopBarProps) => {
                 {/* Logo */}
                 <div className="flex items-center">
                     <img
-                        src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+                        src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'}
                         alt="Proble Logo"
                         className="h-8 w-auto"
                     />

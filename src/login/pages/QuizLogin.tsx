@@ -221,7 +221,7 @@ export default function QuizLogin() {
                     {/* Central Content */}
                     <div className="text-center z-10 backdrop-blur-xl bg-surface/30 p-12 rounded-[3rem] border border-white/20 shadow-2xl flex flex-col items-center">
                         <img
-                            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+                            src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'}
                             alt="Proble Logo"
                             className="w-64 h-auto mb-8 hover:scale-105 transition-transform duration-300 drop-shadow-2xl"
                         />

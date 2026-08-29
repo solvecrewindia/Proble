@@ -53,13 +53,13 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, setSearchQuery }) => {
             <div className="flex justify-start items-center gap-2.5 cursor-pointer shrink-0" onClick={() => navigate('/')}>
                 {/* Desktop Logo */}
                 <img
-                    src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
+                    src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"}
                     alt="Proble Logo"
                     className="hidden md:block h-[38px] w-auto rounded-md"
                 />
                 {/* Mobile Logo */}
                 <img
-                    src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"}
+                    src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"}
                     alt="Proble Logo"
                     className="block md:hidden h-[24px] w-auto rounded-md"
                 />

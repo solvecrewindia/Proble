@@ -172,7 +172,7 @@ export default function Login() {
                     <div className="relative text-center z-10 flex flex-col items-center">
                         <div className="relative">
                             <img
-                                src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+                                src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'}
                                 alt="Proble Logo"
                                 className="relative w-56 sm:w-64 h-auto hover:scale-105 transition-transform duration-500 ease-out drop-shadow-2xl z-10"
                             />

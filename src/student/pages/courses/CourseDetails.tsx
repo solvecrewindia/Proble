@@ -271,7 +271,7 @@ const QuizDetails = () => {
                 <h2 className="text-xl font-bold mb-6 text-text">Choose your mode</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Flashcards Card (Hero - Full Width) */}
-                    {quiz.type !== 'master' && (
+                    {quiz.type !== 'master' && quiz.type !== 'originals' && (
                         <div
                             onClick={() => navigate(`/student/practice/flashcards/${id}`)}
                             className="group relative md:col-span-2 bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-indigo-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both"

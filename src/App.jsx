@@ -7,6 +7,7 @@ import InstallPwaPopup from './shared/components/InstallPwaPopup';
 import Maintenance from './shared/components/Maintenance';
 import { useState, Suspense, useEffect } from 'react';
 import { supabase } from './lib/supabase';
+import FullScreenLoader from './shared/components/FullScreenLoader';
 
 // Lazy Load Components
 import { lazyRetry } from './shared/utils/lazyRetry';
@@ -28,14 +29,7 @@ const Onboarding = lazyRetry(() => import('./login/pages/Onboarding'), 'Onboardi
 
 const AdminApp = lazyRetry(() => import('./admin/App'), 'AdminApp');
 
-const FullScreenLoader = () => (
-    <div className="flex items-center justify-center h-screen bg-background text-foreground">
-        <div className="animate-breathe flex flex-col items-center gap-4">
-            <img src="/logo-dark.png" alt="Proble" className="h-12 hidden dark:block" />
-            <img src="/logo-light.png" alt="Proble" className="h-12 block dark:hidden" />
-        </div>
-    </div>
-);
+
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {

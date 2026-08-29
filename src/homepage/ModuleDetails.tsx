@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Clock, AlertCircle, ArrowRight, Activity, Star, Check, CheckCircle, Circle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../shared/context/AuthContext';
+import FullScreenLoader from '../shared/components/FullScreenLoader';
 
 const ModuleDetails = () => {
     const { id } = useParams();
@@ -138,11 +139,7 @@ const ModuleDetails = () => {
         navigate(`/student/test/combined?ids=${selectedQuizzes.join(',')}`);
     };
 
-    if (loading) return (
-        <div className="min-h-screen bg-background flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <FullScreenLoader />;
 
     if (!moduleData) return (
         <div className="min-h-screen bg-background flex items-center justify-center">
@@ -164,92 +161,84 @@ const ModuleDetails = () => {
 
     return (
         <div className="min-h-screen bg-background font-sans text-text">
-            {/* Hero Section with Blur Effect */}
-            <div className="relative overflow-hidden bg-surface-highlight border-b border-gray-200 dark:border-white/5">
-                {/* Background Blur */}
-                <div
-                    className="absolute inset-0 z-0 opacity-30 blur-3xl scale-110 pointer-events-none"
-                    style={{
-                        backgroundImage: `url(${displayImage})`,
-                        backgroundPosition: 'center',
-                        backgroundSize: 'cover',
-                    }}
-                />
+            {/* Hero Section matching Home Page */}
+            <div className="relative py-12 md:py-16 px-5 text-white overflow-hidden">
+                {/* Abstract Background */}
+                <div className="absolute inset-0 bg-primary z-0"></div>
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary-600 via-primary to-[#00d4ff] opacity-80 z-0"></div>
+                <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/20 rounded-full blur-3xl z-0"></div>
+                <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-white/10 rounded-full blur-2xl z-0"></div>
 
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 z-0 bg-gradient-to-b from-background/80 via-background/95 to-background" />
-
-                <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 md:py-20">
+                <div className="relative z-10 max-w-7xl mx-auto px-6">
                     <button
                         onClick={() => navigate(-1)}
-                        className="group flex items-center gap-2 text-gray-600 hover:text-black dark:text-muted dark:hover:text-white transition-colors mb-8"
+                        className="group flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-8"
                     >
-                        <div className="p-2 rounded-full bg-gray-200 group-hover:bg-gray-300 dark:bg-white/5 dark:group-hover:bg-white/10 transition-colors">
+                        <div className="p-2 rounded-full bg-white/10 group-hover:bg-white/20 transition-colors">
                             <ArrowLeft className="w-5 h-5" />
                         </div>
                         <span className="font-medium">Back to Courses</span>
                     </button>
 
                     <div className="flex flex-col md:flex-row gap-10 items-start">
-
                         {/* Content */}
                         <div className="flex-1 space-y-6">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
-                                    <span className="px-3 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-bold uppercase tracking-wider">
+                                    <span className="px-3 py-1 rounded-lg bg-white/20 text-white border border-white/30 text-xs font-bold uppercase tracking-wider shadow-glass">
                                         Module
                                     </span>
-                                    <span className="h-1 w-1 rounded-full bg-muted/30" />
-                                    <span className="text-muted text-sm font-semibold tracking-wide uppercase">
+                                    <span className="h-1 w-1 rounded-full bg-white/50" />
+                                    <span className="text-white/90 text-sm font-semibold tracking-wide uppercase">
                                         {moduleData.category}
                                     </span>
                                 </div>
 
-                                <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-white dark:to-white/70 leading-tight">
+                                <h1 className="text-4xl md:text-5xl font-display font-bold text-white leading-tight tracking-tight">
                                     {moduleData.title}
                                 </h1>
 
-                                <p className="text-lg text-text-secondary max-w-2xl leading-relaxed">
+                                <p className="text-lg text-white/90 max-w-2xl leading-relaxed">
                                     {moduleData.description || "Master the concepts in this comprehensive learning module."}
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-6 pt-4 border-t border-gray-200 dark:border-white/5">
-                                <div className="flex items-center gap-3 text-muted">
-                                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                            <div className="flex items-center gap-6 pt-6 border-t border-white/20">
+                                <div className="flex items-center gap-3 text-white/90">
+                                    <div className="p-2 rounded-lg bg-white/20 text-white shadow-glass">
                                         <BookOpen className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <p className="text-xs uppercase tracking-wider font-semibold opacity-70">Assessments</p>
-                                        <p className="font-bold text-text">{quizzes.length} Tests</p>
+                                        <p className="text-xs uppercase tracking-wider font-semibold opacity-80">Assessments</p>
+                                        <p className="font-bold text-white">{quizzes.length} Tests</p>
                                     </div>
                                 </div>
 
-                                <div className="w-px h-10 bg-gray-200 dark:bg-white/5" />
-                                <div className="flex items-center gap-3 text-muted">
-                                    <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+                                <div className="w-px h-10 bg-white/20" />
+                                <div className="flex items-center gap-3 text-white/90">
+                                    <div className="p-2 rounded-lg bg-white/20 text-white shadow-glass">
                                         <Activity className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <p className="text-xs uppercase tracking-wider font-semibold opacity-70">Students Finished</p>
-                                        <p className="font-bold text-text">{completedStudents} Students</p>
+                                        <p className="text-xs uppercase tracking-wider font-semibold opacity-80">Students Finished</p>
+                                        <p className="font-bold text-white">{completedStudents} Students</p>
                                     </div>
                                 </div>
 
                                 {moduleData.category?.toLowerCase() === 'global' && (
                                     <>
-                                        <div className="w-px h-10 bg-gray-200 dark:bg-white/5" />
-                                        <div className="flex items-center gap-3 text-muted">
-                                            <div className="p-2 rounded-lg bg-yellow-500/10 text-yellow-500">
-                                                <Star className="w-5 h-5 fill-yellow-500" />
+                                        <div className="w-px h-10 bg-white/20" />
+                                        <div className="flex items-center gap-3 text-white/90">
+                                            <div className="p-2 rounded-lg bg-white/20 text-white shadow-glass">
+                                                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                                             </div>
                                             <div>
-                                                <p className="text-xs uppercase tracking-wider font-semibold opacity-70">Your Rating</p>
+                                                <p className="text-xs uppercase tracking-wider font-semibold opacity-80">Your Rating</p>
                                                 <div className="flex items-center gap-1">
-                                                    <p className="font-bold text-text">4.8</p>
+                                                    <p className="font-bold text-white">4.8</p>
                                                     <div className="flex">
                                                         {[1, 2, 3, 4, 5].map((star) => (
-                                                            <Star key={star} className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                                                            <Star key={star} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                                                         ))}
                                                     </div>
                                                 </div>
@@ -262,8 +251,8 @@ const ModuleDetails = () => {
                                     onClick={togglePractice}
                                     disabled={practiceLoading}
                                     className={`ml-auto px-6 py-3 font-bold rounded-xl transition-all shadow-lg flex items-center gap-2 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${isAddedToPractice
-                                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-emerald-500/10'
-                                        : 'bg-primary hover:bg-primary/90 text-white shadow-primary/25'
+                                        ? 'bg-white/20 text-white border border-white/30 shadow-glass'
+                                        : 'bg-white text-primary hover:bg-gray-50 shadow-xl'
                                         }`}
                                 >
                                     {isAddedToPractice ? (
@@ -275,7 +264,7 @@ const ModuleDetails = () => {
                                         <>
                                             <span>Add to My Practice</span>
                                             {practiceLoading ? (
-                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                                             ) : (
                                                 <ArrowRight className="w-5 h-5" />
                                             )}
@@ -334,7 +323,7 @@ const ModuleDetails = () => {
                             {quizzes.map((quiz, index) => (
                                 <div
                                     key={quiz.id}
-                                    onClick={() => isSelectionMode ? toggleQuizSelection(quiz.id) : navigate(`/course/details/${quiz.id}`)}
+                                    onClick={() => isSelectionMode ? toggleQuizSelection(quiz.id) : navigate(moduleData?.title?.toLowerCase().includes('placement race 2026') ? `/student/test/${quiz.id}` : `/course/details/${quiz.id}`)}
                                     className="group cursor-pointer"
                                     style={{ animationDelay: `${index * 100}ms` }}
                                 >
@@ -386,7 +375,7 @@ const ModuleDetails = () => {
                                             {!isSelectionMode && (
                                                 <div className="flex items-center justify-between pt-6 border-t border-white/5 mt-auto">
                                                     <button className="flex-1 bg-primary/10 hover:bg-primary/20 text-primary font-bold py-2.5 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-primary/10 border border-primary/20 hover:border-primary/40">
-                                                        Start Practice
+                                                        {moduleData?.title?.toLowerCase().includes('placement race 2026') ? 'Take Mock Test' : 'Start Practice'}
                                                         <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                                                     </button>
                                                 </div>

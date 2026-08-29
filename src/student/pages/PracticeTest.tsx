@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { Check, X, Sparkles, Lightbulb, Moon, Sun, ChevronLeft, ChevronRight, CheckCircle2, Loader2, ZoomIn, BookOpen, BrainCircuit, Target, ListChecks, Calculator as CalculatorIcon, RotateCcw, Play, Code2, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../../shared/context/ThemeContext';
+import FullScreenLoader from '../../shared/components/FullScreenLoader';
 import { supabase } from '../../lib/supabase';
 import { searchVideos, VideoResult } from '../services/videoSearchService';
 import { Youtube, PlayCircle } from 'lucide-react';
@@ -409,12 +410,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-background text-text">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <span className="ml-2 text-lg">Loading Practice Session...</span>
-            </div>
-        );
+        return <FullScreenLoader />;
     }
 
     if (questions.length === 0) {
@@ -449,7 +445,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between transition-all">
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate('/')}>
-                        <img src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg group-hover:scale-105 transition-transform" />
+                        <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg group-hover:scale-105 transition-transform" />
                     </div>
                 </div>
 

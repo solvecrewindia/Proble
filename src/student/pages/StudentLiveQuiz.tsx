@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import FullScreenLoader from '../../shared/components/FullScreenLoader';
 import { useAuth } from '../../shared/context/AuthContext';
 import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
@@ -544,7 +545,7 @@ export default function StudentLiveQuiz() {
         }
     };
 
-    if (loading || authLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
+    if (loading || authLoading) return <FullScreenLoader />;
 
     // --- QUICK JOIN / NAME PROMPT GATE ---
     // Show a simplified entry screen if the user is not logged in or missing details
@@ -892,7 +893,7 @@ export default function StudentLiveQuiz() {
             {/* Header */}
             <header className={cn("sticky top-0 z-50 px-6 py-3 flex items-center justify-between", isGameMode ? "bg-indigo-900/50 backdrop-blur-md border-b border-indigo-500/20" : "bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800")}>
                 <div className="flex items-center gap-4">
-                    <img src={theme === 'dark' ? "/logo-dark.png" : "/logo-light.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg" />
+                    <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg" />
                     <div className="flex items-center gap-2 px-3 py-1 bg-surface rounded-full border border-neutral-200 dark:border-neutral-800">
                         <div className={cn("w-2 h-2 rounded-full",
                             realtimeStatus === 'connected' ? "bg-green-500 animate-pulse" :

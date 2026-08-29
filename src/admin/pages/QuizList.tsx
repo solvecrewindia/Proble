@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Plus, Clock, FileText, ChevronRight, ArrowLeft, Trash2, Folder, Layers, Edit } from 'lucide-react';
+import { Plus, Clock, FileText, ChevronRight, ArrowLeft, Trash2, Folder, Layers, Edit, Download } from 'lucide-react';
 import { Module } from '../../faculty/types';
 
 const QuizList = () => {
@@ -106,6 +106,52 @@ const QuizList = () => {
         } catch (error) {
             console.error('Error deleting module:', error);
             alert('Failed to delete module');
+        }
+    };
+
+    const handleDownloadExcel = async (e: React.MouseEvent, quizId: string, quizTitle: string) => {
+        e.stopPropagation();
+        try {
+            const { data, error } = await supabase
+                .from('quiz_results')
+                .select(`
+                    *,
+                    profiles (username, email, registration_number)
+                `)
+                .eq('quiz_id', quizId)
+                .order('percentage', { ascending: false });
+
+            if (error) throw error;
+            if (!data || data.length === 0) {
+                alert('No attendees for this test yet.');
+                return;
+            }
+
+            const csvContent = [
+                ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Date'],
+                ...data.map(res => [
+                    res.profiles?.username || 'Unknown',
+                    res.profiles?.registration_number || 'N/A',
+                    res.profiles?.email || 'N/A',
+                    res.score,
+                    res.total_questions,
+                    `${res.percentage.toFixed(2)}%`,
+                    new Date(res.created_at).toLocaleDateString()
+                ])
+            ].map(e => e.join(",")).join("\n");
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `${quizTitle}_results.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error downloading results:', error);
+            alert('Failed to download results');
         }
     };
 
@@ -300,13 +346,24 @@ const QuizList = () => {
                                         {quiz.settings?.duration || 60} min
                                     </span>
 
-                                    <button
-                                        onClick={(e) => handleDeleteQuiz(e, quiz.id)}
-                                        className="p-2 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                        title="Delete Quiz"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        {categoryTitle === 'PROBLE ORIGINALS' && (
+                                            <button
+                                                onClick={(e) => handleDownloadExcel(e, quiz.id, quiz.title)}
+                                                className="p-2 text-text-secondary hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                title="Download Excel"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={(e) => handleDeleteQuiz(e, quiz.id)}
+                                            className="p-2 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Delete Quiz"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <h3 className="text-lg font-semibold text-text mb-2 line-clamp-2 group-hover:text-primary transition-colors">
