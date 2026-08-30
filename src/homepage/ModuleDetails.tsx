@@ -18,6 +18,7 @@ const ModuleDetails = () => {
     const [practiceLoading, setPracticeLoading] = useState(false);
     const [imgError, setImgError] = useState(false);
     const [completedStudents, setCompletedStudents] = useState(0);
+    const [completedQuizzes, setCompletedQuizzes] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchModuleData = async () => {
@@ -58,12 +59,17 @@ const ModuleDetails = () => {
                     const quizIds = sortedQuizzes.map(q => q.id);
                     const { data: resultsData } = await supabase
                         .from('quiz_results')
-                        .select('student_id')
+                        .select('student_id, quiz_id')
                         .in('quiz_id', quizIds);
                     
                     if (resultsData) {
                         const uniqueStudents = new Set(resultsData.map(r => r.student_id));
                         setCompletedStudents(uniqueStudents.size);
+                        
+                        if (user) {
+                            const userCompleted = resultsData.filter(r => r.student_id === user.id).map(r => r.quiz_id);
+                            setCompletedQuizzes(userCompleted);
+                        }
                     }
                 }
 
@@ -323,8 +329,18 @@ const ModuleDetails = () => {
                             {quizzes.map((quiz, index) => (
                                 <div
                                     key={quiz.id}
-                                    onClick={() => isSelectionMode ? toggleQuizSelection(quiz.id) : navigate(moduleData?.title?.toLowerCase().includes('placement race 2026') ? `/student/test/${quiz.id}` : `/course/details/${quiz.id}`)}
-                                    className="group cursor-pointer"
+                                    onClick={() => {
+                                        if (isSelectionMode) {
+                                            toggleQuizSelection(quiz.id);
+                                            return;
+                                        }
+                                        const isPlacementRace = moduleData?.title?.toLowerCase().includes('placement race');
+                                        if (isPlacementRace && completedQuizzes.includes(quiz.id)) {
+                                            return;
+                                        }
+                                        navigate(isPlacementRace ? `/student/test/${quiz.id}` : `/course/details/${quiz.id}`);
+                                    }}
+                                    className={`group ${moduleData?.title?.toLowerCase().includes('placement race') && completedQuizzes.includes(quiz.id) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
                                     style={{ animationDelay: `${index * 100}ms` }}
                                 >
                                     <div className={`h-full bg-surface border rounded-2xl flex flex-col transition-all duration-300 relative overflow-hidden ${isSelectionMode && selectedQuizzes.includes(quiz.id)
@@ -383,10 +399,16 @@ const ModuleDetails = () => {
 
                                             {!isSelectionMode && (
                                                 <div className="flex items-center justify-between pt-6 border-t border-white/5 mt-auto">
-                                                    <button className="flex-1 bg-primary/10 hover:bg-primary/20 text-primary font-bold py-2.5 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-primary/10 border border-primary/20 hover:border-primary/40">
-                                                        {moduleData?.title?.toLowerCase().includes('placement race 2026') ? 'Take Mock Test' : 'Start Practice'}
-                                                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                                                    </button>
+                                                    {moduleData?.title?.toLowerCase().includes('placement race') && completedQuizzes.includes(quiz.id) ? (
+                                                        <button disabled className="flex-1 bg-green-500/10 text-green-500 font-bold py-2.5 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 border border-green-500/20 cursor-not-allowed">
+                                                            <CheckCircle className="w-4 h-4" /> Already Done!
+                                                        </button>
+                                                    ) : (
+                                                        <button className="flex-1 bg-primary/10 hover:bg-primary/20 text-primary font-bold py-2.5 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-primary/10 border border-primary/20 hover:border-primary/40">
+                                                            {moduleData?.title?.toLowerCase().includes('placement race') ? 'Take Mock Test' : 'Start Practice'}
+                                                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
