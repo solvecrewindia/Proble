@@ -44,6 +44,7 @@ const QuizDetails = () => {
                     title: quizData.title,
                     description: quizData.description,
                     type: quizData.type,
+                    settings: quizData.settings,
                     duration: (quizData.settings?.duration || 60) + ' mins',
                     questions: count || 0,
                     difficulty: 'Intermediate',
