@@ -312,22 +312,22 @@ const QuizDetails = () => {
                         </div>
                     )}
 
-                    {/* Practice Mode Card */}
-                    {quiz.type !== 'master' && !isPlacement && (
+                    {/* Read Mode Card */}
+                    {quiz.settings?.readContent && (
                         <div
-                            onClick={() => navigate(`/student/practice/test/${id}`, { state: { antiCheatLevel: 'relaxed' } })}
-                            className="group relative bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-blue-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both"
+                            onClick={() => navigate(`/student/read/${id}`)}
+                            className="group relative bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-emerald-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
 
                             <div className="relative z-10 flex flex-col h-full">
 
-                                <h3 className="text-xl font-bold text-text mb-2 group-hover:text-blue-400 transition-colors">Practice Test</h3>
+                                <h3 className="text-xl font-bold text-text mb-2 group-hover:text-emerald-400 transition-colors">Study Material</h3>
                                 <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
-                                    Untimed learning environment with instant feedback and AI-powered explanations.
+                                    Read through the comprehensive study guide and notes before taking the test.
                                 </p>
-                                <div className="flex items-center text-sm font-bold text-[#61dafbaa] group-hover:translate-x-1 transition-transform">
-                                    Start Practice <ArrowRight className="w-4 h-4 ml-2" />
+                                <div className="flex items-center text-sm font-bold text-emerald-400 group-hover:translate-x-1 transition-transform">
+                                    Start Reading <ArrowRight className="w-4 h-4 ml-2" />
                                 </div>
                             </div>
                         </div>

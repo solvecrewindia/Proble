@@ -9,6 +9,7 @@ import JoinTest from './pages/JoinTest';
 import ProfileSettings from '../shared/pages/ProfileSettings';
 import FlashCards from './pages/FlashCards';
 import StudentLiveQuiz from './pages/StudentLiveQuiz';
+import ReadMode from './pages/ReadMode';
 const NoSidebarLayout = () => (
     <div className="min-h-screen flex bg-background">
         <main className="flex-1 flex justify-center transition-all duration-300 ease-in-out">
@@ -50,6 +51,7 @@ const StudentApp = () => {
             <Route path="practice/test/:id" element={<PracticeTest />} />
             <Route path="live/:id" element={<StudentLiveQuiz />} />
             <Route path="practice/flashcards/:id" element={<FlashCards />} />
+            <Route path="read/:id" element={<ReadMode />} />
         </Routes>
     );
 };

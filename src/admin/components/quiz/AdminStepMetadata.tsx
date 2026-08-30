@@ -76,6 +76,20 @@ export function AdminStepMetadata({ data, update }: any) {
                     />
                 </div>
 
+                <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-text flex items-center gap-2">
+                        Read Page Content (LaTeX Supported)
+                        <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] uppercase font-bold tracking-wider">New</span>
+                    </label>
+                    <textarea
+                        className="flex min-h-[200px] w-full rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text transition-all font-mono"
+                        placeholder="Write blog-like study material here. LaTeX is supported e.g. O(n^2)."
+                        value={data.settings?.readContent || ''}
+                        onChange={(e) => update({ settings: { ...data.settings, readContent: e.target.value } })}
+                    />
+                    <p className="text-xs text-muted">If filled, students will see a 'Read Mode' card instead of 'Practice Mode'.</p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-text">Anti-Cheat Level</label>

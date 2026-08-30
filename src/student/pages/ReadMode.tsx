@@ -1,0 +1,100 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { ArrowLeft, BookOpen, ArrowRight, Loader2 } from 'lucide-react';
+import { MathText } from '../../shared/components/MathText';
+
+const ReadMode = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+
+    const [quiz, setQuiz] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const fetchContent = async () => {
+            if (!id) return;
+            try {
+                const { data, error } = await supabase
+                    .from('quizzes')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error) throw error;
+                if (!data) throw new Error("Not found");
+
+                setQuiz(data);
+            } catch (err: any) {
+                console.error(err);
+                setError(err.message || "Failed to load content");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchContent();
+    }, [id]);
+
+    if (loading) return <div className="min-h-screen bg-background text-text flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+    if (error || !quiz) return <div className="min-h-screen bg-background text-text flex items-center justify-center text-red-500">{error || "Content not found."}</div>;
+
+    const readContent = quiz.settings?.readContent || "";
+
+    return (
+        <div className="min-h-screen bg-background text-text font-sans">
+            <div className="max-w-4xl mx-auto px-6 pt-8 pb-24">
+                {/* Back Button */}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="flex items-center gap-2 text-muted hover:text-text transition-colors mb-10 group"
+                >
+                    <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+                    <span className="text-sm font-medium">Back to details</span>
+                </button>
+
+                {/* Header Section */}
+                <div className="mb-12 border-b border-neutral-200 dark:border-neutral-800 pb-10">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+                        <BookOpen className="w-4 h-4" />
+                        <span>Study Material</span>
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-text leading-tight mb-6">
+                        {quiz.title}
+                    </h1>
+                    {quiz.description && (
+                        <p className="text-muted text-lg leading-relaxed">
+                            {quiz.description}
+                        </p>
+                    )}
+                </div>
+
+                {/* Content Section */}
+                <div className="prose prose-lg dark:prose-invert max-w-none mb-16">
+                    {/* Render LaTeX and text using MathText. We might need to split by lines or just pass it fully. MathText handles large blocks if it splits by \n. Let's wrap in whitespace-pre-wrap for basic formatting if it's text. */}
+                    <div className="whitespace-pre-wrap text-lg leading-relaxed text-text-secondary">
+                        <MathText text={readContent} />
+                    </div>
+                </div>
+
+                {/* Footer Action */}
+                <div className="mt-16 pt-8 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-6 bg-surface/50 p-8 rounded-3xl">
+                    <div>
+                        <h3 className="text-xl font-bold mb-2">Ready to test your knowledge?</h3>
+                        <p className="text-muted text-sm">Take the mock test based on this material.</p>
+                    </div>
+                    <button
+                        onClick={() => navigate(`/student/test/${id}`)}
+                        className="w-full sm:w-auto px-8 py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center gap-2"
+                    >
+                        Take Test Now
+                        <ArrowRight className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ReadMode;
