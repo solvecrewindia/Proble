@@ -73,10 +73,10 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ url, code, onClose }) 
                 </div>
 
                 <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-white/5 grid grid-cols-2 gap-3">
-                    <Button variant="outline" onClick={copyToClipboard} className="w-full">
+                    <Button type="button" variant="outline" onClick={copyToClipboard} className="w-full">
                         <Copy className="w-4 h-4 mr-2" /> Copy Link
                     </Button>
-                    <Button onClick={downloadQRCode} className="w-full">
+                    <Button type="button" onClick={downloadQRCode} className="w-full">
                         <Download className="w-4 h-4 mr-2" /> Download
                     </Button>
                 </div>

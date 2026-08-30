@@ -1,4 +1,4 @@
-﻿import { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download, PlusCircle, MinusCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
@@ -572,6 +572,7 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="text-sm font-medium text-text">Required Columns (Exact Match)</h3>
                                 <Button
+                                    type="button"
                                     variant="outline"
                                     size="sm"
                                     onClick={downloadTemplate}
