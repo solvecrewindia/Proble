@@ -22,6 +22,7 @@ const QuizDetails = () => {
     const [isAddedToPractice, setIsAddedToPractice] = useState(false);
     const [practiceLoading, setPracticeLoading] = useState(false);
     const [moduleId, setModuleId] = useState<string | null>(null);
+    const [isAlreadyDone, setIsAlreadyDone] = useState(false);
 
     useEffect(() => {
         const fetchQuiz = async () => {
@@ -73,6 +74,19 @@ const QuizDetails = () => {
                         alert(`This quiz is restricted to users from ${quizData.settings.allowedDomain} only.`);
                         navigate('/'); // Redirect to home or another page
                         return;
+                    }
+                }
+
+                if (user) {
+                    const { data: resultData } = await supabase
+                        .from('quiz_results')
+                        .select('id')
+                        .eq('quiz_id', quizData.id)
+                        .eq('student_id', user.id)
+                        .maybeSingle();
+                    
+                    if (resultData) {
+                        setIsAlreadyDone(true);
                     }
                 }
             }
@@ -297,7 +311,7 @@ const QuizDetails = () => {
                     {/* Practice Mode Card */}
                     {quiz.type !== 'master' && (
                         <div
-                            onClick={() => navigate(`/student/practice/setup/${id}`)}
+                            onClick={() => navigate(`/student/practice/test/${id}`, { state: { antiCheatLevel: 'relaxed' } })}
                             className="group relative bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-blue-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both"
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
@@ -320,26 +334,34 @@ const QuizDetails = () => {
                         const isMaster = quiz.type === 'master';
                         const startTime = quiz.settings?.scheduledAt ? new Date(quiz.settings.scheduledAt) : null;
                         const isNotStartedYet = startTime && new Date() < startTime;
+                        
+                        const isOriginals = quiz.type === 'originals' || quiz.type === 'ORIGINALS';
+                        const preventRetake = isOriginals && isAlreadyDone;
 
                         return (
                             <div
-                                onClick={() => !isNotStartedYet && navigate(`/student/test/${id}`)}
-                                className={`group relative bg-surface border border-neutral-800 rounded-3xl p-8 transition-all duration-500 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${isMaster ? 'md:col-span-2' : ''} ${isNotStartedYet ? 'opacity-70 cursor-not-allowed' : 'hover:bg-surface-highlight hover:border-cyan-500/50 cursor-pointer hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1'}`}
+                                onClick={() => {
+                                    if (preventRetake) return;
+                                    if (!isNotStartedYet) navigate(`/student/test/${id}`);
+                                }}
+                                className={`group relative bg-surface border border-neutral-800 rounded-3xl p-8 transition-all duration-500 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${isMaster ? 'md:col-span-2' : ''} ${isNotStartedYet || preventRetake ? 'opacity-70 cursor-not-allowed' : 'hover:bg-surface-highlight hover:border-cyan-500/50 cursor-pointer hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1'}`}
                             >
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
 
                                 <div className="relative z-10 flex flex-col h-full">
 
-                                    <h3 className={`text-xl font-bold mb-2 transition-colors ${isNotStartedYet ? 'text-text' : 'text-text group-hover:text-cyan-400'}`}>
+                                    <h3 className={`text-xl font-bold mb-2 transition-colors ${isNotStartedYet || preventRetake ? 'text-text' : 'text-text group-hover:text-cyan-400'}`}>
                                         Mock Test
                                     </h3>
                                     <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
-                                        {isNotStartedYet
-                                            ? `This test has not started yet. Please wait until ${startTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
-                                            : "Full exam simulation under strict timed conditions. Get detailed analytics and global ranking."}
+                                        {preventRetake 
+                                            ? "You have already completed this original mock test."
+                                            : isNotStartedYet
+                                                ? `This test has not started yet. Please wait until ${startTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
+                                                : "Full exam simulation under strict timed conditions. Get detailed analytics and global ranking."}
                                     </p>
-                                    <div className={`flex items-center text-sm font-bold transition-transform ${isNotStartedYet ? 'text-muted' : 'text-[#61dafbaa] group-hover:translate-x-1'}`}>
-                                        {isNotStartedYet ? 'Scheduled' : 'Begin Exam'} {!isNotStartedYet && <ArrowRight className="w-4 h-4 ml-2" />}
+                                    <div className={`flex items-center text-sm font-bold transition-transform ${isNotStartedYet || preventRetake ? 'text-muted' : 'text-[#61dafbaa] group-hover:translate-x-1'}`}>
+                                        {preventRetake ? 'Already Done!' : isNotStartedYet ? 'Scheduled' : 'Begin Exam'} {!isNotStartedYet && !preventRetake && <ArrowRight className="w-4 h-4 ml-2" />}
                                     </div>
                                 </div>
                             </div>

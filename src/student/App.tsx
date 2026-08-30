@@ -5,7 +5,6 @@ import PracticeList from './pages/PracticeList';
 import CourseDetails from "./pages/courses/CourseDetails";
 import MCQTest from './pages/MCQTest';
 import PracticeTest from './pages/PracticeTest';
-import TestSetup from './pages/TestSetup';
 import JoinTest from './pages/JoinTest';
 import ProfileSettings from '../shared/pages/ProfileSettings';
 import FlashCards from './pages/FlashCards';
@@ -41,7 +40,6 @@ const StudentApp = () => {
 
             <Route element={<FullScreenLayout />}>
                 <Route path="/quiz/:id" element={<CourseDetails />} />
-                <Route path="practice/setup/:id" element={<TestSetup />} />
             </Route>
 
             <Route element={<StudentLayout />}>

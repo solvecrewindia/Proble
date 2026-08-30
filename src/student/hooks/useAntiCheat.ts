@@ -23,17 +23,17 @@ export const useAntiCheat = ({
     const [isFullScreen, setIsFullScreen] = useState(true); // Assume start in FS or prompt
     const [warning, setWarning] = useState<string | null>(null);
 
-    const triggerViolation = useCallback((type: string) => {
+    const triggerViolation = useCallback((type: string, instantTerminate: boolean = false) => {
         if (!enabled) return;
 
-        const currentCount = violations + 1;
+        const currentCount = instantTerminate ? effectiveLimit : violations + 1;
         setViolations(currentCount);
 
         // Notify parent
         if (onViolation) onViolation(currentCount, type);
 
         // Check limit - triggers auto-submit
-        if (currentCount >= effectiveLimit) {
+        if (currentCount >= effectiveLimit || instantTerminate) {
             if (onAutoSubmit) onAutoSubmit();
             setWarning(`Security Violation: ${type}. Exam Terminated.`);
         } else {
@@ -136,6 +136,18 @@ export const useAntiCheat = ({
         const preventDefault = (e: Event) => e.preventDefault();
 
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Screenshot detection (Instant Termination)
+            if (
+                e.key === 'PrintScreen' || 
+                (e.metaKey && e.shiftKey && e.key.toLowerCase() === 's') || 
+                (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key))
+            ) {
+                e.preventDefault();
+                triggerViolation("Screenshot Detected", true); // true = instant terminate
+                return;
+            }
+
+            // Normal restricted shortcuts (Triggers warning/strike)
             if (
                 (e.ctrlKey && ['c', 'v', 'x', 'p', 'u'].includes(e.key.toLowerCase())) ||
                 e.key === 'F12' ||

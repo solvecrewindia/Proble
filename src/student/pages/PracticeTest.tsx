@@ -163,7 +163,7 @@ const PracticeTest = () => {
         const hasOptionImages = q.options.some((o: any) => typeof o === 'object' && o.image);
         const hasImages = hasQuestionImage || hasOptionImages;
 
-        const model = hasImages ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
+        const model = 'groq/compound';
 
         let promptText = `
 You are an AI explanation engine for a student exam platform.
@@ -485,22 +485,24 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
             <main className="max-w-7xl mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 min-h-[calc(100vh-80px)]">
 
                 {/* --- LEFT: QUESTION --- */}
-                <div className="lg:col-span-8 flex flex-col gap-4">
-                    <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 md:p-6 shadow-sm flex flex-col gap-4 min-h-[350px]">
+                <div className="lg:col-span-8 flex flex-col gap-6">
+                    <div className="bg-surface/60 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl shadow-black/5 flex flex-col gap-6 min-h-[400px] relative overflow-hidden">
+                        {/* Decorative glow inside card */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] pointer-events-none" />
 
                         {/* Question Meta */}
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="font-medium text-muted bg-neutral-100 dark:bg-neutral-800 px-3 py-1 rounded-full text-xs">
-                                Question {currentQIndex + 1} / {questions.length}
+                        <div className="flex justify-between items-center text-sm relative z-10">
+                            <span className="font-semibold text-primary bg-primary/10 px-4 py-1.5 rounded-full text-xs border border-primary/20 shadow-sm">
+                                Question {currentQIndex + 1} <span className="text-primary/60">/ {questions.length}</span>
                             </span>
-                            <span className="text-muted font-mono text-[10px] uppercase tracking-wider">
+                            <span className="text-muted font-mono text-[10px] uppercase tracking-wider bg-black/5 dark:bg-white/5 px-3 py-1 rounded-md">
                                 PRACTICE MODE
                             </span>
                         </div>
 
                         {/* Question Text */}
-                        <div className="prose dark:prose-invert max-w-none">
-                                <MathText text={q.question} className="text-lg md:text-xl font-semibold leading-relaxed text-text" as="h2" />
+                        <div className="prose dark:prose-invert max-w-none select-none pointer-events-none relative z-10">
+                                <MathText text={q.question} className="text-xl md:text-2xl font-bold leading-relaxed text-text drop-shadow-sm" as="h2" />
                         </div>
 
                         {/* Optional Question Image */}
@@ -519,7 +521,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                         )}
 
                         {/* Options / Input */}
-                        <div className="mt-2 flex flex-col gap-2">
+                        <div className="mt-4 flex flex-col gap-3 relative z-10">
                             {(q.type === 'range' || q.type === 'numeric') ? (
                                 <div className="max-w-xs space-y-3">
                                     <div>
@@ -681,18 +683,18 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
 
                                     // Default State
                                     if (!isAnswered) {
-                                        variantClasses = "border-neutral-200 dark:border-neutral-700 bg-surface hover:border-primary/50 hover:bg-neutral-50 dark:hover:bg-white/5 cursor-pointer";
+                                        variantClasses = "border-black/5 dark:border-white/5 bg-surface hover:border-primary/30 hover:bg-surface-highlight hover:shadow-md cursor-pointer";
                                     } else {
                                         // Evaluation State
                                         if (idx === q.correct) {
                                             // Correct Option (Always Green)
-                                            variantClasses = "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400";
+                                            variantClasses = "border-green-500 bg-green-500/10 shadow-[0_0_20px_rgba(34,197,94,0.15)] text-green-700 dark:text-green-400 transform scale-[1.01]";
                                         } else if (idx === selectedOpt) {
                                             // Wrong Selection (Red)
-                                            variantClasses = "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400";
+                                            variantClasses = "border-red-500 bg-red-500/10 shadow-[0_0_20px_rgba(239,68,68,0.15)] text-red-700 dark:text-red-400 transform scale-[1.01]";
                                         } else {
                                             // Unselected Other Options (Dimmed)
-                                            variantClasses = "border-neutral-200 dark:border-neutral-700 bg-surface opacity-50";
+                                            variantClasses = "border-black/5 dark:border-white/5 bg-surface opacity-50";
                                         }
                                     }
 
@@ -701,24 +703,27 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                                             key={idx}
                                             onClick={() => handleOptionClick(idx)}
                                             className={cn(
-                                                "group relative p-3 rounded-lg border transition-all duration-200 flex items-center gap-3",
+                                                "group relative p-4 rounded-2xl border-2 transition-all duration-300 flex items-center gap-4 overflow-hidden",
                                                 variantClasses
                                             )}
                                         >
+                                            {/* Option Hover Glow */}
+                                            {!isAnswered && <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />}
+
                                             {/* Indicator */}
                                             <div className={cn(
-                                                "w-5 h-5 rounded-full border flex items-center justify-center transition-colors flex-shrink-0",
+                                                "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0 relative z-10",
                                                 isAnswered && idx === q.correct ? "border-green-500 bg-green-500" :
                                                     isAnswered && idx === selectedOpt ? "border-red-500 bg-red-500" :
-                                                        "border-neutral-300 dark:border-neutral-300 dark:border-neutral-600 group-hover:border-primary/60"
+                                                        "border-neutral-300 dark:border-neutral-600 group-hover:border-primary/60"
                                             )}>
                                                 {isAnswered && idx === q.correct && <Check className="w-3.5 h-3.5 text-white" />}
                                                 {isAnswered && idx === selectedOpt && idx !== q.correct && <X className="w-3.5 h-3.5 text-white" />}
                                             </div>
 
                                             {/* Content */}
-                                            <div className="flex-1">
-                                                <MathText text={optText} className="text-sm font-medium" />
+                                            <div className="flex-1 relative z-10">
+                                                <MathText text={optText} className="text-base font-medium transition-colors selection:bg-transparent" />
                                                 {optImg && (
                                                     <img
                                                         src={optImg}
@@ -746,13 +751,13 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                     </div>
 
                     {/* Navigation Bar */}
-                    <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 flex justify-between items-center shadow-sm sticky bottom-4">
+                    <div className="bg-surface/60 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-4 flex justify-between items-center shadow-lg shadow-black/5 sticky bottom-6 z-20">
                         <button
                             onClick={() => setCurrentQIndex(prev => Math.max(0, prev - 1))}
                             disabled={currentQIndex === 0}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm text-text hover:bg-neutral-100 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm text-text hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
                         >
-                            <ChevronLeft className="w-4 h-4" /> Previous
+                            <ChevronLeft className="w-5 h-5" /> Previous
                         </button>
 
                         <button
@@ -761,20 +766,20 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                                 else setCurrentQIndex(prev => Math.min(questions.length - 1, prev + 1));
                             }}
                             className={cn(
-                                "flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm text-white transition-all shadow-md",
+                                "flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 shadow-lg active:scale-95 group",
                                 currentQIndex === questions.length - 1
-                                    ? "bg-black dark:bg-white dark:text-black hover:scale-105"
-                                    : "bg-primary hover:bg-primary-dark hover:scale-105 shadow-primary/25"
+                                    ? "bg-text text-background hover:scale-105 hover:shadow-xl hover:shadow-text/20"
+                                    : "bg-primary text-white hover:bg-primary-dark hover:scale-105 hover:shadow-primary/30"
                             )}
                         >
                             {currentQIndex === questions.length - 1 ? 'Finish Practice' : 'Next'}
-                            {currentQIndex !== questions.length - 1 && <ChevronRight className="w-4 h-4" />}
+                            {currentQIndex !== questions.length - 1 && <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
                         </button>
                     </div>
 
                     {/* Related Videos Section (Moved to Left Column) */}
-                    {isAnswered && (aiExplanation || selectedOpt !== q.correct) && (
-                        <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+                    {isAnswered && (aiExplanation || selectedOpt !== q.correct) && (loadingVideos || videoError || relatedVideos.length > 0) && (
+                        <div className="bg-surface/60 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-6 shadow-2xl shadow-black/5 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
                             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                                 <Youtube className="w-5 h-5 text-red-600" />
                                 <h3 className="font-bold text-sm text-text">Recommended Study Videos</h3>
@@ -866,8 +871,8 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                 </div>
 
                 {/* --- RIGHT: AI EXPLANATION & VIDEOS --- */}
-                <div className="lg:col-span-4 space-y-4">
-                    <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 shadow-sm sticky top-20 overflow-hidden relative min-h-[300px] flex flex-col">
+                <div className="lg:col-span-4 space-y-6">
+                    <div className="bg-surface/60 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-6 shadow-2xl shadow-black/5 sticky top-24 overflow-hidden relative min-h-[300px] flex flex-col">
                         {/* Ambient Glow */}
                         <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
