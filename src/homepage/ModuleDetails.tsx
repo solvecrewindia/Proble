@@ -334,13 +334,9 @@ const ModuleDetails = () => {
                                             toggleQuizSelection(quiz.id);
                                             return;
                                         }
-                                        const isPlacementRace = moduleData?.title?.toLowerCase().includes('placement race');
-                                        if (isPlacementRace && completedQuizzes.includes(quiz.id)) {
-                                            return;
-                                        }
-                                        navigate(isPlacementRace ? `/student/test/${quiz.id}` : `/course/details/${quiz.id}`);
+                                        navigate(`/course/details/${quiz.id}`);
                                     }}
-                                    className={`group ${moduleData?.title?.toLowerCase().includes('placement race') && completedQuizzes.includes(quiz.id) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+                                    className="group cursor-pointer"
                                     style={{ animationDelay: `${index * 100}ms` }}
                                 >
                                     <div className={`h-full bg-surface border rounded-2xl flex flex-col transition-all duration-300 relative overflow-hidden ${isSelectionMode && selectedQuizzes.includes(quiz.id)
@@ -400,7 +396,7 @@ const ModuleDetails = () => {
                                             {!isSelectionMode && (
                                                 <div className="flex items-center justify-between pt-6 border-t border-white/5 mt-auto">
                                                     {moduleData?.title?.toLowerCase().includes('placement race') && completedQuizzes.includes(quiz.id) ? (
-                                                        <button disabled className="flex-1 bg-green-500/10 text-green-500 font-bold py-2.5 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 border border-green-500/20 cursor-not-allowed">
+                                                        <button className="flex-1 bg-green-500/10 hover:bg-green-500/20 text-green-500 font-bold py-2.5 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 border border-green-500/20 group-hover:shadow-lg group-hover:shadow-green-500/10">
                                                             <CheckCircle className="w-4 h-4" /> Already Done!
                                                         </button>
                                                     ) : (
