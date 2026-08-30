@@ -284,8 +284,12 @@ const QuizDetails = () => {
                 {/* Action Cards Grid */}
                 <h2 className="text-xl font-bold mb-6 text-text">Choose your mode</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Flashcards Card (Hero - Full Width) */}
-                    {quiz.type !== 'master' && quiz.type !== 'originals' && (
+                    {(() => {
+                        const isPlacement = quiz.type?.toLowerCase() === 'placement' || quiz.settings?.category?.toUpperCase() === 'PLACEMENT';
+                        return (
+                            <>
+                                {/* Flashcards Card (Hero - Full Width) */}
+                                {quiz.type !== 'master' && quiz.type !== 'originals' && !isPlacement && (
                         <div
                             onClick={() => navigate(`/student/practice/flashcards/${id}`)}
                             className="group relative md:col-span-2 bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-indigo-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both"
@@ -309,7 +313,7 @@ const QuizDetails = () => {
                     )}
 
                     {/* Practice Mode Card */}
-                    {quiz.type !== 'master' && (
+                    {quiz.type !== 'master' && !isPlacement && (
                         <div
                             onClick={() => navigate(`/student/practice/test/${id}`, { state: { antiCheatLevel: 'relaxed' } })}
                             className="group relative bg-surface hover:bg-surface-highlight border border-neutral-800 hover:border-blue-500/50 rounded-3xl p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both"
@@ -344,7 +348,7 @@ const QuizDetails = () => {
                                     if (preventRetake) return;
                                     if (!isNotStartedYet) navigate(`/student/test/${id}`);
                                 }}
-                                className={`group relative bg-surface border border-neutral-800 rounded-3xl p-8 transition-all duration-500 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${isMaster ? 'md:col-span-2' : ''} ${isNotStartedYet || preventRetake ? 'opacity-70 cursor-not-allowed' : 'hover:bg-surface-highlight hover:border-cyan-500/50 cursor-pointer hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1'}`}
+                                className={`group relative bg-surface border border-neutral-800 rounded-3xl p-8 transition-all duration-500 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${isMaster || isPlacement ? 'md:col-span-2' : ''} ${isNotStartedYet || preventRetake ? 'opacity-70 cursor-not-allowed' : 'hover:bg-surface-highlight hover:border-cyan-500/50 cursor-pointer hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1'}`}
                             >
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
 
@@ -366,6 +370,9 @@ const QuizDetails = () => {
                                 </div>
                             </div>
                         );
+                    })()}
+                    </>
+                    );
                     })()}
                 </div>
             </div>
