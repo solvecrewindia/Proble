@@ -82,15 +82,24 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
         }
     };
 
-    const downloadTemplate = () => {
-        const headers = ['Question No', 'Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer'];
-        const sampleRow = ['Q1', 'Sample Question?', 'Option A', 'Option B', 'Option C', 'Option D', 'A'];
+    const downloadTemplate = (e?: React.MouseEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        try {
+            const headers = ['Question No', 'Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer'];
+            const sampleRow = ['Q1', 'Sample Question?', 'Option A', 'Option B', 'Option C', 'Option D', 'A'];
 
-        const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Template");
+            const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template");
 
-        XLSX.writeFile(wb, "quiz_template.xlsx");
+            XLSX.writeFile(wb, "quiz_template.xlsx");
+        } catch (error: any) {
+            console.error("Error downloading template", error);
+            alert(`Failed to download template: ${error.message || error}`);
+        }
     };
 
     // Handle Excel Drop and Processing
