@@ -128,15 +128,14 @@ const QuizList = () => {
             }
 
             const csvContent = [
-                ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Date'],
+                ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage'],
                 ...data.map(res => [
                     res.profiles?.username || 'Unknown',
                     res.profiles?.registration_number || 'N/A',
                     res.profiles?.email || 'N/A',
                     res.score,
                     res.total_questions,
-                    `${res.percentage.toFixed(2)}%`,
-                    new Date(res.created_at).toLocaleDateString()
+                    `${res.percentage.toFixed(2)}%`
                 ])
             ].map(e => e.join(",")).join("\n");
 
