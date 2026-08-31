@@ -89,8 +89,8 @@ const ReadMode = () => {
                             li: ({node, ...props}) => <li className="" {...props} />,
                             strong: ({node, ...props}) => <strong className="font-bold text-text" {...props} />,
                             code: ({node, inline, ...props}: any) => 
-                                inline ? <code className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-sm text-primary font-mono" {...props} /> 
-                                       : <code className="block bg-neutral-100 dark:bg-neutral-800 p-4 rounded-lg text-sm font-mono overflow-x-auto mb-4" {...props} />,
+                                inline ? <code className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-sm text-primary font-mono font-medium" {...props} /> 
+                                       : <code className="block bg-[#0d1117] text-[#c9d1d9] p-5 rounded-xl text-[15px] font-mono overflow-x-auto mb-6 border border-neutral-800 shadow-xl" {...props} />,
                             pre: ({node, ...props}) => <pre className="bg-transparent p-0 m-0" {...props} />,
                             table: ({node, ...props}) => (
                                 <div className="overflow-x-auto my-6 rounded-xl border border-neutral-200 dark:border-neutral-800">
