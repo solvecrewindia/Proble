@@ -127,17 +127,33 @@ const QuizList = () => {
             // Fetch in-progress attempts
             const { data: attemptsData, error: attemptsError } = await supabase
                 .from('attempts')
-                .select(`
-                    *,
-                    profiles (username, email, registration_number)
-                `)
+                .select('*')
                 .eq('quiz_id', quizId);
                 
             if (attemptsError) throw attemptsError;
             
             // Filter out attempts that already have a completed result to avoid duplicates
             const completedStudentIds = new Set(resultsData?.map(r => r.student_id) || []);
-            const inProgressAttempts = (attemptsData || []).filter(a => !completedStudentIds.has(a.student_id));
+            let inProgressAttempts = (attemptsData || []).filter(a => !completedStudentIds.has(a.student_id));
+
+            // Manually fetch profiles for in-progress attempts since there might be no foreign key
+            if (inProgressAttempts.length > 0) {
+                const attemptStudentIds = inProgressAttempts.map(a => a.student_id);
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('id, username, email, registration_number')
+                    .in('id', attemptStudentIds);
+                
+                const profileMap = new Map();
+                if (profilesData) {
+                    profilesData.forEach(p => profileMap.set(p.id, p));
+                }
+                
+                inProgressAttempts = inProgressAttempts.map(a => ({
+                    ...a,
+                    profiles: profileMap.get(a.student_id) || null
+                }));
+            }
 
             if ((!resultsData || resultsData.length === 0) && inProgressAttempts.length === 0) {
                 alert('No attendees for this test yet (not even in-progress).');
