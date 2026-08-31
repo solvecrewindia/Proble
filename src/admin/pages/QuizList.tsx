@@ -112,7 +112,8 @@ const QuizList = () => {
     const handleDownloadExcel = async (e: React.MouseEvent, quizId: string, quizTitle: string) => {
         e.stopPropagation();
         try {
-            const { data, error } = await supabase
+            // Fetch completed results
+            const { data: resultsData, error: resultsError } = await supabase
                 .from('quiz_results')
                 .select(`
                     *,
@@ -121,22 +122,47 @@ const QuizList = () => {
                 .eq('quiz_id', quizId)
                 .order('percentage', { ascending: false });
 
-            if (error) throw error;
+            if (resultsError) throw resultsError;
             
-            if (!data || data.length === 0) {
-                alert('No attendees for this test yet.');
+            // Fetch in-progress attempts
+            const { data: attemptsData, error: attemptsError } = await supabase
+                .from('attempts')
+                .select(`
+                    *,
+                    profiles (username, email, registration_number)
+                `)
+                .eq('quiz_id', quizId);
+                
+            if (attemptsError) throw attemptsError;
+            
+            // Filter out attempts that already have a completed result to avoid duplicates
+            const completedStudentIds = new Set(resultsData?.map(r => r.student_id) || []);
+            const inProgressAttempts = (attemptsData || []).filter(a => !completedStudentIds.has(a.student_id));
+
+            if ((!resultsData || resultsData.length === 0) && inProgressAttempts.length === 0) {
+                alert('No attendees for this test yet (not even in-progress).');
                 return;
             }
 
             const csvContent = [
-                ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage'],
-                ...data.map(res => [
+                ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Status'],
+                ...(resultsData || []).map(res => [
                     res.profiles?.username || 'Unknown',
                     res.profiles?.registration_number || 'N/A',
                     res.profiles?.email || 'N/A',
                     res.score,
                     res.total_questions,
-                    `${(res.percentage || 0).toFixed(2)}%`
+                    `${(res.percentage || 0).toFixed(2)}%`,
+                    'Completed'
+                ]),
+                ...inProgressAttempts.map(att => [
+                    att.profiles?.username || 'Unknown',
+                    att.profiles?.registration_number || 'N/A',
+                    att.profiles?.email || 'N/A',
+                    att.score || 0,
+                    'N/A',
+                    '0.00%',
+                    'In Progress (Not Submitted)'
                 ])
             ].map(e => e.join(",")).join("\n");
 
