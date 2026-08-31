@@ -171,10 +171,7 @@ const PracticeList = () => {
                                     <div className="text-sm font-bold mb-2 line-clamp-2 h-10 text-text">{displayData.title}</div>
                                     <div className="flex justify-between text-xs text-muted items-center">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-[26px] h-[26px] rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                                                <span className="text-[10px] font-bold">F</span>
-                                            </div>
-                                            <span>Faculty</span>
+                                            <span className="text-xs font-semibold text-muted">Proble</span>
                                         </div>
                                         <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-[10px] uppercase">
                                             {displayData.category}

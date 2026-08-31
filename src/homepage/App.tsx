@@ -79,16 +79,16 @@ function App({ searchQuery = '' }: AppProps) {
 
         const getAuthorDetails = (uid: string) => {
           const profile = userMap.get(uid);
-          if (!profile) return { name: 'Faculty', avatar: undefined };
+          if (!profile) return { name: 'Proble', avatar: undefined };
           if (profile.role === 'admin') return { name: 'Proble', avatar: undefined };
           return {
-            name: profile.username || 'Faculty',
+            name: profile.username || 'Proble',
             avatar: profile.avatar_url || undefined
           };
         };
 
         const mappedModules: Course[] = modules.map((m: any) => {
-          const authorDetails = m.created_by ? getAuthorDetails(m.created_by) : { name: 'Faculty', avatar: undefined };
+          const authorDetails = m.created_by ? getAuthorDetails(m.created_by) : { name: 'Proble', avatar: undefined };
           return {
             id: m.id,
             title: m.title,
@@ -101,7 +101,7 @@ function App({ searchQuery = '' }: AppProps) {
         });
 
         const mappedQuizzes: Course[] = quizzes.map((q: any) => {
-          const authorDetails = q.created_by ? getAuthorDetails(q.created_by) : { name: 'Faculty', avatar: undefined };
+          const authorDetails = q.created_by ? getAuthorDetails(q.created_by) : { name: 'Proble', avatar: undefined };
           return {
             id: q.id,
             title: q.title,

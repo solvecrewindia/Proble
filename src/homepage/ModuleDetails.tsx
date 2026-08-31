@@ -17,7 +17,6 @@ const ModuleDetails = () => {
     const [isAddedToPractice, setIsAddedToPractice] = useState(false);
     const [practiceLoading, setPracticeLoading] = useState(false);
     const [imgError, setImgError] = useState(false);
-    const [completedStudents, setCompletedStudents] = useState(0);
     const [completedQuizzes, setCompletedQuizzes] = useState<string[]>([]);
 
     useEffect(() => {
@@ -54,7 +53,7 @@ const ModuleDetails = () => {
 
                 setQuizzes(sortedQuizzes);
 
-                // Fetch completed students count
+                // Fetch completed quizzes for the current user
                 if (sortedQuizzes.length > 0) {
                     const quizIds = sortedQuizzes.map(q => q.id);
                     const { data: resultsData } = await supabase
@@ -63,9 +62,6 @@ const ModuleDetails = () => {
                         .in('quiz_id', quizIds);
                     
                     if (resultsData) {
-                        const uniqueStudents = new Set(resultsData.map(r => r.student_id));
-                        setCompletedStudents(uniqueStudents.size);
-                        
                         if (user) {
                             const userCompleted = resultsData.filter(r => r.student_id === user.id).map(r => r.quiz_id);
                             setCompletedQuizzes(userCompleted);
@@ -217,17 +213,6 @@ const ModuleDetails = () => {
                                     <div>
                                         <p className="text-xs uppercase tracking-wider font-semibold opacity-80">Assessments</p>
                                         <p className="font-bold text-white">{quizzes.length} Tests</p>
-                                    </div>
-                                </div>
-
-                                <div className="w-px h-10 bg-white/20" />
-                                <div className="flex items-center gap-3 text-white/90">
-                                    <div className="p-2 rounded-lg bg-white/20 text-white shadow-glass">
-                                        <Activity className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs uppercase tracking-wider font-semibold opacity-80">Students Finished</p>
-                                        <p className="font-bold text-white">{completedStudents} Students</p>
                                     </div>
                                 </div>
 

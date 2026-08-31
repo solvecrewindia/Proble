@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2 } from 'lucide-react';
+import { Star, Clock, BookOpen, ArrowLeft, ArrowRight, Check, Plus, Loader2, Users } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../shared/context/AuthContext';
 
@@ -23,6 +23,7 @@ const QuizDetails = () => {
     const [practiceLoading, setPracticeLoading] = useState(false);
     const [moduleId, setModuleId] = useState<string | null>(null);
     const [isAlreadyDone, setIsAlreadyDone] = useState(false);
+    const [studentsCount, setStudentsCount] = useState(0);
 
     useEffect(() => {
         const fetchQuiz = async () => {
@@ -56,6 +57,17 @@ const QuizDetails = () => {
                 } else {
                     setModuleId(null);
                     checkPracticeStatus(null, quizData.id);
+                }
+
+                // Fetch total students who took this test
+                const { data: resultsDataForCount } = await supabase
+                    .from('quiz_results')
+                    .select('student_id')
+                    .eq('quiz_id', id);
+                
+                if (resultsDataForCount) {
+                    const uniqueStudents = new Set(resultsDataForCount.map(r => r.student_id));
+                    setStudentsCount(uniqueStudents.size);
                 }
 
                 if (quizData.type === 'global') {
@@ -246,6 +258,10 @@ const QuizDetails = () => {
                                 <BookOpen className="w-4 h-4" />
                                 <span>{quiz.questions} Questions</span>
                             </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border border-neutral-200 dark:border-neutral-700 text-sm font-medium text-muted">
+                                <Users className="w-4 h-4" />
+                                <span>{studentsCount} {studentsCount === 1 ? 'Student' : 'Students'} Finished</span>
+                            </div>
                             {quiz.type === 'global' && (
                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-sm font-medium text-yellow-600 dark:text-yellow-500">
                                     <Star className="w-4 h-4 fill-current" />
@@ -282,8 +298,7 @@ const QuizDetails = () => {
                     )}
                 </div>
 
-                {/* Action Cards Grid */}
-                <h2 className="text-xl font-bold mb-6 text-text">Choose your mode</h2>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {(() => {
                         const isPlacement = quiz.type?.toLowerCase() === 'placement' || quiz.settings?.category?.toUpperCase() === 'PLACEMENT';
