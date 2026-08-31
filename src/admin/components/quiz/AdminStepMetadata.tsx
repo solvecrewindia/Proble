@@ -1,11 +1,97 @@
 import React, { useState } from 'react';
 import { Input } from '../../../faculty/components/ui/Input';
 import { supabase } from '../../../lib/supabase';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, FileText } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
+import * as mammoth from 'mammoth';
+import TurndownService from 'turndown';
+// @ts-ignore
+import { gfm } from 'turndown-plugin-gfm';
 
 export function AdminStepMetadata({ data, update }: any) {
     const [uploading, setUploading] = useState(false);
+    const [importingWord, setImportingWord] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleWordImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setImportingWord(true);
+            const arrayBuffer = await file.arrayBuffer();
+
+            // Custom image converter for mammoth
+            const options = {
+                convertImage: mammoth.images.inline(async (element: any) => {
+                    try {
+                        const contentType = element.contentType;
+                        const buffer = await element.read();
+                        // Create a blob from buffer
+                        const blob = new Blob([buffer], { type: contentType });
+                        // Create a File object
+                        const fileExt = contentType.split('/')[1] || 'png';
+                        const fileName = `word-img-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+                        const fileObj = new File([blob], fileName, { type: contentType });
+
+                        // Compress image
+                        const compOptions = {
+                            maxSizeMB: 0.1,
+                            maxWidthOrHeight: 1200,
+                            useWebWorker: true
+                        };
+                        const compressedFile = await imageCompression(fileObj, compOptions);
+
+                        // Upload to Supabase
+                        const { error: uploadError } = await supabase.storage
+                            .from('quiz-banners')
+                            .upload(fileName, compressedFile);
+
+                        if (uploadError) throw uploadError;
+
+                        // Get Public URL
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('quiz-banners')
+                            .getPublicUrl(fileName);
+
+                        return { src: publicUrl };
+                    } catch (err) {
+                        console.error("Failed to upload image from word doc", err);
+                        return { src: "" }; // Fallback
+                    }
+                })
+            };
+
+            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer }, options);
+            const html = result.value;
+
+            // Convert HTML to Markdown using Turndown
+            const turndownService = new TurndownService({
+                headingStyle: 'atx',
+                bulletListMarker: '-',
+                codeBlockStyle: 'fenced'
+            });
+            
+            turndownService.use(gfm);
+            
+            const markdown = turndownService.turndown(html);
+
+            // Update the content
+            const currentContent = data.settings?.readContent || '';
+            const newContent = currentContent ? `${currentContent}\n\n${markdown}` : markdown;
+            
+            update({ settings: { ...data.settings, readContent: newContent } });
+            
+            // Clear input
+            if (fileInputRef.current) fileInputRef.current.value = '';
+
+        } catch (error) {
+            console.error('Error importing word document:', error);
+            alert('Failed to import Word document. Please try again.');
+        } finally {
+            setImportingWord(false);
+        }
+    };
 
     const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -77,10 +163,34 @@ export function AdminStepMetadata({ data, update }: any) {
                 </div>
 
                 <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-text flex items-center gap-2">
-                        Read Page Content (LaTeX Supported)
-                        <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] uppercase font-bold tracking-wider">New</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-text flex items-center gap-2">
+                            Read Page Content (LaTeX Supported)
+                            <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] uppercase font-bold tracking-wider">New</span>
+                        </label>
+                        <div>
+                            <input 
+                                type="file" 
+                                accept=".docx" 
+                                ref={fileInputRef} 
+                                className="hidden" 
+                                onChange={handleWordImport} 
+                            />
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={importingWord}
+                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                {importingWord ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <FileText className="w-3.5 h-3.5" />
+                                )}
+                                {importingWord ? 'Importing...' : 'Import Word (.docx)'}
+                            </button>
+                        </div>
+                    </div>
                     <textarea
                         className="flex min-h-[200px] w-full rounded-xl border border-neutral-300 dark:border-neutral-600 bg-background px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-text transition-all font-mono"
                         placeholder="Write blog-like study material here. LaTeX is supported e.g. O(n^2)."
