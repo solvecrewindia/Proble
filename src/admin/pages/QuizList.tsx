@@ -25,16 +25,12 @@ const QuizList = () => {
             setLoading(true);
 
             if (moduleId) {
-                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(moduleId);
-                let query = supabase.from('modules').select('*');
-                if (isUuid) {
-                    query = query.eq('id', moduleId);
-                } else {
-                    query = query.eq('slug', moduleId);
-                }
-
                 // Fetch specific Module details first
-                const { data: moduleData, error: moduleError } = await query.single();
+                const { data: moduleData, error: moduleError } = await supabase
+                    .from('modules')
+                    .select('*')
+                    .eq('id', moduleId)
+                    .single();
 
                 if (moduleError) throw moduleError;
                 setCurrentModule(moduleData);
@@ -43,7 +39,7 @@ const QuizList = () => {
                 const { data: quizData, error: quizError } = await supabase
                     .from('quizzes')
                     .select('*')
-                    .eq('module_id', moduleData.id);
+                    .eq('module_id', moduleId);
 
                 if (quizError) throw quizError;
                 setQuizzes(quizData || []);
@@ -127,48 +123,22 @@ const QuizList = () => {
 
             if (error) throw error;
             
-            let csvContent = "";
-
             if (!data || data.length === 0) {
-                // Fallback: check if anyone has this in their completed_quizzes array (for reading modules)
-                const { data: profileData, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('username, email, registration_number')
-                    .contains('completed_quizzes', [quizId]);
-                    
-                if (profileError) {
-                    console.error("Profile check error:", profileError);
-                    alert('No attendees for this test yet (and profile check failed). Make sure completed_quizzes column exists.');
-                    return;
-                }
-                
-                if (!profileData || profileData.length === 0) {
-                    alert('No attendees for this test yet.');
-                    return;
-                }
-                
-                csvContent = [
-                    ['Student Name', 'Reg. No', 'Email', 'Status'],
-                    ...profileData.map(p => [
-                        p.username || 'Unknown',
-                        p.registration_number || 'N/A',
-                        p.email || 'N/A',
-                        'Completed (Read/Practice)'
-                    ])
-                ].map(e => e.join(",")).join("\n");
-            } else {
-                csvContent = [
-                    ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage'],
-                    ...data.map(res => [
-                        res.profiles?.username || 'Unknown',
-                        res.profiles?.registration_number || 'N/A',
-                        res.profiles?.email || 'N/A',
-                        res.score,
-                        res.total_questions,
-                        `${(res.percentage || 0).toFixed(2)}%`
-                    ])
-                ].map(e => e.join(",")).join("\n");
+                alert('No attendees for this test yet.');
+                return;
             }
+
+            const csvContent = [
+                ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage'],
+                ...data.map(res => [
+                    res.profiles?.username || 'Unknown',
+                    res.profiles?.registration_number || 'N/A',
+                    res.profiles?.email || 'N/A',
+                    res.score,
+                    res.total_questions,
+                    `${(res.percentage || 0).toFixed(2)}%`
+                ])
+            ].map(e => e.join(",")).join("\n");
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");

@@ -45,7 +45,7 @@ function App({ searchQuery = '' }: AppProps) {
 
         // Optimized Select: Only fetch necessary fields
         const [modulesRes, quizzesRes] = await Promise.all([
-          supabase.from('modules').select('id, title, image_url, created_by, created_at, slug').eq('category', moduleCategory),
+          supabase.from('modules').select('id, title, image_url, created_by, created_at').eq('category', moduleCategory),
           supabase.from('quizzes').select('id, title, image_url, created_by, created_at, module_id').eq('type', dbType).order('created_at', { ascending: false })
         ]);
 
@@ -90,7 +90,7 @@ function App({ searchQuery = '' }: AppProps) {
         const mappedModules: Course[] = modules.map((m: any) => {
           const authorDetails = m.created_by ? getAuthorDetails(m.created_by) : { name: 'Proble', avatar: undefined };
           return {
-            id: m.slug || m.id,
+            id: m.id,
             title: m.title,
             author: authorDetails.name,
             author_avatar_url: authorDetails.avatar,
