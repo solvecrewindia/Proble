@@ -33,8 +33,7 @@ const ReadMode = () => {
                     quiz_id: id,
                     student_id: user.id,
                     status: 'completed',
-                    answers: { is_read_only: true },
-                    updated_at: new Date().toISOString()
+                    answers: { is_read_only: true }
                 }, { onConflict: 'student_id, quiz_id' });
             
             setIsModuleCompleted(true);

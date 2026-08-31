@@ -137,8 +137,7 @@ const MCQTest = () => {
                     quiz_id: id,
                     student_id: user.id,
                     answers: currentAnswers,
-                    status: 'in-progress',
-                    updated_at: new Date().toISOString()
+                    status: 'in-progress'
                 }, { onConflict: 'student_id, quiz_id' });
             } catch (err) {
                 console.error("Failed to save draft:", err);
@@ -360,7 +359,7 @@ const MCQTest = () => {
                             .eq('quiz_id', quizData.id)
                             .eq('student_id', user.id)
                             .eq('status', 'in-progress')
-                            .order('updated_at', { ascending: false }) // Get latest
+                            .order('created_at', { ascending: false }) // Get latest
                             .limit(1)
                             .single();
 
