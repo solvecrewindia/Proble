@@ -26,20 +26,17 @@ const ReadMode = () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not logged in");
 
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('completed_quizzes')
-                .eq('id', user.id)
-                .single();
-
-            const completed = profile?.completed_quizzes || [];
-            if (!completed.includes(id)) {
-                completed.push(id);
-                await supabase
-                    .from('profiles')
-                    .update({ completed_quizzes: completed })
-                    .eq('id', user.id);
-            }
+            // Save to attempts table instead of profiles to avoid needing DB schema changes
+            await supabase
+                .from('attempts')
+                .upsert({
+                    quiz_id: id,
+                    student_id: user.id,
+                    status: 'completed',
+                    answers: { is_read_only: true },
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'student_id, quiz_id' });
+            
             setIsModuleCompleted(true);
         } catch (error) {
             console.error('Error marking as read:', error);
@@ -67,13 +64,17 @@ const ReadMode = () => {
                 // Check completion status
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('completed_quizzes')
-                        .eq('id', user.id)
+                    // Check if they marked it as read in the attempts table
+                    const { data: readAttempt } = await supabase
+                        .from('attempts')
+                        .select('id, answers')
+                        .eq('quiz_id', id)
+                        .eq('student_id', user.id)
+                        .eq('status', 'completed')
+                        .limit(1)
                         .single();
                     
-                    if (profile?.completed_quizzes?.includes(id)) {
+                    if (readAttempt && readAttempt.answers && readAttempt.answers.is_read_only) {
                         setIsModuleCompleted(true);
                     }
 

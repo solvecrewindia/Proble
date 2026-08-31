@@ -124,7 +124,7 @@ const QuizList = () => {
 
             if (resultsError) throw resultsError;
             
-            // Fetch in-progress attempts
+            // Fetch all attempts
             const { data: attemptsData, error: attemptsError } = await supabase
                 .from('attempts')
                 .select('*')
@@ -134,11 +134,14 @@ const QuizList = () => {
             
             // Filter out attempts that already have a completed result to avoid duplicates
             const completedStudentIds = new Set(resultsData?.map(r => r.student_id) || []);
-            let inProgressAttempts = (attemptsData || []).filter(a => !completedStudentIds.has(a.student_id));
+            const validAttempts = (attemptsData || []).filter(a => !completedStudentIds.has(a.student_id));
+            
+            let inProgressAttempts = validAttempts.filter(a => !a.answers?.is_read_only);
+            let readOnlyAttendees = validAttempts.filter(a => a.answers?.is_read_only);
 
-            // Manually fetch profiles for in-progress attempts since there might be no foreign key
-            if (inProgressAttempts.length > 0) {
-                const attemptStudentIds = inProgressAttempts.map(a => a.student_id);
+            // Manually fetch profiles for attempts since there might be no foreign key
+            if (validAttempts.length > 0) {
+                const attemptStudentIds = validAttempts.map(a => a.student_id);
                 const { data: profilesData } = await supabase
                     .from('profiles')
                     .select('id, username, email, registration_number')
@@ -153,21 +156,11 @@ const QuizList = () => {
                     ...a,
                     profiles: profileMap.get(a.student_id) || null
                 }));
+                readOnlyAttendees = readOnlyAttendees.map(a => ({
+                    ...a,
+                    profiles: profileMap.get(a.student_id) || null
+                }));
             }
-
-            // Fetch students who marked this as 'Read/Completed' (from reading material)
-            const { data: readOnlyData, error: readOnlyError } = await supabase
-                .from('profiles')
-                .select('id, username, email, registration_number')
-                .contains('completed_quizzes', [quizId]);
-            
-            if (readOnlyError) console.error("Error fetching read-only attendees:", readOnlyError);
-            
-            // Filter out those who already have a result or attempt
-            const attemptStudentIdsSet = new Set(inProgressAttempts.map(a => a.student_id));
-            const readOnlyAttendees = (readOnlyData || []).filter(
-                p => !completedStudentIds.has(p.id) && !attemptStudentIdsSet.has(p.id)
-            );
 
             if ((!resultsData || resultsData.length === 0) && inProgressAttempts.length === 0 && readOnlyAttendees.length === 0) {
                 alert('No attendees for this test yet (not even in-progress).');
@@ -194,10 +187,10 @@ const QuizList = () => {
                     '0.00%',
                     'In Progress (Not Submitted)'
                 ]),
-                ...readOnlyAttendees.map(p => [
-                    p.username || 'Unknown',
-                    p.registration_number || 'N/A',
-                    p.email || 'N/A',
+                ...readOnlyAttendees.map(att => [
+                    att.profiles?.username || 'Unknown',
+                    att.profiles?.registration_number || 'N/A',
+                    att.profiles?.email || 'N/A',
                     'N/A',
                     'N/A',
                     'N/A',
