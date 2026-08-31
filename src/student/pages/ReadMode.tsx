@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, BookOpen, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
@@ -15,6 +15,38 @@ const ReadMode = () => {
     const [quiz, setQuiz] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isModuleCompleted, setIsModuleCompleted] = useState(false);
+    const [markingRead, setMarkingRead] = useState(false);
+
+    const handleMarkAsRead = async () => {
+        if (!id) return;
+        setMarkingRead(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not logged in");
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('completed_quizzes')
+                .eq('id', user.id)
+                .single();
+
+            const completed = profile?.completed_quizzes || [];
+            if (!completed.includes(id)) {
+                completed.push(id);
+                await supabase
+                    .from('profiles')
+                    .update({ completed_quizzes: completed })
+                    .eq('id', user.id);
+            }
+            setIsModuleCompleted(true);
+        } catch (error) {
+            console.error('Error marking as read:', error);
+            alert('Failed to mark as read');
+        } finally {
+            setMarkingRead(false);
+        }
+    };
 
     useEffect(() => {
         const fetchContent = async () => {
@@ -30,6 +62,20 @@ const ReadMode = () => {
                 if (!data) throw new Error("Not found");
 
                 setQuiz(data);
+
+                // Check completion status
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('completed_quizzes')
+                        .eq('id', user.id)
+                        .single();
+                    
+                    if (profile?.completed_quizzes?.includes(id)) {
+                        setIsModuleCompleted(true);
+                    }
+                }
             } catch (err: any) {
                 console.error(err);
                 setError(err.message || "Failed to load content");
@@ -114,6 +160,28 @@ const ReadMode = () => {
                         <h3 className="text-xl font-bold mb-2">Ready to test your knowledge?</h3>
                         <p className="text-muted text-sm">Take the mock test based on this material.</p>
                     </div>
+                    {isModuleCompleted ? (
+                        <div className="w-full sm:w-auto px-8 py-4 bg-green-500/20 text-green-400 font-bold rounded-2xl border border-green-500/50 flex items-center justify-center gap-2">
+                            <CheckCircle2 className="w-5 h-5" />
+                            Completed
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleMarkAsRead}
+                            disabled={markingRead}
+                            className="w-full sm:w-auto px-8 py-4 bg-surface hover:bg-surface-hover text-white font-bold rounded-2xl transition-all border border-white/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {markingRead ? (
+                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="w-5 h-5" />
+                                    Mark as Read
+                                </>
+                            )}
+                        </button>
+                    )}
+                    
                     <button
                         onClick={() => navigate(`/student/test/${id}`)}
                         className="w-full sm:w-auto px-8 py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center gap-2"

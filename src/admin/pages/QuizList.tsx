@@ -155,7 +155,21 @@ const QuizList = () => {
                 }));
             }
 
-            if ((!resultsData || resultsData.length === 0) && inProgressAttempts.length === 0) {
+            // Fetch students who marked this as 'Read/Completed' (from reading material)
+            const { data: readOnlyData, error: readOnlyError } = await supabase
+                .from('profiles')
+                .select('id, username, email, registration_number')
+                .contains('completed_quizzes', [quizId]);
+            
+            if (readOnlyError) console.error("Error fetching read-only attendees:", readOnlyError);
+            
+            // Filter out those who already have a result or attempt
+            const attemptStudentIdsSet = new Set(inProgressAttempts.map(a => a.student_id));
+            const readOnlyAttendees = (readOnlyData || []).filter(
+                p => !completedStudentIds.has(p.id) && !attemptStudentIdsSet.has(p.id)
+            );
+
+            if ((!resultsData || resultsData.length === 0) && inProgressAttempts.length === 0 && readOnlyAttendees.length === 0) {
                 alert('No attendees for this test yet (not even in-progress).');
                 return;
             }
@@ -169,7 +183,7 @@ const QuizList = () => {
                     res.score,
                     res.total_questions,
                     `${(res.percentage || 0).toFixed(2)}%`,
-                    'Completed'
+                    'Completed (Tested)'
                 ]),
                 ...inProgressAttempts.map(att => [
                     att.profiles?.username || 'Unknown',
@@ -179,6 +193,15 @@ const QuizList = () => {
                     'N/A',
                     '0.00%',
                     'In Progress (Not Submitted)'
+                ]),
+                ...readOnlyAttendees.map(p => [
+                    p.username || 'Unknown',
+                    p.registration_number || 'N/A',
+                    p.email || 'N/A',
+                    'N/A',
+                    'N/A',
+                    'N/A',
+                    'Completed (Read Only)'
                 ])
             ].map(e => e.join(",")).join("\n");
 
