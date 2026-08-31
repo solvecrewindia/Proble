@@ -123,44 +123,22 @@ const QuizList = () => {
 
             if (error) throw error;
             
-            let csvContent = "";
-
             if (!data || data.length === 0) {
-                // Fallback: check if anyone has this in their completed_quizzes array (for reading modules)
-                const { data: profileData, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('username, email, registration_number')
-                    .contains('completed_quizzes', [quizId]);
-                    
-                if (profileError) throw profileError;
-                
-                if (!profileData || profileData.length === 0) {
-                    alert('No attendees for this test yet.');
-                    return;
-                }
-                
-                csvContent = [
-                    ['Student Name', 'Reg. No', 'Email', 'Status'],
-                    ...profileData.map(p => [
-                        p.username || 'Unknown',
-                        p.registration_number || 'N/A',
-                        p.email || 'N/A',
-                        'Completed (Read/Practice)'
-                    ])
-                ].map(e => e.join(",")).join("\n");
-            } else {
-                csvContent = [
-                    ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage'],
-                    ...data.map(res => [
-                        res.profiles?.username || 'Unknown',
-                        res.profiles?.registration_number || 'N/A',
-                        res.profiles?.email || 'N/A',
-                        res.score,
-                        res.total_questions,
-                        `${res.percentage.toFixed(2)}%`
-                    ])
-                ].map(e => e.join(",")).join("\n");
+                alert('No attendees for this test yet.');
+                return;
             }
+
+            const csvContent = [
+                ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage'],
+                ...data.map(res => [
+                    res.profiles?.username || 'Unknown',
+                    res.profiles?.registration_number || 'N/A',
+                    res.profiles?.email || 'N/A',
+                    res.score,
+                    res.total_questions,
+                    `${(res.percentage || 0).toFixed(2)}%`
+                ])
+            ].map(e => e.join(",")).join("\n");
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
