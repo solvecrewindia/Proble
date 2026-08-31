@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { ArrowLeft, BookOpen, ArrowRight, Loader2 } from 'lucide-react';
-import { MathText } from '../../shared/components/MathText';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css'; // ensure katex css is loaded
 
 const ReadMode = () => {
     const { id } = useParams();
@@ -71,11 +74,27 @@ const ReadMode = () => {
                 </div>
 
                 {/* Content Section */}
-                <div className="prose prose-lg dark:prose-invert max-w-none mb-16">
-                    {/* Render LaTeX and text using MathText. We might need to split by lines or just pass it fully. MathText handles large blocks if it splits by \n. Let's wrap in whitespace-pre-wrap for basic formatting if it's text. */}
-                    <div className="whitespace-pre-wrap text-lg leading-relaxed text-text-secondary">
-                        <MathText text={readContent} />
-                    </div>
+                <div className="prose prose-lg dark:prose-invert max-w-none mb-16 font-sans text-text-secondary leading-relaxed break-words">
+                    <ReactMarkdown 
+                        remarkPlugins={[remarkMath]} 
+                        rehypePlugins={[rehypeKatex]}
+                        components={{
+                            h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-8 mb-4 text-text" {...props} />,
+                            h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-8 mb-4 border-b border-neutral-200 dark:border-neutral-800 pb-2 text-text" {...props} />,
+                            h3: ({node, ...props}) => <h3 className="text-xl font-bold mt-6 mb-3 text-text" {...props} />,
+                            p: ({node, ...props}) => <p className="mb-4" {...props} />,
+                            ul: ({node, ...props}) => <ul className="list-disc pl-8 mb-4 space-y-2" {...props} />,
+                            ol: ({node, ...props}) => <ol className="list-decimal pl-8 mb-4 space-y-2" {...props} />,
+                            li: ({node, ...props}) => <li className="" {...props} />,
+                            strong: ({node, ...props}) => <strong className="font-bold text-text" {...props} />,
+                            code: ({node, inline, ...props}: any) => 
+                                inline ? <code className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-sm text-primary font-mono" {...props} /> 
+                                       : <code className="block bg-neutral-100 dark:bg-neutral-800 p-4 rounded-lg text-sm font-mono overflow-x-auto mb-4" {...props} />,
+                            pre: ({node, ...props}) => <pre className="bg-transparent p-0 m-0" {...props} />
+                        }}
+                    >
+                        {readContent}
+                    </ReactMarkdown>
                 </div>
 
                 {/* Footer Action */}

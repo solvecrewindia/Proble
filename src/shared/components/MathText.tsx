@@ -39,7 +39,9 @@ const preprocessLatexStructure = (str: string) => {
         .replace(/\\begin\{center\}/g, '<div class="text-center my-4">')
         .replace(/\\end\{center\}/g, '</div>')
         // Boxed and text
-        .replace(/\\boxed\{([^{}]+)\}/g, '<span class="border border-neutral-300 dark:border-neutral-700 px-2 py-1 rounded">$1</span>');
+        .replace(/\\boxed\{([^{}]+)\}/g, '<span class="border border-neutral-300 dark:border-neutral-700 px-2 py-1 rounded">$1</span>')
+        // Paragraphs (double newlines)
+        .replace(/\n\s*\n/g, '<br/><br/>');
 };
 
 /**
