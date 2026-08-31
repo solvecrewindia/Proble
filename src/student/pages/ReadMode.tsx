@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { ArrowLeft, BookOpen, ArrowRight, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
+import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css'; // ensure katex css is loaded
 
@@ -76,7 +77,7 @@ const ReadMode = () => {
                 {/* Content Section */}
                 <div className="prose prose-lg dark:prose-invert max-w-none mb-16 font-sans text-text-secondary leading-relaxed break-words">
                     <ReactMarkdown 
-                        remarkPlugins={[remarkMath]} 
+                        remarkPlugins={[remarkMath, remarkGfm]} 
                         rehypePlugins={[rehypeKatex]}
                         components={{
                             h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-8 mb-4 text-text" {...props} />,
@@ -90,7 +91,17 @@ const ReadMode = () => {
                             code: ({node, inline, ...props}: any) => 
                                 inline ? <code className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-sm text-primary font-mono" {...props} /> 
                                        : <code className="block bg-neutral-100 dark:bg-neutral-800 p-4 rounded-lg text-sm font-mono overflow-x-auto mb-4" {...props} />,
-                            pre: ({node, ...props}) => <pre className="bg-transparent p-0 m-0" {...props} />
+                            pre: ({node, ...props}) => <pre className="bg-transparent p-0 m-0" {...props} />,
+                            table: ({node, ...props}) => (
+                                <div className="overflow-x-auto my-6 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                                    <table className="w-full text-left border-collapse" {...props} />
+                                </div>
+                            ),
+                            thead: ({node, ...props}) => <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800" {...props} />,
+                            tbody: ({node, ...props}) => <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800" {...props} />,
+                            tr: ({node, ...props}) => <tr className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors" {...props} />,
+                            th: ({node, ...props}) => <th className="px-6 py-4 font-bold text-text bg-surface" {...props} />,
+                            td: ({node, ...props}) => <td className="px-6 py-4 align-top" {...props} />,
                         }}
                     >
                         {readContent}

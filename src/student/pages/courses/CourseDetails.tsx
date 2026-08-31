@@ -239,7 +239,7 @@ const QuizDetails = () => {
 
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row gap-8 items-start justify-between mb-16 border-b border-neutral-200 dark:border-neutral-800 pb-12">
-                    <div className="space-y-6 max-w-2xl">
+                    <div className="space-y-6 max-w-4xl flex-1">
                         <div className="space-y-2">
                             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-text leading-tight text-balance">
                                 {quiz.title}
