@@ -378,20 +378,7 @@ const ModuleDetails = () => {
                                                 {quiz.description || "Test your knowledge with this comprehensive assessment."}
                                             </p>
 
-                                            {!isSelectionMode && (
-                                                <div className="flex items-center justify-between pt-6 border-t border-white/5 mt-auto">
-                                                    {moduleData?.title?.toLowerCase().includes('placement race') && completedQuizzes.includes(quiz.id) ? (
-                                                        <button className="flex-1 bg-green-500/10 hover:bg-green-500/20 text-green-500 font-bold py-2.5 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 border border-green-500/20 group-hover:shadow-lg group-hover:shadow-green-500/10">
-                                                            <CheckCircle className="w-4 h-4" /> Already Done!
-                                                        </button>
-                                                    ) : (
-                                                        <button className="flex-1 bg-primary/10 hover:bg-primary/20 text-primary font-bold py-2.5 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-primary/10 border border-primary/20 hover:border-primary/40">
-                                                            {moduleData?.title?.toLowerCase().includes('placement race') ? 'Take Mock Test' : 'Start Practice'}
-                                                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
+
                                         </div>
                                     </div>
                                 </div>

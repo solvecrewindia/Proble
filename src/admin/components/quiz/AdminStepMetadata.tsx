@@ -73,6 +73,20 @@ export function AdminStepMetadata({ data, update }: any) {
             });
             
             turndownService.use(gfm);
+
+            // Fix for word document table cells having paragraphs that break markdown tables
+            turndownService.addRule('table-cell-p', {
+                filter: function (node, options) {
+                    return (
+                        node.nodeName === 'P' &&
+                        node.parentNode &&
+                        (node.parentNode.nodeName === 'TD' || node.parentNode.nodeName === 'TH')
+                    );
+                },
+                replacement: function (content) {
+                    return content;
+                }
+            });
             
             const markdown = turndownService.turndown(html);
 
