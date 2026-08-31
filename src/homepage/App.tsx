@@ -46,11 +46,14 @@ function App({ searchQuery = '' }: AppProps) {
         // Optimized Select: Only fetch necessary fields
         const [modulesRes, quizzesRes] = await Promise.all([
           supabase.from('modules').select('id, title, image_url, created_by, created_at').eq('category', moduleCategory),
-          supabase.from('quizzes').select('id, title, image_url, created_by, created_at').eq('type', dbType).is('module_id', null).order('created_at', { ascending: false })
+          supabase.from('quizzes').select('id, title, image_url, created_by, created_at, module_id').eq('type', dbType).order('created_at', { ascending: false })
         ]);
 
         const modules = modulesRes.data || [];
-        const quizzes = quizzesRes.data || [];
+        const allQuizzes = quizzesRes.data || [];
+        
+        // Filter out quizzes that are part of a module (module_id is not null/empty)
+        const quizzes = allQuizzes.filter((q: any) => !q.module_id || q.module_id.trim() === '' || q.module_id === 'null');
 
         // Collect all distinct created_by IDs
         const userIds = new Set<string>();
