@@ -17,6 +17,7 @@ const ReadMode = () => {
     const [error, setError] = useState('');
     const [isModuleCompleted, setIsModuleCompleted] = useState(false);
     const [markingRead, setMarkingRead] = useState(false);
+    const [isTestAlreadyDone, setIsTestAlreadyDone] = useState(false);
 
     const handleMarkAsRead = async () => {
         if (!id) return;
@@ -74,6 +75,18 @@ const ReadMode = () => {
                     
                     if (profile?.completed_quizzes?.includes(id)) {
                         setIsModuleCompleted(true);
+                    }
+
+                    // Check if test was already submitted
+                    const { data: testResults } = await supabase
+                        .from('quiz_results')
+                        .select('id')
+                        .eq('quiz_id', id)
+                        .eq('student_id', user.id)
+                        .limit(1);
+                    
+                    if (testResults && testResults.length > 0) {
+                        setIsTestAlreadyDone(true);
                     }
                 }
             } catch (err: any) {
@@ -183,11 +196,18 @@ const ReadMode = () => {
                     )}
                     
                     <button
-                        onClick={() => navigate(`/student/test/${id}`)}
-                        className="w-full sm:w-auto px-8 py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center gap-2"
+                        onClick={() => {
+                            if (!isTestAlreadyDone) navigate(`/student/test/${id}`);
+                        }}
+                        disabled={isTestAlreadyDone}
+                        className={`w-full sm:w-auto px-8 py-4 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${
+                            isTestAlreadyDone 
+                                ? 'bg-surface border border-neutral-700 text-neutral-400 cursor-not-allowed opacity-80' 
+                                : 'bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl hover:-translate-y-1'
+                        }`}
                     >
-                        Take Test Now
-                        <ArrowRight className="w-5 h-5" />
+                        {isTestAlreadyDone ? 'Test Already Completed' : 'Take Test Now'}
+                        {!isTestAlreadyDone && <ArrowRight className="w-5 h-5" />}
                     </button>
                 </div>
             </div>

@@ -339,38 +339,35 @@ const MCQTest = () => {
                     // --- SERVER-SIDE RETAKE GUARD (cannot bypass with incognito/localStorage clear) ---
                     const { data: { user } } = await supabase.auth.getUser();
                     if (user) {
-                        const isMaster = quizData.type === 'master';
-                        if (isMaster) {
-                            // Check for COMPLETED attempts only
-                            const { data: completedAttempts } = await supabase
-                                .from('quiz_results')
-                                .select('id')
-                                .eq('quiz_id', quizData.id)
-                                .eq('student_id', user.id)
-                                .limit(1);
+                        // Check for COMPLETED attempts for ALL test types
+                        const { data: completedAttempts } = await supabase
+                            .from('quiz_results')
+                            .select('id')
+                            .eq('quiz_id', quizData.id)
+                            .eq('student_id', user.id)
+                            .limit(1);
 
-                            if (completedAttempts && completedAttempts.length > 0) {
-                                alert("You have already completed this assessment.");
-                                navigate(`/student/practice/${id}`);
-                                return;
-                            }
+                        if (completedAttempts && completedAttempts.length > 0) {
+                            alert("You have already completed this assessment. Retakes are not permitted.");
+                            navigate(`/student/practice/${id}`);
+                            return;
+                        }
 
-                            // Load Draft / In-Progress Attempt
-                            const { data: draftAttempt } = await supabase
-                                .from('attempts')
-                                .select('answers, status')
-                                .eq('quiz_id', quizData.id)
-                                .eq('student_id', user.id)
-                                .eq('status', 'in-progress')
-                                .order('updated_at', { ascending: false }) // Get latest
-                                .limit(1)
-                                .single();
+                        // Load Draft / In-Progress Attempt
+                        const { data: draftAttempt } = await supabase
+                            .from('attempts')
+                            .select('answers, status')
+                            .eq('quiz_id', quizData.id)
+                            .eq('student_id', user.id)
+                            .eq('status', 'in-progress')
+                            .order('updated_at', { ascending: false }) // Get latest
+                            .limit(1)
+                            .single();
 
-                            if (draftAttempt && draftAttempt.answers) {
-                                console.log("Restoring Data:", draftAttempt.answers);
-                                setAnswers(draftAttempt.answers);
-                                // Optional: Restore other state if saved
-                            }
+                        if (draftAttempt && draftAttempt.answers) {
+                            console.log("Restoring Data:", draftAttempt.answers);
+                            setAnswers(draftAttempt.answers);
+                            // Optional: Restore other state if saved
                         }
                     }
                 }

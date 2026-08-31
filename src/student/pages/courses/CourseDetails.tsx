@@ -355,8 +355,7 @@ const QuizDetails = () => {
                         const startTime = quiz.settings?.scheduledAt ? new Date(quiz.settings.scheduledAt) : null;
                         const isNotStartedYet = startTime && new Date() < startTime;
                         
-                        const isOriginals = quiz.type === 'originals' || quiz.type === 'ORIGINALS';
-                        const preventRetake = isOriginals && isAlreadyDone;
+                        const preventRetake = isAlreadyDone;
 
                         return (
                             <div
@@ -375,13 +374,13 @@ const QuizDetails = () => {
                                     </h3>
                                     <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
                                         {preventRetake 
-                                            ? "You have already completed this original mock test."
+                                            ? "You have already completed this test. Retakes are not permitted."
                                             : isNotStartedYet
                                                 ? `This test has not started yet. Please wait until ${startTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
                                                 : "Full exam simulation under strict timed conditions. Get detailed analytics and global ranking."}
                                     </p>
                                     <div className={`flex items-center text-sm font-bold transition-transform ${isNotStartedYet || preventRetake ? 'text-muted' : 'text-[#61dafbaa] group-hover:translate-x-1'}`}>
-                                        {preventRetake ? 'Already Done!' : isNotStartedYet ? 'Scheduled' : 'Begin Exam'} {!isNotStartedYet && !preventRetake && <ArrowRight className="w-4 h-4 ml-2" />}
+                                        {preventRetake ? 'Already Completed' : isNotStartedYet ? 'Scheduled' : 'Begin Exam'} {!isNotStartedYet && !preventRetake && <ArrowRight className="w-4 h-4 ml-2" />}
                                     </div>
                                 </div>
                             </div>
