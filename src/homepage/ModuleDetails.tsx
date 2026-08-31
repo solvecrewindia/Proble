@@ -25,12 +25,17 @@ const ModuleDetails = () => {
             setLoading(true);
 
             try {
+                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+                
+                let query = supabase.from('modules').select('*');
+                if (isUuid) {
+                    query = query.eq('id', id);
+                } else {
+                    query = query.eq('slug', id);
+                }
+
                 // 1. Fetch Module Details
-                const { data: mod, error: modError } = await supabase
-                    .from('modules')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
+                const { data: mod, error: modError } = await query.single();
 
                 if (modError) throw modError;
                 setModuleData(mod);
@@ -39,7 +44,7 @@ const ModuleDetails = () => {
                 const { data: quizList, error: quizError } = await supabase
                     .from('quizzes')
                     .select('*')
-                    .eq('module_id', id)
+                    .eq('module_id', mod.id)
                     .eq('status', 'active'); // Only show active quizzes
 
                 if (quizError) throw quizError;
@@ -75,7 +80,7 @@ const ModuleDetails = () => {
                         .from('user_practice')
                         .select('*')
                         .eq('user_id', user.id)
-                        .eq('module_id', id)
+                        .eq('module_id', mod.id)
                         .single();
 
                     if (practiceData) setIsAddedToPractice(true);
@@ -100,13 +105,14 @@ const ModuleDetails = () => {
 
         try {
             setPracticeLoading(true);
+            const targetModuleId = moduleData?.id || id;
             if (isAddedToPractice) {
                 // Remove
                 const { error } = await supabase
                     .from('user_practice')
                     .delete()
                     .eq('user_id', user.id)
-                    .eq('module_id', id);
+                    .eq('module_id', targetModuleId);
 
                 if (error) throw error;
                 setIsAddedToPractice(false);
@@ -116,7 +122,7 @@ const ModuleDetails = () => {
                     .from('user_practice')
                     .insert({
                         user_id: user.id,
-                        module_id: id
+                        module_id: targetModuleId
                     });
 
                 if (error) throw error;

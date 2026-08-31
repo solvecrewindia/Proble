@@ -12,6 +12,7 @@ const AdminModuleCreate = () => {
 
     // State
     const [title, setTitle] = useState('');
+    const [slug, setSlug] = useState('');
     const [description, setDescription] = useState('');
     const [imageUrl, setImageUrl] = useState('');
     const [saving, setSaving] = useState(false);
@@ -19,7 +20,7 @@ const AdminModuleCreate = () => {
     const [error, setError] = useState<string | null>(null);
 
     // Fetch existing module if editing
-    useState(() => {
+    useEffect(() => {
         const fetchModule = async () => {
             if (!moduleId) return;
             try {
@@ -33,6 +34,7 @@ const AdminModuleCreate = () => {
                 if (error) throw error;
                 if (data) {
                     setTitle(data.title);
+                    setSlug(data.slug || '');
                     setDescription(data.description || '');
                     setImageUrl(data.image_url || '');
                 }
@@ -45,7 +47,7 @@ const AdminModuleCreate = () => {
         };
 
         fetchModule();
-    });
+    }, [moduleId]);
 
     // Image Upload
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -105,6 +107,7 @@ const AdminModuleCreate = () => {
             setError(null);
 
             let result;
+            const finalSlug = slug.trim() ? slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') : null;
 
             if (moduleId) {
                 // UPDATE
@@ -112,6 +115,7 @@ const AdminModuleCreate = () => {
                     .from('modules')
                     .update({
                         title,
+                        slug: finalSlug,
                         description,
                         image_url: imageUrl,
                         // category: don't update category usually, or allow? let's keep it same
@@ -125,6 +129,7 @@ const AdminModuleCreate = () => {
                     .from('modules')
                     .insert({
                         title,
+                        slug: finalSlug,
                         description,
                         image_url: imageUrl,
                         category: category?.toUpperCase() === 'PROBLE ORIGINALS' ? 'ORIGINALS' : category?.toUpperCase(),
@@ -187,6 +192,19 @@ const AdminModuleCreate = () => {
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="e.g. Calculus I, Machine Learning Basics"
+                            className="w-full px-4 py-3 bg-background border border-white/10 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-muted"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-text-secondary mb-2">
+                            Custom URL Slug <span className="text-muted text-xs">(Optional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={slug}
+                            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                            placeholder="e.g. placementrace2026"
                             className="w-full px-4 py-3 bg-background border border-white/10 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-muted"
                         />
                     </div>
