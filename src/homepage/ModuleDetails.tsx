@@ -54,19 +54,19 @@ const ModuleDetails = () => {
                 setQuizzes(sortedQuizzes);
 
                 // Fetch completed quizzes for the current user
-                if (sortedQuizzes.length > 0) {
+                if (sortedQuizzes.length > 0 && user) {
                     const quizIds = sortedQuizzes.map(q => q.id);
-                    const { data: resultsData } = await supabase
-                        .from('quiz_results')
-                        .select('student_id, quiz_id')
-                        .in('quiz_id', quizIds);
+                    const [{ data: resultsData }, { data: attemptsData }] = await Promise.all([
+                        supabase.from('quiz_results').select('quiz_id').eq('student_id', user.id).in('quiz_id', quizIds),
+                        supabase.from('attempts').select('quiz_id, answers, status').eq('student_id', user.id).eq('status', 'completed').in('quiz_id', quizIds)
+                    ]);
                     
-                    if (resultsData) {
-                        if (user) {
-                            const userCompleted = resultsData.filter(r => r.student_id === user.id).map(r => r.quiz_id);
-                            setCompletedQuizzes(userCompleted);
-                        }
-                    }
+                    const completedSet = new Set([
+                        ...(resultsData || []).map(r => r.quiz_id),
+                        ...(attemptsData || []).filter(a => !a.answers?.is_read_only).map(a => a.quiz_id)
+                    ]);
+
+                    setCompletedQuizzes(Array.from(completedSet));
                 }
 
                 // 3. Check if added to practice

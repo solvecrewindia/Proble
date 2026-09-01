@@ -206,43 +206,77 @@ const MCQTest = () => {
             setScore(calculatedScore);
             setShowResults(true);
 
-            // --- SERVER-SIDE DUPLICATE CHECK (Zero-Trust) ---
-            // Even if the frontend somehow allowed a retake, verify at DB level.
-            const { data: existingResult } = await supabase
-                .from('quiz_results')
-                .select('id')
-                .eq('quiz_id', id)
-                .eq('student_id', user.id)
-                .limit(1);
+            // 3. Save to quiz_results (safely update if exists, else insert)
+            try {
+                const { data: existingQR } = await supabase
+                    .from('quiz_results')
+                    .select('id')
+                    .eq('quiz_id', id)
+                    .eq('student_id', user.id)
+                    .maybeSingle();
 
-            if (existingResult && existingResult.length > 0) {
-                console.warn("Duplicate submission blocked — result already exists for this student + quiz.");
-                localStorage.removeItem(`quiz_progress_${user.id}_${id}`);
-                return; // Don't save again
+                const totalQ = questions.length || 1;
+                const percentage = (calculatedScore / totalQ) * 100;
+
+                if (existingQR) {
+                    await supabase.from('quiz_results').update({
+                        score: calculatedScore,
+                        total_questions: questions.length,
+                        percentage: percentage
+                    }).eq('id', existingQR.id);
+                } else {
+                    const { error: insertErr } = await supabase.from('quiz_results').insert({
+                        quiz_id: id,
+                        student_id: user.id,
+                        score: calculatedScore,
+                        total_questions: questions.length,
+                        percentage: percentage,
+                        created_at: new Date().toISOString()
+                    });
+                    if (insertErr) {
+                        console.warn("Direct insert failed, attempting upsert fallback:", insertErr);
+                        await supabase.from('quiz_results').upsert({
+                            quiz_id: id,
+                            student_id: user.id,
+                            score: calculatedScore,
+                            total_questions: questions.length,
+                            percentage: percentage
+                        });
+                    }
+                }
+            } catch (qrErr) {
+                console.error("Failed to save quiz_results:", qrErr);
             }
 
-            // 3. Save to quiz_results (enforced by UNIQUE constraint on student_id, quiz_id)
-            // Using .upsert() so that even without the above check, the DB constraint
-            // will prevent a true duplicate row — it will update instead.
-            const { error: resultError } = await supabase.from('quiz_results').upsert({
-                quiz_id: id,
-                student_id: user.id,
-                score: calculatedScore,
-                total_questions: questions.length,
-                percentage: (calculatedScore / questions.length) * 100
-            }, { onConflict: 'student_id, quiz_id', ignoreDuplicates: true });
+            // 4. Mark Attempt as Completed (safely update or insert)
+            try {
+                const { data: existingAttempt } = await supabase
+                    .from('attempts')
+                    .select('id')
+                    .eq('quiz_id', id)
+                    .eq('student_id', user.id)
+                    .maybeSingle();
 
-            if (resultError) {
-                console.error("Failed to save quiz result:", resultError);
+                if (existingAttempt) {
+                    await supabase.from('attempts').update({
+                        status: 'completed',
+                        score: calculatedScore,
+                        completed_at: new Date().toISOString(),
+                        answers: answers // Final save
+                    }).eq('id', existingAttempt.id);
+                } else {
+                    await supabase.from('attempts').insert({
+                        quiz_id: id,
+                        student_id: user.id,
+                        status: 'completed',
+                        score: calculatedScore,
+                        completed_at: new Date().toISOString(),
+                        answers: answers
+                    });
+                }
+            } catch (attErr) {
+                console.error("Failed to save completed attempt:", attErr);
             }
-
-            // 4. Mark Attempt as Completed
-            await supabase.from('attempts').update({
-                status: 'completed',
-                score: calculatedScore,
-                completed_at: new Date().toISOString(),
-                answers: answers // Final save
-            }).eq('quiz_id', id).eq('student_id', user.id);
 
             // Clear Local Storage on Successful Submit
             localStorage.removeItem(`quiz_progress_${user.id}_${id}`);
@@ -336,19 +370,30 @@ const MCQTest = () => {
                     if (quizData.module_id) setQuizModuleId(quizData.module_id);
 
                     // --- SERVER-SIDE RETAKE GUARD (cannot bypass with incognito/localStorage clear) ---
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (user) {
-                        // Check for COMPLETED attempts for ALL test types
-                        const { data: completedAttempts } = await supabase
-                            .from('quiz_results')
-                            .select('id')
-                            .eq('quiz_id', quizData.id)
-                            .eq('student_id', user.id)
-                            .limit(1);
+                    const currentUser = user || (await supabase.auth.getUser()).data?.user;
+                    if (currentUser) {
+                        // Check for COMPLETED attempts in quiz_results OR attempts table
+                        const [{ data: completedResults }, { data: completedAttempts }] = await Promise.all([
+                            supabase
+                                .from('quiz_results')
+                                .select('id')
+                                .eq('quiz_id', quizData.id)
+                                .eq('student_id', currentUser.id)
+                                .limit(1),
+                            supabase
+                                .from('attempts')
+                                .select('id, answers, status')
+                                .eq('quiz_id', quizData.id)
+                                .eq('student_id', currentUser.id)
+                                .eq('status', 'completed')
+                        ]);
 
-                        if (completedAttempts && completedAttempts.length > 0) {
+                        const isAlreadyTaken = (completedResults && completedResults.length > 0) || 
+                            (completedAttempts && completedAttempts.some((a: any) => !a.answers?.is_read_only));
+
+                        if (isAlreadyTaken) {
                             alert("You have already completed this assessment. Retakes are not permitted.");
-                            navigate(`/student/practice/${id}`);
+                            navigate(`/course/details/${id}`);
                             return;
                         }
 
@@ -357,16 +402,15 @@ const MCQTest = () => {
                             .from('attempts')
                             .select('answers, status')
                             .eq('quiz_id', quizData.id)
-                            .eq('student_id', user.id)
+                            .eq('student_id', currentUser.id)
                             .eq('status', 'in-progress')
-                            .order('created_at', { ascending: false }) // Get latest
+                            .order('created_at', { ascending: false })
                             .limit(1)
-                            .single();
+                            .maybeSingle();
 
                         if (draftAttempt && draftAttempt.answers) {
-                            console.log("Restoring Data:", draftAttempt.answers);
+                            console.log("Restoring Draft Data:", draftAttempt.answers);
                             setAnswers(draftAttempt.answers);
-                            // Optional: Restore other state if saved
                         }
                     }
                 }

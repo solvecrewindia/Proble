@@ -127,24 +127,43 @@ export default function Master() {
         setResults([]); // Clear previous
 
         try {
-            // Use a simpler query first to see if data exists
+            let fetchedResults: any[] = [];
             const { data, error } = await supabase
                 .from('quiz_results')
                 .select(`
                     *,
-                    profiles (username, email, registration_number)
+                    profiles (username, full_name, name, email, registration_number)
                 `)
                 .eq('quiz_id', quizId)
                 .order('percentage', { ascending: false });
 
-            if (error) {
-                console.error("Error fetching results:", error);
-                alert("Failed to fetch results: " + error.message);
-                return;
+            if (error || !data) {
+                // Fallback: fetch separately
+                const { data: rawResults } = await supabase
+                    .from('quiz_results')
+                    .select('*')
+                    .eq('quiz_id', quizId)
+                    .order('percentage', { ascending: false });
+
+                if (rawResults && rawResults.length > 0) {
+                    const studentIds = rawResults.map(r => r.student_id);
+                    const { data: profiles } = await supabase
+                        .from('profiles')
+                        .select('id, username, full_name, name, email, registration_number')
+                        .in('id', studentIds);
+
+                    const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                    fetchedResults = rawResults.map(r => ({
+                        ...r,
+                        profiles: profileMap.get(r.student_id) || null
+                    }));
+                }
+            } else {
+                fetchedResults = data;
             }
 
-            console.log(`[DEBUG] Fetched ${data?.length || 0} results for quiz ${quizId}`);
-            if (data) setResults(data);
+            console.log(`[DEBUG] Fetched ${fetchedResults.length} results for quiz ${quizId}`);
+            setResults(fetchedResults);
         } catch (err) {
             console.error("Unexpected error in fetchResults:", err);
         }
@@ -160,20 +179,24 @@ export default function Master() {
             return regA.localeCompare(regB);
         });
 
-        const csvContent = [
+        const formatField = (val: any) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+        const rows = [
             ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Date'],
             ...sortedResults.map(res => [
-                res.profiles?.username || 'Unknown',
+                res.profiles?.name || res.profiles?.full_name || res.profiles?.username || 'Unknown',
                 res.profiles?.registration_number || 'N/A',
                 res.profiles?.email || 'N/A',
-                res.score,
-                res.total_questions,
-                `${res.percentage.toFixed(2)}%`,
-                new Date(res.created_at).toLocaleDateString()
+                String(res.score ?? 0),
+                String(res.total_questions ?? 'N/A'),
+                `${(res.percentage || 0).toFixed(2)}%`,
+                res.created_at ? new Date(res.created_at).toLocaleDateString() : 'N/A'
             ])
-        ].map(e => e.join(",")).join("\n");
+        ];
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const csvContent = rows.map(r => r.map(formatField).join(",")).join("\r\n");
+
+        const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
@@ -182,6 +205,7 @@ export default function Master() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     const handleRetest = async (result: any, studentName: string) => {

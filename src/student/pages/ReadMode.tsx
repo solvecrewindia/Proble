@@ -63,29 +63,29 @@ const ReadMode = () => {
                 // Check completion status
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    // Check if they marked it as read in the attempts table
-                    const { data: readAttempt } = await supabase
-                        .from('attempts')
-                        .select('id, answers')
-                        .eq('quiz_id', id)
-                        .eq('student_id', user.id)
-                        .eq('status', 'completed')
-                        .limit(1)
-                        .single();
+                    const [{ data: userAttempts }, { data: testResults }] = await Promise.all([
+                        supabase
+                            .from('attempts')
+                            .select('id, answers, status')
+                            .eq('quiz_id', id)
+                            .eq('student_id', user.id)
+                            .eq('status', 'completed'),
+                        supabase
+                            .from('quiz_results')
+                            .select('id')
+                            .eq('quiz_id', id)
+                            .eq('student_id', user.id)
+                            .limit(1)
+                    ]);
                     
-                    if (readAttempt && readAttempt.answers && readAttempt.answers.is_read_only) {
+                    if (userAttempts && userAttempts.some((a: any) => a.answers?.is_read_only)) {
                         setIsModuleCompleted(true);
                     }
 
-                    // Check if test was already submitted
-                    const { data: testResults } = await supabase
-                        .from('quiz_results')
-                        .select('id')
-                        .eq('quiz_id', id)
-                        .eq('student_id', user.id)
-                        .limit(1);
-                    
-                    if (testResults && testResults.length > 0) {
+                    const hasCompletedTest = (testResults && testResults.length > 0) || 
+                        (userAttempts && userAttempts.some((a: any) => !a.answers?.is_read_only));
+
+                    if (hasCompletedTest) {
                         setIsTestAlreadyDone(true);
                     }
                 }
@@ -171,44 +171,59 @@ const ReadMode = () => {
                 <div className="mt-16 pt-8 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-6 bg-surface/50 p-8 rounded-3xl">
                     <div>
                         <h3 className="text-xl font-bold mb-2">Ready to test your knowledge?</h3>
-                        <p className="text-muted text-sm">Take the mock test based on this material.</p>
+                        <p className="text-muted text-sm">
+                            {isTestAlreadyDone 
+                                ? "You have already taken and completed the test for this material." 
+                                : "Take the mock test based on this material."}
+                        </p>
                     </div>
-                    {isModuleCompleted ? (
-                        <div className="w-full sm:w-auto px-8 py-4 bg-green-500/20 text-green-400 font-bold rounded-2xl border border-green-500/50 flex items-center justify-center gap-2">
-                            <CheckCircle2 className="w-5 h-5" />
-                            Completed
-                        </div>
-                    ) : (
+                    <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
+                        {isModuleCompleted ? (
+                            <div className="w-full sm:w-auto px-6 py-3.5 bg-green-500/20 text-green-400 font-bold rounded-2xl border border-green-500/50 flex items-center justify-center gap-2">
+                                <CheckCircle2 className="w-5 h-5" />
+                                Read Completed
+                            </div>
+                        ) : (
+                            <button
+                                onClick={handleMarkAsRead}
+                                disabled={markingRead}
+                                className="w-full sm:w-auto px-6 py-3.5 bg-surface hover:bg-surface-hover text-white font-bold rounded-2xl transition-all border border-white/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {markingRead ? (
+                                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-5 h-5" />
+                                        Mark as Read
+                                    </>
+                                )}
+                            </button>
+                        )}
+                        
                         <button
-                            onClick={handleMarkAsRead}
-                            disabled={markingRead}
-                            className="w-full sm:w-auto px-8 py-4 bg-surface hover:bg-surface-hover text-white font-bold rounded-2xl transition-all border border-white/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                            onClick={() => {
+                                if (!isTestAlreadyDone) navigate(`/student/test/${id}`);
+                            }}
+                            disabled={isTestAlreadyDone}
+                            className={`w-full sm:w-auto px-8 py-3.5 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${
+                                isTestAlreadyDone 
+                                    ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 cursor-not-allowed opacity-90' 
+                                    : 'bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl hover:-translate-y-1'
+                            }`}
                         >
-                            {markingRead ? (
-                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                            ) : (
+                            {isTestAlreadyDone ? (
                                 <>
                                     <CheckCircle2 className="w-5 h-5" />
-                                    Mark as Read
+                                    Already Taken Test
+                                </>
+                            ) : (
+                                <>
+                                    Take Test Now
+                                    <ArrowRight className="w-5 h-5" />
                                 </>
                             )}
                         </button>
-                    )}
-                    
-                    <button
-                        onClick={() => {
-                            if (!isTestAlreadyDone) navigate(`/student/test/${id}`);
-                        }}
-                        disabled={isTestAlreadyDone}
-                        className={`w-full sm:w-auto px-8 py-4 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${
-                            isTestAlreadyDone 
-                                ? 'bg-surface border border-neutral-700 text-neutral-400 cursor-not-allowed opacity-80' 
-                                : 'bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl hover:-translate-y-1'
-                        }`}
-                    >
-                        {isTestAlreadyDone ? 'Test Already Completed' : 'Take Test Now'}
-                        {!isTestAlreadyDone && <ArrowRight className="w-5 h-5" />}
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>

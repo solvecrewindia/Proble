@@ -60,22 +60,24 @@ const QuizDetails = () => {
                 }
 
                 // Fetch total students who took this test
-                const { data: resultsDataForCount } = await supabase
-                    .from('quiz_results')
-                    .select('student_id')
-                    .eq('quiz_id', id);
+                const [{ data: resultsDataForCount }, { data: attemptsDataForCount }] = await Promise.all([
+                    supabase.from('quiz_results').select('student_id').eq('quiz_id', id),
+                    supabase.from('attempts').select('student_id, answers, status').eq('quiz_id', id)
+                ]);
                 
-                if (resultsDataForCount) {
-                    const uniqueStudents = new Set(resultsDataForCount.map(r => r.student_id));
-                    setStudentsCount(uniqueStudents.size);
-                }
+                const uniqueStudents = new Set([
+                    ...(resultsDataForCount || []).map(r => r.student_id),
+                    ...(attemptsDataForCount || []).filter(a => a.status === 'completed' && !a.answers?.is_read_only).map(a => a.student_id)
+                ].filter(Boolean));
+                setStudentsCount(uniqueStudents.size);
 
                 if (quizData.type === 'global') {
                     fetchRatings(quizData.id);
                 }
 
                 // Auth Check for Master Quizzes
-                if (quizData.type === 'master' && !user) {
+                const currentUserId = user?.id || (await supabase.auth.getUser()).data?.user?.id;
+                if (quizData.type === 'master' && !currentUserId) {
                     navigate('/login', { state: { from: location }, replace: true });
                     return;
                 }
@@ -90,15 +92,16 @@ const QuizDetails = () => {
                     }
                 }
 
-                if (user) {
-                    const { data: resultData } = await supabase
-                        .from('quiz_results')
-                        .select('id')
-                        .eq('quiz_id', quizData.id)
-                        .eq('student_id', user.id)
-                        .maybeSingle();
+                if (currentUserId) {
+                    const [{ data: resultData }, { data: attemptData }] = await Promise.all([
+                        supabase.from('quiz_results').select('id').eq('quiz_id', quizData.id).eq('student_id', currentUserId).limit(1),
+                        supabase.from('attempts').select('id, answers, status').eq('quiz_id', quizData.id).eq('student_id', currentUserId).eq('status', 'completed')
+                    ]);
                     
-                    if (resultData) {
+                    const isCompleted = (resultData && resultData.length > 0) || 
+                        (attemptData && attemptData.some((a: any) => !a.answers?.is_read_only));
+
+                    if (isCompleted) {
                         setIsAlreadyDone(true);
                     }
                 }
@@ -363,15 +366,35 @@ const QuizDetails = () => {
                                     if (preventRetake) return;
                                     if (!isNotStartedYet) navigate(`/student/test/${id}`);
                                 }}
-                                className={`group relative bg-surface border border-neutral-800 rounded-3xl p-8 transition-all duration-500 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${isMaster || isPlacement ? 'md:col-span-2' : ''} ${isNotStartedYet || preventRetake ? 'opacity-70 cursor-not-allowed' : 'hover:bg-surface-highlight hover:border-cyan-500/50 cursor-pointer hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1'}`}
+                                className={`group relative bg-surface border rounded-3xl p-8 transition-all duration-500 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both ${isMaster || isPlacement ? 'md:col-span-2' : ''} ${
+                                    preventRetake 
+                                        ? 'border-emerald-500/30 bg-emerald-950/10 cursor-not-allowed opacity-90 shadow-lg shadow-emerald-500/5' 
+                                        : isNotStartedYet 
+                                            ? 'border-neutral-800 opacity-70 cursor-not-allowed' 
+                                            : 'border-neutral-800 hover:bg-surface-highlight hover:border-cyan-500/50 cursor-pointer hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1'
+                                }`}
                             >
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+                                <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 ${preventRetake ? 'bg-emerald-500/10' : 'bg-cyan-500/5'}`} />
 
                                 <div className="relative z-10 flex flex-col h-full">
 
-                                    <h3 className={`text-xl font-bold mb-2 transition-colors ${isNotStartedYet || preventRetake ? 'text-text' : 'text-text group-hover:text-cyan-400'}`}>
-                                        Mock Test
-                                    </h3>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className={`text-xl font-bold transition-colors ${
+                                            preventRetake 
+                                                ? 'text-emerald-400' 
+                                                : isNotStartedYet 
+                                                    ? 'text-text' 
+                                                    : 'text-text group-hover:text-cyan-400'
+                                        }`}>
+                                            Mock Test
+                                        </h3>
+                                        {preventRetake && (
+                                            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                                                <Check className="w-3.5 h-3.5" /> Completed
+                                            </span>
+                                        )}
+                                    </div>
+
                                     <p className="text-muted text-sm leading-relaxed mb-8 flex-1">
                                         {preventRetake 
                                             ? "You have already completed this test. Retakes are not permitted."
@@ -379,8 +402,24 @@ const QuizDetails = () => {
                                                 ? `This test has not started yet. Please wait until ${startTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
                                                 : "Full exam simulation under strict timed conditions. Get detailed analytics and global ranking."}
                                     </p>
-                                    <div className={`flex items-center text-sm font-bold transition-transform ${isNotStartedYet || preventRetake ? 'text-muted' : 'text-[#61dafbaa] group-hover:translate-x-1'}`}>
-                                        {preventRetake ? 'Already Completed' : isNotStartedYet ? 'Scheduled' : 'Begin Exam'} {!isNotStartedYet && !preventRetake && <ArrowRight className="w-4 h-4 ml-2" />}
+                                    <div className={`flex items-center text-sm font-bold transition-transform ${
+                                        preventRetake 
+                                            ? 'text-emerald-400 font-semibold' 
+                                            : isNotStartedYet 
+                                                ? 'text-muted' 
+                                                : 'text-[#61dafbaa] group-hover:translate-x-1'
+                                    }`}>
+                                        {preventRetake ? (
+                                            <>
+                                                <Check className="w-4 h-4 mr-1.5" /> Already Completed
+                                            </>
+                                        ) : isNotStartedYet ? (
+                                            'Scheduled'
+                                        ) : (
+                                            <>
+                                                Begin Exam <ArrowRight className="w-4 h-4 ml-2" />
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>

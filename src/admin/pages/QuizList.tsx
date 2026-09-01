@@ -112,104 +112,289 @@ const QuizList = () => {
     const handleDownloadExcel = async (e: React.MouseEvent, quizId: string, quizTitle: string) => {
         e.stopPropagation();
         try {
-            // Fetch completed results
+            // 1. Fetch completed results from quiz_results
             const { data: resultsData, error: resultsError } = await supabase
                 .from('quiz_results')
-                .select(`
-                    *,
-                    profiles (username, email, registration_number)
-                `)
+                .select('*')
                 .eq('quiz_id', quizId)
                 .order('percentage', { ascending: false });
 
-            if (resultsError) throw resultsError;
+            if (resultsError) {
+                console.warn('Could not query quiz_results directly:', resultsError);
+            }
             
-            // Fetch all attempts
+            // 2. Fetch all attempts
             const { data: attemptsData, error: attemptsError } = await supabase
                 .from('attempts')
                 .select('*')
                 .eq('quiz_id', quizId);
                 
-            if (attemptsError) throw attemptsError;
-            
-            // Filter out attempts that already have a completed result to avoid duplicates
-            const completedStudentIds = new Set(resultsData?.map(r => r.student_id) || []);
-            const validAttempts = (attemptsData || []).filter(a => !completedStudentIds.has(a.student_id));
-            
-            let inProgressAttempts = validAttempts.filter(a => !a.answers?.is_read_only);
-            let readOnlyAttendees = validAttempts.filter(a => a.answers?.is_read_only);
-
-            // Manually fetch profiles for attempts since there might be no foreign key
-            if (validAttempts.length > 0) {
-                const attemptStudentIds = validAttempts.map(a => a.student_id);
-                const { data: profilesData } = await supabase
-                    .from('profiles')
-                    .select('id, username, email, registration_number')
-                    .in('id', attemptStudentIds);
-                
-                const profileMap = new Map();
-                if (profilesData) {
-                    profilesData.forEach(p => profileMap.set(p.id, p));
-                }
-                
-                inProgressAttempts = inProgressAttempts.map(a => ({
-                    ...a,
-                    profiles: profileMap.get(a.student_id) || null
-                }));
-                readOnlyAttendees = readOnlyAttendees.map(a => ({
-                    ...a,
-                    profiles: profileMap.get(a.student_id) || null
-                }));
+            if (attemptsError) {
+                console.warn('Could not query attempts:', attemptsError);
             }
 
-            if ((!resultsData || resultsData.length === 0) && inProgressAttempts.length === 0 && readOnlyAttendees.length === 0) {
+            const rawResults = resultsData || [];
+            const rawAttempts = attemptsData || [];
+
+            // Filter out attempts that already have a completed result to avoid duplicates
+            const completedStudentIds = new Set(rawResults.map(r => r.student_id));
+            const validAttempts = rawAttempts.filter(a => !completedStudentIds.has(a.student_id));
+            
+            const completedAttempts = validAttempts.filter(a => a.status === 'completed' && !a.answers?.is_read_only);
+            const inProgressAttempts = validAttempts.filter(a => a.status === 'in-progress' && !a.answers?.is_read_only);
+            const readOnlyAttendees = validAttempts.filter(a => a.answers?.is_read_only);
+
+            // Collect all student IDs to fetch profiles
+            const allStudentIds = Array.from(new Set([
+                ...rawResults.map(r => r.student_id),
+                ...rawAttempts.map(a => a.student_id)
+            ])).filter(Boolean);
+
+            if (allStudentIds.length === 0 && rawResults.length === 0) {
                 alert('No attendees for this test yet (not even in-progress).');
                 return;
             }
 
-            const csvContent = [
-                ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Status'],
-                ...(resultsData || []).map(res => [
-                    res.profiles?.username || 'Unknown',
-                    res.profiles?.registration_number || 'N/A',
-                    res.profiles?.email || 'N/A',
-                    res.score,
-                    res.total_questions,
+            // Batch fetch profiles
+            const profileMap = new Map();
+            if (allStudentIds.length > 0) {
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('id, username, full_name, name, email, registration_number')
+                    .in('id', allStudentIds);
+                
+                if (profilesData) {
+                    profilesData.forEach(p => profileMap.set(p.id, p));
+                }
+            }
+
+            const formatField = (val: any) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+            const rows: string[][] = [
+                ['Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Status', 'Date']
+            ];
+
+            // 1. Add Completed Results (from quiz_results)
+            rawResults.forEach(res => {
+                const p = profileMap.get(res.student_id) || {};
+                const name = p.name || p.full_name || p.username || 'Unknown Student';
+                const regNo = p.registration_number || 'N/A';
+                const email = p.email || 'N/A';
+                const date = res.created_at ? new Date(res.created_at).toLocaleDateString() : 'N/A';
+                rows.push([
+                    name,
+                    regNo,
+                    email,
+                    String(res.score ?? 0),
+                    String(res.total_questions ?? 'N/A'),
                     `${(res.percentage || 0).toFixed(2)}%`,
-                    'Completed (Tested)'
-                ]),
-                ...inProgressAttempts.map(att => [
-                    att.profiles?.username || 'Unknown',
-                    att.profiles?.registration_number || 'N/A',
-                    att.profiles?.email || 'N/A',
-                    att.score || 0,
+                    'Completed (Tested)',
+                    date
+                ]);
+            });
+
+            // 2. Add Completed Attempts (from attempts table)
+            completedAttempts.forEach(att => {
+                const p = profileMap.get(att.student_id) || {};
+                const name = p.name || p.full_name || p.username || 'Unknown Student';
+                const regNo = p.registration_number || 'N/A';
+                const email = p.email || 'N/A';
+                const date = att.completed_at || att.created_at ? new Date(att.completed_at || att.created_at).toLocaleDateString() : 'N/A';
+                rows.push([
+                    name,
+                    regNo,
+                    email,
+                    String(att.score ?? 0),
+                    'N/A',
+                    'N/A',
+                    'Completed (Tested)',
+                    date
+                ]);
+            });
+
+            // 3. Add In-Progress Attempts
+            inProgressAttempts.forEach(att => {
+                const p = profileMap.get(att.student_id) || {};
+                const name = p.name || p.full_name || p.username || 'Unknown Student';
+                const regNo = p.registration_number || 'N/A';
+                const email = p.email || 'N/A';
+                const date = att.created_at ? new Date(att.created_at).toLocaleDateString() : 'N/A';
+                rows.push([
+                    name,
+                    regNo,
+                    email,
+                    String(att.score || 0),
                     'N/A',
                     '0.00%',
-                    'In Progress (Not Submitted)'
-                ]),
-                ...readOnlyAttendees.map(att => [
-                    att.profiles?.username || 'Unknown',
-                    att.profiles?.registration_number || 'N/A',
-                    att.profiles?.email || 'N/A',
-                    'N/A',
-                    'N/A',
-                    'N/A',
-                    'Completed (Read Only)'
-                ])
-            ].map(e => e.join(",")).join("\n");
+                    'In Progress (Not Submitted)',
+                    date
+                ]);
+            });
 
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            // 4. Add Read-Only Attendees
+            readOnlyAttendees.forEach(att => {
+                const p = profileMap.get(att.student_id) || {};
+                const name = p.name || p.full_name || p.username || 'Unknown Student';
+                const regNo = p.registration_number || 'N/A';
+                const email = p.email || 'N/A';
+                const date = att.created_at ? new Date(att.created_at).toLocaleDateString() : 'N/A';
+                rows.push([
+                    name,
+                    regNo,
+                    email,
+                    'N/A',
+                    'N/A',
+                    'N/A',
+                    'Completed (Read Only)',
+                    date
+                ]);
+            });
+
+            if (rows.length <= 1) {
+                alert('No attendees for this test yet (not even in-progress).');
+                return;
+            }
+
+            const csvContent = rows.map(row => row.map(formatField).join(",")).join("\r\n");
+
+            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
+            const sanitizedTitle = (quizTitle || 'Quiz').replace(/[^a-zA-Z0-9_-]/g, '_');
             link.setAttribute("href", url);
-            link.setAttribute("download", `${quizTitle}_results.csv`);
+            link.setAttribute("download", `${sanitizedTitle}_attendees.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        } catch (error) {
+            URL.revokeObjectURL(url);
+        } catch (error: any) {
             console.error('Error downloading results:', error);
-            alert('Failed to download results');
+            alert('Failed to download results: ' + (error?.message || 'Unknown error'));
+        }
+    };
+
+    const handleDownloadModuleExcel = async (e: React.MouseEvent, modId: string, modTitle: string) => {
+        e.stopPropagation();
+        try {
+            // 1. Get all quizzes in module
+            const { data: moduleQuizzes, error: qError } = await supabase
+                .from('quizzes')
+                .select('id, title')
+                .eq('module_id', modId);
+
+            if (qError) throw qError;
+            if (!moduleQuizzes || moduleQuizzes.length === 0) {
+                alert('No quizzes found in this module.');
+                return;
+            }
+
+            const quizIds = moduleQuizzes.map(q => q.id);
+            const quizTitleMap = new Map(moduleQuizzes.map(q => [q.id, q.title]));
+
+            // 2. Fetch completed results and attempts for all quizzes in this module
+            const [{ data: resultsData }, { data: attemptsData }] = await Promise.all([
+                supabase.from('quiz_results').select('*').in('quiz_id', quizIds),
+                supabase.from('attempts').select('*').in('quiz_id', quizIds)
+            ]);
+
+            const rawResults = resultsData || [];
+            const rawAttempts = attemptsData || [];
+
+            const completedPairs = new Set(rawResults.map(r => `${r.student_id}_${r.quiz_id}`));
+            const validAttempts = rawAttempts.filter(a => !completedPairs.has(`${a.student_id}_${a.quiz_id}`));
+
+            const allStudentIds = Array.from(new Set([
+                ...rawResults.map(r => r.student_id),
+                ...rawAttempts.map(a => a.student_id)
+            ])).filter(Boolean);
+
+            if (allStudentIds.length === 0 && rawResults.length === 0) {
+                alert('No attendees found for any quizzes in this module.');
+                return;
+            }
+
+            const profileMap = new Map();
+            if (allStudentIds.length > 0) {
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('id, username, full_name, name, email, registration_number')
+                    .in('id', allStudentIds);
+                if (profilesData) {
+                    profilesData.forEach(p => profileMap.set(p.id, p));
+                }
+            }
+
+            const formatField = (val: any) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+            const rows: string[][] = [
+                ['Module Name', 'Quiz Title', 'Student Name', 'Reg. No', 'Email', 'Score', 'Total Questions', 'Percentage', 'Status', 'Date']
+            ];
+
+            rawResults.forEach(res => {
+                const p = profileMap.get(res.student_id) || {};
+                const name = p.name || p.full_name || p.username || 'Unknown Student';
+                const regNo = p.registration_number || 'N/A';
+                const email = p.email || 'N/A';
+                const qTitle = quizTitleMap.get(res.quiz_id) || 'Quiz';
+                const date = res.created_at ? new Date(res.created_at).toLocaleDateString() : 'N/A';
+                rows.push([
+                    modTitle,
+                    qTitle,
+                    name,
+                    regNo,
+                    email,
+                    String(res.score ?? 0),
+                    String(res.total_questions ?? 'N/A'),
+                    `${(res.percentage || 0).toFixed(2)}%`,
+                    'Completed (Tested)',
+                    date
+                ]);
+            });
+
+            validAttempts.forEach(att => {
+                const p = profileMap.get(att.student_id) || {};
+                const name = p.name || p.full_name || p.username || 'Unknown Student';
+                const regNo = p.registration_number || 'N/A';
+                const email = p.email || 'N/A';
+                const qTitle = quizTitleMap.get(att.quiz_id) || 'Quiz';
+                const isReadOnly = !!att.answers?.is_read_only;
+                const status = isReadOnly ? 'Completed (Read Only)' : (att.status === 'completed' ? 'Completed (Tested)' : 'In Progress (Not Submitted)');
+                const date = att.completed_at || att.created_at ? new Date(att.completed_at || att.created_at).toLocaleDateString() : 'N/A';
+                rows.push([
+                    modTitle,
+                    qTitle,
+                    name,
+                    regNo,
+                    email,
+                    String(att.score ?? (isReadOnly ? 'N/A' : 0)),
+                    'N/A',
+                    isReadOnly ? 'N/A' : '0.00%',
+                    status,
+                    date
+                ]);
+            });
+
+            if (rows.length <= 1) {
+                alert('No attendees found for any quizzes in this module.');
+                return;
+            }
+
+            const csvContent = rows.map(row => row.map(formatField).join(",")).join("\r\n");
+            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            const sanitizedTitle = (modTitle || 'Module').replace(/[^a-zA-Z0-9_-]/g, '_');
+            link.setAttribute("href", url);
+            link.setAttribute("download", `${sanitizedTitle}_module_attendees.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error: any) {
+            console.error('Error downloading module results:', error);
+            alert('Failed to download module results: ' + (error?.message || 'Unknown error'));
         }
     };
 
@@ -331,13 +516,22 @@ const QuizList = () => {
                                     <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
                                         <Folder className="w-6 h-6" />
                                     </div>
-                                    <button
-                                        onClick={(e) => handleDeleteModule(e, module.id)}
-                                        className="p-2 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                        title="Delete Module"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={(e) => handleDownloadModuleExcel(e, module.id, module.title)}
+                                            className="p-2 text-text-secondary hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Download All Attendees in Module"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDeleteModule(e, module.id)}
+                                            className="p-2 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Delete Module"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {module.image_url && (

@@ -155,15 +155,25 @@ const JoinTest = () => {
             const shouldCheckAttempts = quizData.type === 'master' || quizData.settings?.scheduledAt;
             
             if (shouldCheckAttempts) {
-                const { data: existingAttempts, error: attemptError } = await supabase
-                    .from('quiz_results')
-                    .select('id')
-                    .eq('quiz_id', quizData.id)
-                    .eq('student_id', user.id)
-                    .limit(1);
-                if (attemptError) {
-                    console.error("Error checking attempts:", attemptError);
-                } else if (existingAttempts && existingAttempts.length > 0) {
+                const [{ data: existingResults }, { data: existingAttempts }] = await Promise.all([
+                    supabase
+                        .from('quiz_results')
+                        .select('id')
+                        .eq('quiz_id', quizData.id)
+                        .eq('student_id', user.id)
+                        .limit(1),
+                    supabase
+                        .from('attempts')
+                        .select('id, answers, status')
+                        .eq('quiz_id', quizData.id)
+                        .eq('student_id', user.id)
+                        .eq('status', 'completed')
+                ]);
+
+                const hasCompleted = (existingResults && existingResults.length > 0) || 
+                    (existingAttempts && existingAttempts.some((a: any) => !a.answers?.is_read_only));
+
+                if (hasCompleted) {
                     setAlreadyCompleted(true);
                     setVerifying(false);
                     return;
