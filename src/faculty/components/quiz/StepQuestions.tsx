@@ -152,74 +152,112 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                 const workbook = XLSX.read(data, { type: 'binary' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
 
-                if (!jsonData || jsonData.length === 0) {
+                if (!rawRows || rawRows.length === 0) {
                     throw new Error("Excel file is empty");
                 }
 
-                // Find Keys with Case-Insensitive matching
-                const firstRow = jsonData[0] as any;
-                const headers = Object.keys(firstRow);
-
-                // 1. Question Number Key (e.g., 'Question No', 'Q.No', 'QNo', 'Q#', 'S.No', 'No')
-                const keyQNo = headers.find(h => /^(q\.?\s*no\.?|question\s*no\.?|q#|sl\.?\s*no\.?|s\.?\s*no\.?|no\.?)$/i.test(h.trim()))
-                    || headers.find(h => /(q\.?\s*no|question\s*no|serial\s*no)/i.test(h.trim()));
-
-                // 2. Question Text Key (MUST NOT match Question Number column)
-                const keyQText = headers.find(h => {
-                    const clean = h.trim().toLowerCase();
-                    return /^(question|question\s*text|stem|problem|q_text|qtext)$/i.test(clean) ||
-                           (/^question/i.test(clean) && !/(no|num|#|id|serial|count)/i.test(clean));
-                }) || headers.find(h => /stem|problem|prompt/i.test(h.trim()));
-
-                // 3. Option Keys
-                const keyOpt1 = headers.find(h => /^(option\s*1|option\s*a|opt\s*1|opt\s*a|choice\s*1|choice\s*a)$/i.test(h.trim()))
-                    || headers.find(h => /option\s*[1a]|opt\s*[1a]|choice\s*[1a]/i.test(h.trim()));
-
-                const keyOpt2 = headers.find(h => /^(option\s*2|option\s*b|opt\s*2|opt\s*b|choice\s*2|choice\s*b)$/i.test(h.trim()))
-                    || headers.find(h => /option\s*[2b]|opt\s*[2b]|choice\s*[2b]/i.test(h.trim()));
-
-                const keyOpt3 = headers.find(h => /^(option\s*3|option\s*c|opt\s*3|opt\s*c|choice\s*3|choice\s*c)$/i.test(h.trim()))
-                    || headers.find(h => /option\s*[3c]|opt\s*[3c]|choice\s*[3c]/i.test(h.trim()));
-
-                const keyOpt4 = headers.find(h => /^(option\s*4|option\s*d|opt\s*4|opt\s*d|choice\s*4|choice\s*d)$/i.test(h.trim()))
-                    || headers.find(h => /option\s*[4d]|opt\s*[4d]|choice\s*[4d]/i.test(h.trim()));
-
-                // 4. Keywords Key (matched before Correct Answer to avoid /key/ ambiguity)
-                const keyKeywords = headers.find(h => /^(keywords?|key\s*words?|explanation\s*keywords?|explanation)$/i.test(h.trim()))
-                    || headers.find(h => /keyword/i.test(h.trim()));
-
-                // 5. Correct Answer Key
-                const keyCorrect = headers.find(h => /^(correct\s*answer|correct\s*option|correct|answer\s*key|answer|key)$/i.test(h.trim()) && !/keyword/i.test(h.trim()))
-                    || headers.find(h => /(correct|answer)/i.test(h.trim()) && !/keyword/i.test(h.trim()));
-
-                if (!keyOpt1 || !keyCorrect || !keyQText) {
-                    throw new Error(`Missing required columns (Question, Option 1, Correct Answer). Found headers: ${headers.join(', ')}`);
+                // Filter out completely empty rows at the beginning if any
+                const validRows = rawRows.filter(r => Array.isArray(r) && r.some(cell => String(cell || '').trim() !== ''));
+                if (validRows.length < 2) {
+                    throw new Error("Excel file must contain a header row and at least one question row");
                 }
 
-                setImportStatus(`Processing ${jsonData.length} questions...`);
+                const headerRow = (validRows[0] || []).map(cell => String(cell || '').trim());
+                const sampleRow = (validRows[1] || []).map(cell => String(cell || '').trim());
+
+                // Identify indices of all headers
+                let qNoCol = -1;
+                let qTextCol = -1;
+                let opt1Col = -1;
+                let opt2Col = -1;
+                let opt3Col = -1;
+                let opt4Col = -1;
+                let correctCol = -1;
+                let keywordsCol = -1;
+
+                // Step 1: Detect Option, Correct, and Keywords columns first
+                headerRow.forEach((h, idx) => {
+                    const clean = h.toLowerCase();
+                    if (/^(option\s*1|option\s*a|opt\s*1|opt\s*a|choice\s*1|choice\s*a)$/i.test(clean) || /option\s*[1a]|opt\s*[1a]|choice\s*[1a]/i.test(clean)) {
+                        if (opt1Col === -1) opt1Col = idx;
+                    } else if (/^(option\s*2|option\s*b|opt\s*2|opt\s*b|choice\s*2|choice\s*b)$/i.test(clean) || /option\s*[2b]|opt\s*[2b]|choice\s*[2b]/i.test(clean)) {
+                        if (opt2Col === -1) opt2Col = idx;
+                    } else if (/^(option\s*3|option\s*c|opt\s*3|opt\s*c|choice\s*3|choice\s*c)$/i.test(clean) || /option\s*[3c]|opt\s*[3c]|choice\s*[3c]/i.test(clean)) {
+                        if (opt3Col === -1) opt3Col = idx;
+                    } else if (/^(option\s*4|option\s*d|opt\s*4|opt\s*d|choice\s*4|choice\s*d)$/i.test(clean) || /option\s*[4d]|opt\s*[4d]|choice\s*[4d]/i.test(clean)) {
+                        if (opt4Col === -1) opt4Col = idx;
+                    } else if (/^(keywords?|key\s*words?|explanation\s*keywords?)$/i.test(clean) || /keyword/i.test(clean)) {
+                        if (keywordsCol === -1) keywordsCol = idx;
+                    } else if (/^(correct\s*answer|correct\s*option|correct|answer\s*key|answer|key)$/i.test(clean) && !/keyword/i.test(clean)) {
+                        if (correctCol === -1) correctCol = idx;
+                    }
+                });
+
+                // Step 2: Detect Question Number vs Question Text
+                headerRow.forEach((h, idx) => {
+                    if ([opt1Col, opt2Col, opt3Col, opt4Col, correctCol, keywordsCol].includes(idx)) return;
+                    const clean = h.toLowerCase();
+
+                    if (/^(q\.?\s*no\.?|question\s*no\.?|q#|sl\.?\s*no\.?|s\.?\s*no\.?|no\.?)$/i.test(clean)) {
+                        qNoCol = idx;
+                    } else if (/^(question\s*text|stem|problem|prompt|q_text)$/i.test(clean)) {
+                        qTextCol = idx;
+                    }
+                });
+
+                // Step 3: Disambiguate remaining Question columns (handles files with duplicate 'Question' headers)
+                const unassignedQuestionCols: number[] = [];
+                headerRow.forEach((h, idx) => {
+                    if ([opt1Col, opt2Col, opt3Col, opt4Col, correctCol, keywordsCol].includes(idx)) return;
+                    if (/^question/i.test(h.trim()) || idx < (opt1Col !== -1 ? opt1Col : 2)) {
+                        unassignedQuestionCols.push(idx);
+                    }
+                });
+
+                if (unassignedQuestionCols.length === 1) {
+                    if (qTextCol === -1) qTextCol = unassignedQuestionCols[0];
+                } else if (unassignedQuestionCols.length >= 2) {
+                    // Check sample row to identify which column has short IDs (Q1, Q2) vs full question text
+                    const colA = unassignedQuestionCols[0];
+                    const colB = unassignedQuestionCols[1];
+                    const sampleA = String(sampleRow[colA] || '').trim();
+                    const sampleB = String(sampleRow[colB] || '').trim();
+
+                    if (/^q?\d+$/i.test(sampleA) || (sampleA.length > 0 && sampleA.length < sampleB.length)) {
+                        if (qNoCol === -1) qNoCol = colA;
+                        if (qTextCol === -1) qTextCol = colB;
+                    } else {
+                        if (qNoCol === -1) qNoCol = colB;
+                        if (qTextCol === -1) qTextCol = colA;
+                    }
+                }
+
+                if (qTextCol === -1) {
+                    qTextCol = unassignedQuestionCols.length > 0 ? unassignedQuestionCols[0] : 0;
+                }
+
+                if (opt1Col === -1 || correctCol === -1 || qTextCol === -1) {
+                    throw new Error(`Missing required columns (Question, Option 1, Correct). Found headers: ${headerRow.join(', ')}`);
+                }
+
+                setImportStatus(`Processing ${validRows.length - 1} questions...`);
 
                 const newQuestions: Question[] = [];
                 let mappedCount = 0;
 
-                for (const row of jsonData as any[]) {
-                    let qNo = row[keyQNo];
-                    const questionText = row[keyQText];
-                    const opt1 = row[keyOpt1];
-                    const opt2 = row[keyOpt2];
-                    const opt3 = row[keyOpt3];
-                    const opt4 = row[keyOpt4];
-                    const correctChar = row[keyCorrect];
+                for (let r = 1; r < validRows.length; r++) {
+                    const row = validRows[r];
+                    let qNo = qNoCol !== -1 ? row[qNoCol] : undefined;
+                    const questionText = qTextCol !== -1 ? String(row[qTextCol] ?? '').trim() : '';
+                    const opt1 = opt1Col !== -1 ? String(row[opt1Col] ?? '').trim() : '';
+                    const opt2 = opt2Col !== -1 ? String(row[opt2Col] ?? '').trim() : '';
+                    const opt3 = opt3Col !== -1 ? String(row[opt3Col] ?? '').trim() : '';
+                    const opt4 = opt4Col !== -1 ? String(row[opt4Col] ?? '').trim() : '';
+                    const correctChar = correctCol !== -1 ? String(row[correctCol] ?? '').trim() : '';
 
                     if (!questionText && !zipFile) {
-                        // If no text AND no zip file (so no potential images), then it's truly empty?
-                        // Alternatively, just allow it. The user might upload images manually later.
-                        // Let's just check if it's a completely empty row (no options/correct either?)
-                        // For now, let's just allow it, but maybe warn?
-                        // Actually user said "only images", implying they upload zip.
-                        // If they don't upload zip, they get empty questions they can edit.
-                        // So we continue ONLY if row is basically empty
                         if (!questionText && !opt1 && !correctChar) continue;
                     }
 
@@ -334,8 +372,8 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                         }
                     }
 
-                    const keywordsRaw = keyKeywords ? row[keyKeywords] : '';
-                    const keywordsList = keywordsRaw ? String(keywordsRaw).split(',').map((s: string) => s.trim()).filter(Boolean) : undefined;
+                    const keywordsRaw = keywordsCol !== -1 ? row[keywordsCol] : '';
+                    const keywordsList = keywordsRaw ? String(keywordsRaw).split(/[;,|]+/).map((s: string) => s.trim()).filter(Boolean) : undefined;
 
                     newQuestions.push({
                         id: uuidv4(),
