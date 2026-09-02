@@ -1234,7 +1234,7 @@ const MCQTest = () => {
 
                     {/* Navigation Bar (Desktop) */}
                     <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 flex justify-between items-center shadow-sm sticky bottom-4">
-                        {!isPerQuestionMode ? (
+                        {!isPerQuestionMode && (
                             <button
                                 onClick={() => setCurrentQuestion(prev => Math.max(1, prev - 1))}
                                 disabled={currentQuestion === 1}
@@ -1242,10 +1242,6 @@ const MCQTest = () => {
                             >
                                 <ChevronLeft className="w-4 h-4" /> Previous
                             </button>
-                        ) : (
-                            <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20">
-                                <Lock className="w-3.5 h-3.5" /> Sequential Mode ({perQuestionSeconds}s / question)
-                            </div>
                         )}
 
                         <button
