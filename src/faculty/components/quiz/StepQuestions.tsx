@@ -162,21 +162,40 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                 const firstRow = jsonData[0] as any;
                 const headers = Object.keys(firstRow);
 
-                const findHeadeKey = (patterns: RegExp[]) => {
-                    return headers.find(h => patterns.some(p => p.test(h.trim())));
-                };
+                // 1. Question Number Key (e.g., 'Question No', 'Q.No', 'QNo', 'Q#', 'S.No', 'No')
+                const keyQNo = headers.find(h => /^(q\.?\s*no\.?|question\s*no\.?|q#|sl\.?\s*no\.?|s\.?\s*no\.?|no\.?)$/i.test(h.trim()))
+                    || headers.find(h => /(q\.?\s*no|question\s*no|serial\s*no)/i.test(h.trim()));
 
-                const keyQNo = findHeadeKey([/Question\s*No/i, /Q\.?\s*No/i, /Q#/i, /No/i]);
-                const keyQText = findHeadeKey([/Question/i, /Question\s*Text/i, /Stem/i]);
-                const keyOpt1 = findHeadeKey([/Option\s*1/i, /Option\s*A/i]);
-                const keyOpt2 = findHeadeKey([/Option\s*2/i, /Option\s*B/i]);
-                const keyOpt3 = findHeadeKey([/Option\s*3/i, /Option\s*C/i]);
-                const keyOpt4 = findHeadeKey([/Option\s*4/i, /Option\s*D/i]);
-                const keyCorrect = findHeadeKey([/Correct\s*Answer/i, /Answer/i, /Key/i]);
-                const keyKeywords = findHeadeKey([/Keywords/i, /Key\s*Words/i, /Explanation\s*Keywords/i]);
+                // 2. Question Text Key (MUST NOT match Question Number column)
+                const keyQText = headers.find(h => {
+                    const clean = h.trim().toLowerCase();
+                    return /^(question|question\s*text|stem|problem|q_text|qtext)$/i.test(clean) ||
+                           (/^question/i.test(clean) && !/(no|num|#|id|serial|count)/i.test(clean));
+                }) || headers.find(h => /stem|problem|prompt/i.test(h.trim()));
 
-                if (!keyOpt1 || !keyCorrect) {
-                    throw new Error(`Missing required columns (Option 1, Correct Answer). Found: ${headers.join(', ')}`);
+                // 3. Option Keys
+                const keyOpt1 = headers.find(h => /^(option\s*1|option\s*a|opt\s*1|opt\s*a|choice\s*1|choice\s*a)$/i.test(h.trim()))
+                    || headers.find(h => /option\s*[1a]|opt\s*[1a]|choice\s*[1a]/i.test(h.trim()));
+
+                const keyOpt2 = headers.find(h => /^(option\s*2|option\s*b|opt\s*2|opt\s*b|choice\s*2|choice\s*b)$/i.test(h.trim()))
+                    || headers.find(h => /option\s*[2b]|opt\s*[2b]|choice\s*[2b]/i.test(h.trim()));
+
+                const keyOpt3 = headers.find(h => /^(option\s*3|option\s*c|opt\s*3|opt\s*c|choice\s*3|choice\s*c)$/i.test(h.trim()))
+                    || headers.find(h => /option\s*[3c]|opt\s*[3c]|choice\s*[3c]/i.test(h.trim()));
+
+                const keyOpt4 = headers.find(h => /^(option\s*4|option\s*d|opt\s*4|opt\s*d|choice\s*4|choice\s*d)$/i.test(h.trim()))
+                    || headers.find(h => /option\s*[4d]|opt\s*[4d]|choice\s*[4d]/i.test(h.trim()));
+
+                // 4. Keywords Key (matched before Correct Answer to avoid /key/ ambiguity)
+                const keyKeywords = headers.find(h => /^(keywords?|key\s*words?|explanation\s*keywords?|explanation)$/i.test(h.trim()))
+                    || headers.find(h => /keyword/i.test(h.trim()));
+
+                // 5. Correct Answer Key
+                const keyCorrect = headers.find(h => /^(correct\s*answer|correct\s*option|correct|answer\s*key|answer|key)$/i.test(h.trim()) && !/keyword/i.test(h.trim()))
+                    || headers.find(h => /(correct|answer)/i.test(h.trim()) && !/keyword/i.test(h.trim()));
+
+                if (!keyOpt1 || !keyCorrect || !keyQText) {
+                    throw new Error(`Missing required columns (Question, Option 1, Correct Answer). Found headers: ${headers.join(', ')}`);
                 }
 
                 setImportStatus(`Processing ${jsonData.length} questions...`);
