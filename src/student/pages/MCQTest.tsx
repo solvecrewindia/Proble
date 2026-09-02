@@ -482,13 +482,28 @@ const MCQTest = () => {
                             derivedType = 'range';
                         }
 
+                        // Robust parsing of choices
+                        let parsedChoices: any[] = [];
+                        if (Array.isArray(q.choices)) {
+                            parsedChoices = q.choices;
+                        } else if (typeof q.choices === 'string') {
+                            try {
+                                const parsed = JSON.parse(q.choices);
+                                parsedChoices = Array.isArray(parsed) ? parsed : [];
+                            } catch {
+                                parsedChoices = [];
+                            }
+                        } else if (q.choices && typeof q.choices === 'object') {
+                            parsedChoices = Object.values(q.choices);
+                        }
+
                         return {
                             id: index + 1,
                             dbId: q.id,
                             type: derivedType,
-                            question: q.text,
-                            imageUrl: q.image_url ? `${q.image_url}?t = ${Date.now()} ` : null,
-                            options: q.choices || [], // Ensure array
+                            question: q.text || '',
+                            imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null,
+                            options: parsedChoices,
                             correct: (() => {
                                 try {
                                     if (derivedType === 'msq') return JSON.parse(q.correct_answer || '[]');
@@ -788,14 +803,22 @@ const MCQTest = () => {
                                         const formatAns = (ans: any, type: string) => {
                                             if (ans === undefined || ans === null || ans === '' || (Array.isArray(ans) && ans.length === 0)) return <span className="text-slate-400 italic">Skipped</span>;
                                             if (type === 'mcq' || type === 'true_false') {
-                                                if (q.options && q.options[ans]) return <MathText text={q.options[ans].text || q.options[ans]} />;
+                                                if (Array.isArray(q.options) && q.options[ans] !== undefined) {
+                                                    const optVal = typeof q.options[ans] === 'object' && q.options[ans] !== null ? (q.options[ans].text ?? '') : q.options[ans];
+                                                    return <MathText text={optVal} />;
+                                                }
                                                 return `Option ${Number(ans) + 1}`;
                                             }
                                             if (type === 'msq' && Array.isArray(ans)) {
-                                                return ans.map((a: any, i: number) => <span key={i}>{i > 0 && ', '}<MathText text={q.options[a]?.text || q.options[a] || `Option ${Number(a) + 1}`} /></span>);
+                                                return ans.map((a: any, i: number) => {
+                                                    const optVal = Array.isArray(q.options) && q.options[a] !== undefined
+                                                        ? (typeof q.options[a] === 'object' && q.options[a] !== null ? (q.options[a].text ?? '') : q.options[a])
+                                                        : `Option ${Number(a) + 1}`;
+                                                    return <span key={i}>{i > 0 && ', '}<MathText text={optVal} /></span>;
+                                                });
                                             }
                                             if (type === 'code') return <span className="font-mono text-xs">Code Solution</span>;
-                                            return ans;
+                                            return String(ans);
                                         };
 
                                         return (
@@ -1066,13 +1089,13 @@ const MCQTest = () => {
                                     <p className="text-[10px] text-muted mt-1 ml-1">Value must be between Min and Max specified.</p>
                                 </div>
                             ) : (
-                                activeQuestion.options.map((opt: any, idx: number) => {
+                                (Array.isArray(activeQuestion.options) ? activeQuestion.options : []).map((opt: any, idx: number) => {
                                     const isSelected = activeQuestion.type === 'msq'
                                         ? (answers[currentQuestion] as number[])?.includes(idx)
                                         : answers[currentQuestion] === idx;
 
-                                    const optText = typeof opt === 'object' ? opt.text : opt;
-                                    const optImg = typeof opt === 'object' ? opt.image : null;
+                                    const optText = typeof opt === 'object' && opt !== null ? (opt.text ?? '') : (opt ?? '');
+                                    const optImg = typeof opt === 'object' && opt !== null ? opt.image : null;
 
                                     return (
                                         <div

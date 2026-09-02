@@ -3,15 +3,35 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
 interface MathTextProps {
-    text: string;
+    text: any;
     className?: string;
     as?: React.ElementType;
 }
 
+// Safely normalize any input into a clean string
+const extractTextString = (input: any): string => {
+    if (input === null || input === undefined) return '';
+    if (typeof input === 'string') return input;
+    if (typeof input === 'number' || typeof input === 'boolean') return String(input);
+    if (typeof input === 'object') {
+        if (typeof input.text === 'string') return input.text;
+        if (typeof input.text === 'number') return String(input.text);
+        if (typeof input.label === 'string') return input.label;
+        if (typeof input.value === 'string' || typeof input.value === 'number') return String(input.value);
+        try {
+            return JSON.stringify(input);
+        } catch {
+            return '';
+        }
+    }
+    return String(input);
+};
+
 // Basic LaTeX document structural parser
-const preprocessLatexStructure = (str: string) => {
-    if (!str) return '';
-    return str
+const preprocessLatexStructure = (str: any) => {
+    const text = extractTextString(str);
+    if (!text) return '';
+    return text
         // Remove document structure
         .replace(/\\documentclass\[.*?\]\{.*?\}/g, '')
         .replace(/\\usepackage(\[.*?\])?\{.*?\}/g, '')
@@ -54,11 +74,13 @@ const preprocessLatexStructure = (str: string) => {
  * Anything outside $...$ is rendered as plain text.
  */
 export function MathText({ text, className, as: Tag = 'span' }: MathTextProps) {
+    const rawString = useMemo(() => extractTextString(text), [text]);
+
     const rendered = useMemo(() => {
-        if (!text || typeof text !== 'string') return text ?? '';
+        if (!rawString) return '';
 
         // Check for common math starters: $, \[, \(
-        if (!text.includes('$') && !text.includes('\\[') && !text.includes('\\(')) {
+        if (!rawString.includes('$') && !rawString.includes('\\[') && !rawString.includes('\\(')) {
             // Still run structural parsing
             return null;
         }
@@ -70,10 +92,10 @@ export function MathText({ text, className, as: Tag = 'span' }: MathTextProps) {
         let lastIndex = 0;
         let match: RegExpExecArray | null;
 
-        while ((match = regex.exec(text)) !== null) {
+        while ((match = regex.exec(rawString)) !== null) {
             // Push preceding plain text
             if (match.index > lastIndex) {
-                parts.push({ type: 'text', content: text.slice(lastIndex, match.index), displayMode: false });
+                parts.push({ type: 'text', content: rawString.slice(lastIndex, match.index), displayMode: false });
             }
 
             const displayContent = match[1] || match[3]; // $$...$$ or \[...\]
@@ -89,24 +111,28 @@ export function MathText({ text, className, as: Tag = 'span' }: MathTextProps) {
         }
 
         // Trailing text
-        if (lastIndex < text.length) {
-            parts.push({ type: 'text', content: text.slice(lastIndex), displayMode: false });
+        if (lastIndex < rawString.length) {
+            parts.push({ type: 'text', content: rawString.slice(lastIndex), displayMode: false });
         }
 
         // If we found no math segments, return null so we just render plain text
         if (parts.every(p => p.type === 'text')) return null;
 
         return parts;
-    }, [text]);
+    }, [rawString]);
 
     // Fast path: no math detected — render as plain text
     if (rendered === null) {
-        return <Tag className={className} dangerouslySetInnerHTML={{ __html: preprocessLatexStructure(text) }} />;
+        return <Tag className={className} dangerouslySetInnerHTML={{ __html: preprocessLatexStructure(rawString) }} />;
     }
 
     // String fallback (empty / non-string)
     if (typeof rendered === 'string') {
         return <Tag className={className}>{rendered}</Tag>;
+    }
+
+    if (!Array.isArray(rendered)) {
+        return <Tag className={className}>{String(rendered ?? '')}</Tag>;
     }
 
     return (
