@@ -666,6 +666,10 @@ const MCQTest = () => {
                 setValidationError("Please write your explanation in the box below before proceeding.");
                 return;
             }
+            if (userExpl.length < 20) {
+                setValidationError("Please write at least 20 characters in your explanation before proceeding.");
+                return;
+            }
         }
 
         // Clear validation error and advance
@@ -1315,8 +1319,13 @@ const MCQTest = () => {
                                         <span>Explain Your Answer & Reasoning</span>
                                         <span className="text-red-500 font-bold">*</span>
                                     </label>
-                                    <span className="text-[11px] text-muted font-mono font-medium">
-                                        {(explanations[currentQuestion] || '').trim().length} chars
+                                    <span className={cn(
+                                        "text-[11px] font-mono font-medium transition-colors",
+                                        (explanations[currentQuestion] || '').trim().length >= 20
+                                            ? "text-green-600 dark:text-green-400 font-semibold"
+                                            : "text-muted"
+                                    )}>
+                                        {(explanations[currentQuestion] || '').trim().length} / 20 min chars
                                     </span>
                                 </div>
                                 <textarea
@@ -1326,13 +1335,13 @@ const MCQTest = () => {
                                     rows={3}
                                     className={cn(
                                         "w-full bg-background border-2 rounded-xl p-3 text-sm focus:outline-none transition-all resize-y text-text placeholder:text-muted/60",
-                                        validationError && !(explanations[currentQuestion] || '').trim()
+                                        validationError && (explanations[currentQuestion] || '').trim().length < 20
                                             ? "border-red-500 ring-2 ring-red-500/20"
                                             : "border-neutral-200 dark:border-neutral-700 focus:border-primary"
                                     )}
                                 />
                                 <p className="text-[11px] text-muted">
-                                    * An explanation is required for this question before moving to the next question.
+                                    * A minimum of 20 characters explanation is required for this question before moving to the next question.
                                 </p>
                             </div>
                         )}
