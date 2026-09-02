@@ -12,8 +12,9 @@ import { Calculator } from '../../shared/components/Calculator';
 import { MathText } from '../../shared/components/MathText';
 
 const formatSeconds = (totalSec: number) => {
+    if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
     const mins = Math.floor(totalSec / 60);
-    const secs = totalSec % 60;
+    const secs = Math.floor(totalSec % 60);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
@@ -328,23 +329,25 @@ const MCQTest = () => {
 
     // Per-Question Countdown Interval
     useEffect(() => {
-        if (!isPerQuestionMode || perQuestionTimeLeft === null || !testActive || showResults || isPaused) return;
-
-        if (perQuestionTimeLeft <= 0) {
-            if (currentQuestion < questions.length) {
-                setCurrentQuestion(prev => prev + 1);
-            } else {
-                calculateAndShowResults();
-            }
-            return;
-        }
+        if (!isPerQuestionMode || perQuestionTimeLeft === null || perQuestionTimeLeft <= 0 || !testActive || showResults || isPaused) return;
 
         const timer = setInterval(() => {
-            setPerQuestionTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
+            setPerQuestionTimeLeft(prev => {
+                if (prev === null || prev <= 1) {
+                    clearInterval(timer);
+                    if (currentQuestion < questions.length) {
+                        setCurrentQuestion(q => q + 1);
+                    } else {
+                        calculateAndShowResults();
+                    }
+                    return 0;
+                }
+                return prev - 1;
+            });
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [perQuestionTimeLeft, isPerQuestionMode, currentQuestion, questions.length, testActive, showResults, isPaused, calculateAndShowResults]);
+    }, [isPerQuestionMode, perQuestionTimeLeft === null, perQuestionTimeLeft === 0, testActive, showResults, isPaused, currentQuestion, questions.length, calculateAndShowResults]);
 
     // Security Focus State (For UI overlays only)
     useEffect(() => {
@@ -685,7 +688,11 @@ const MCQTest = () => {
         }
     };
 
-    const activeQuestion = useMemo(() => questions[currentQuestion - 1], [questions, currentQuestion]);
+    const activeQuestion = useMemo(() => {
+        if (!questions || questions.length === 0) return null;
+        const index = Math.min(Math.max(0, currentQuestion - 1), questions.length - 1);
+        return questions[index] || null;
+    }, [questions, currentQuestion]);
 
     // Mid-Quiz Expiry Check
     useEffect(() => {
@@ -838,7 +845,7 @@ const MCQTest = () => {
         );
     }
 
-    if (questions.length === 0) return (
+    if (questions.length === 0 || !activeQuestion) return (
         <div className="h-screen flex flex-col items-center justify-center bg-background">
             <h2 className="text-xl font-bold text-text">No questions found.</h2>
             <button onClick={() => navigate(-1)} className="mt-4 text-primary font-medium hover:underline">Go Back</button>
@@ -913,14 +920,14 @@ const MCQTest = () => {
             {/* --- HEADER --- */}
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-700 px-6 py-3 flex items-center justify-between transition-all">
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate(`/ student / practice / ${id} `)}>
+                    <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate(`/student/practice/${id}`)}>
                         <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg group-hover:scale-105 transition-transform" />
                     </div>
                 </div>
 
                 <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center w-full max-w-md hidden md:flex gap-3">
                     <div className="w-full h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden flex-1">
-                        <div className="h-full bg-primary transition-all duration-500 ease-out" style={{ width: `${(currentQuestion / questions.length) * 100}% ` }} />
+                        <div className="h-full bg-primary transition-all duration-500 ease-out" style={{ width: `${(currentQuestion / questions.length) * 100}%` }} />
                     </div>
                     <span className="text-xs font-bold text-primary tabular-nums">
                         {Math.round((currentQuestion / questions.length) * 100)}%
