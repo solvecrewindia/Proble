@@ -1379,13 +1379,6 @@ const MCQTest = () => {
                 {/* --- RIGHT: GRID --- */}
                 <div className="lg:col-span-4 space-y-4">
                     <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 shadow-sm sticky top-20 w-fit mx-auto">
-                        {isPerQuestionMode && (
-                            <div className="flex items-center gap-2 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20 mb-4 max-w-[240px]">
-                                <Lock className="w-3.5 h-3.5 shrink-0" />
-                                <span>Question switching disabled in per-question timer mode.</span>
-                            </div>
-                        )}
-
                         <div className="grid grid-cols-5 gap-2 place-items-center w-fit mx-auto">
                             {questions.map((q) => {
                                 const isSaved = answers[q.id] !== undefined && answers[q.id] !== '';
