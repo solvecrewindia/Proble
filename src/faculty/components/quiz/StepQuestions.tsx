@@ -250,7 +250,24 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                 for (let r = 1; r < validRows.length; r++) {
                     const row = validRows[r];
                     let qNo = qNoCol !== -1 ? row[qNoCol] : undefined;
-                    const questionText = qTextCol !== -1 ? String(row[qTextCol] ?? '').trim() : '';
+                    let questionText = qTextCol !== -1 ? String(row[qTextCol] ?? '').trim() : '';
+
+                    // Safety check: If questionText is just a question number (e.g., 'Q1', 'Q16', '1', 'Q.1')
+                    // and qNo (or any unassigned column) actually has the full text, swap them!
+                    if (/^Q?\d+[:.)-]?$/i.test(questionText)) {
+                        const alternativeCol = [qNoCol, ...unassignedQuestionCols, 0, 1].find(c =>
+                            c !== -1 &&
+                            c !== qTextCol &&
+                            row[c] !== undefined &&
+                            !/^Q?\d+[:.)-]?$/i.test(String(row[c] ?? '').trim()) &&
+                            String(row[c] ?? '').trim().length > 0
+                        );
+                        if (alternativeCol !== undefined) {
+                            qNo = questionText;
+                            questionText = String(row[alternativeCol] ?? '').trim();
+                        }
+                    }
+
                     const opt1 = opt1Col !== -1 ? String(row[opt1Col] ?? '').trim() : '';
                     const opt2 = opt2Col !== -1 ? String(row[opt2Col] ?? '').trim() : '';
                     const opt3 = opt3Col !== -1 ? String(row[opt3Col] ?? '').trim() : '';
