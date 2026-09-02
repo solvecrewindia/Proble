@@ -1322,7 +1322,7 @@ const MCQTest = () => {
                                 <textarea
                                     value={explanations[currentQuestion] || ''}
                                     onChange={(e) => handleExplanationChange(e.target.value)}
-                                    placeholder="Type your explanation and reasoning here... (Make sure to include relevant concepts to receive full credit)"
+                                    placeholder="Type your explanation here..."
                                     rows={3}
                                     className={cn(
                                         "w-full bg-background border-2 rounded-xl p-3 text-sm focus:outline-none transition-all resize-y text-text placeholder:text-muted/60",
