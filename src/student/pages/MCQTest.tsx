@@ -3,13 +3,19 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { useAuth } from '../../shared/context/AuthContext';
-import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2, WifiOff } from 'lucide-react';
+import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2, WifiOff, Clock, Lock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import FullScreenLoader from '../../shared/components/FullScreenLoader';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 import { QuizTimer } from '../components/QuizTimer';
 import { Calculator } from '../../shared/components/Calculator';
 import { MathText } from '../../shared/components/MathText';
+
+const formatSeconds = (totalSec: number) => {
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
 
 const MCQTest = () => {
     const navigate = useNavigate();
@@ -39,6 +45,15 @@ const MCQTest = () => {
     const [quizSettings, setQuizSettings] = useState<any>(null);
     const [quizModuleId, setQuizModuleId] = useState<string | null>(null);
     const [showCalculator, setShowCalculator] = useState(false);
+    const [perQuestionTimeLeft, setPerQuestionTimeLeft] = useState<number | null>(null);
+
+    const isPerQuestionMode = useMemo(() => {
+        return Boolean(quizSettings?.timePerQuestion && Number(quizSettings.timePerQuestion) > 0);
+    }, [quizSettings]);
+
+    const perQuestionSeconds = useMemo(() => {
+        return Number(quizSettings?.timePerQuestion || 0);
+    }, [quizSettings]);
 
     // Security State
     const [isWindowFocused, setIsWindowFocused] = useState(true);
@@ -303,6 +318,33 @@ const MCQTest = () => {
             setShowResults(true);
         }
     }, [answers, questions, id, codeExecutionStatus]);
+
+    // Per-Question Timer Reset
+    useEffect(() => {
+        if (isPerQuestionMode && perQuestionSeconds > 0 && testActive && !showResults) {
+            setPerQuestionTimeLeft(perQuestionSeconds);
+        }
+    }, [currentQuestion, isPerQuestionMode, perQuestionSeconds, testActive, showResults]);
+
+    // Per-Question Countdown Interval
+    useEffect(() => {
+        if (!isPerQuestionMode || perQuestionTimeLeft === null || !testActive || showResults || isPaused) return;
+
+        if (perQuestionTimeLeft <= 0) {
+            if (currentQuestion < questions.length) {
+                setCurrentQuestion(prev => prev + 1);
+            } else {
+                calculateAndShowResults();
+            }
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setPerQuestionTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [perQuestionTimeLeft, isPerQuestionMode, currentQuestion, questions.length, testActive, showResults, isPaused, calculateAndShowResults]);
 
     // Security Focus State (For UI overlays only)
     useEffect(() => {
@@ -886,7 +928,24 @@ const MCQTest = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <QuizTimer initialSeconds={(quizSettings?.duration || 20) * 60} onTimeUp={calculateAndShowResults} />
+                    {isPerQuestionMode ? (
+                        <div className="flex flex-col items-end">
+                            <div className={cn(
+                                "text-sm font-mono font-bold tracking-wider text-base md:text-lg px-3 py-1 rounded-lg border flex items-center gap-1.5 shadow-sm transition-colors",
+                                (perQuestionTimeLeft ?? 0) <= 5
+                                    ? "text-red-600 bg-red-500/10 border-red-500/30 animate-pulse dark:text-red-400"
+                                    : "text-primary bg-primary/10 border-primary/20"
+                            )}>
+                                <Clock className="w-4 h-4" />
+                                {formatSeconds(perQuestionTimeLeft ?? perQuestionSeconds)}
+                            </div>
+                            <div className="text-[10px] uppercase tracking-widest text-muted font-bold mt-0.5">
+                                Q{currentQuestion} Timer
+                            </div>
+                        </div>
+                    ) : (
+                        <QuizTimer initialSeconds={(quizSettings?.duration || 20) * 60} onTimeUp={calculateAndShowResults} />
+                    )}
                     <button
                         onClick={() => setShowCalculator(!showCalculator)}
                         className={cn(
@@ -1145,13 +1204,19 @@ const MCQTest = () => {
 
                     {/* Navigation Bar (Desktop) */}
                     <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 flex justify-between items-center shadow-sm sticky bottom-4">
-                        <button
-                            onClick={() => setCurrentQuestion(prev => Math.max(1, prev - 1))}
-                            disabled={currentQuestion === 1}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm text-text hover:bg-neutral-100 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <ChevronLeft className="w-4 h-4" /> Previous
-                        </button>
+                        {!isPerQuestionMode ? (
+                            <button
+                                onClick={() => setCurrentQuestion(prev => Math.max(1, prev - 1))}
+                                disabled={currentQuestion === 1}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm text-text hover:bg-neutral-100 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronLeft className="w-4 h-4" /> Previous
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20">
+                                <Lock className="w-3.5 h-3.5" /> Sequential Mode ({perQuestionSeconds}s / question)
+                            </div>
+                        )}
 
                         <button
                             onClick={() => {
@@ -1159,7 +1224,7 @@ const MCQTest = () => {
                                 else setCurrentQuestion(prev => Math.min(questions.length, prev + 1));
                             }}
                             className={cn(
-                                "flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm text-white transition-all shadow-md",
+                                "flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm text-white transition-all shadow-md ml-auto",
                                 currentQuestion === questions.length
                                     ? "bg-black dark:bg-white dark:text-black hover:scale-105"
                                     : "bg-primary hover:bg-primary-dark hover:scale-105 shadow-primary/25"
@@ -1174,7 +1239,12 @@ const MCQTest = () => {
                 {/* --- RIGHT: GRID --- */}
                 <div className="lg:col-span-4 space-y-4">
                     <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 shadow-sm sticky top-20 w-fit mx-auto">
-
+                        {isPerQuestionMode && (
+                            <div className="flex items-center gap-2 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20 mb-4 max-w-[240px]">
+                                <Lock className="w-3.5 h-3.5 shrink-0" />
+                                <span>Question switching disabled in per-question timer mode.</span>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-5 gap-2 place-items-center w-fit mx-auto">
                             {questions.map((q) => {
@@ -1183,14 +1253,20 @@ const MCQTest = () => {
                                 return (
                                     <button
                                         key={q.id}
-                                        onClick={() => setCurrentQuestion(q.id)}
+                                        onClick={() => {
+                                            if (!isPerQuestionMode) {
+                                                setCurrentQuestion(q.id);
+                                            }
+                                        }}
+                                        disabled={isPerQuestionMode}
                                         className={cn(
-                                            "w-11 h-11 rounded-lg text-xs font-bold transition-all duration-200 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center", // Added border-neutral-700
+                                            "w-11 h-11 rounded-lg text-xs font-bold transition-all duration-200 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center",
                                             isActive
                                                 ? "border-primary text-primary bg-primary/10"
                                                 : isSaved
                                                     ? "bg-primary/20 border-transparent text-primary dark:text-primary-foreground"
-                                                    : "bg-neutral-100 dark:bg-white/5 border-neutral-200 dark:border-neutral-700 text-muted hover:bg-neutral-200 dark:hover:bg-white/10" // Ensure border stays grey if not saved/active
+                                                    : "bg-neutral-100 dark:bg-white/5 border-neutral-200 dark:border-neutral-700 text-muted hover:bg-neutral-200 dark:hover:bg-white/10",
+                                            isPerQuestionMode && !isActive && "cursor-not-allowed opacity-60"
                                         )}
                                     >
                                         {q.id}

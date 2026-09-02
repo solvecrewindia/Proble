@@ -6,12 +6,11 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { QRCodeModal } from './QRCodeModal';
 
-export function StepSchedule({ data, update }: any) {
+export function StepSchedule({ data, update, questions = [] }: any) {
     const [copied, setCopied] = useState(false);
     const [qrCodeData, setQrCodeData] = useState<{ url: string; code: string } | null>(null);
     const { getServerTime } = useAuth();
     const [isPast, setIsPast] = useState(false);
-
 
     useEffect(() => {
         if (!data.accessCode) {
@@ -19,6 +18,24 @@ export function StepSchedule({ data, update }: any) {
         }
         checkIfPast();
     }, [data.scheduledAt]);
+
+    // Auto-calculate duration if timePerQuestion is present
+    useEffect(() => {
+        const sec = Number(data.settings?.timePerQuestion);
+        const qCount = Array.isArray(questions) ? questions.length : 0;
+        if (sec > 0 && qCount > 0) {
+            const calculatedMinutes = Math.ceil((qCount * sec) / 60);
+            if (data.durationMinutes !== calculatedMinutes) {
+                update({
+                    durationMinutes: calculatedMinutes,
+                    settings: {
+                        ...data.settings,
+                        duration: calculatedMinutes
+                    }
+                });
+            }
+        }
+    }, [questions.length, data.settings?.timePerQuestion]);
 
     const checkIfPast = async () => {
         if (data.scheduledAt) {
@@ -50,7 +67,37 @@ export function StepSchedule({ data, update }: any) {
         setQrCodeData({ url: link, code: data.accessCode || 'CODE' });
     };
 
+    const handleTimePerQuestionChange = (val: string | number) => {
+        const sec = val === '' ? 0 : Number(val);
+        const qCount = Array.isArray(questions) ? questions.length : 0;
+        const newSettings = { ...data.settings, timePerQuestion: sec };
 
+        if (sec > 0 && qCount > 0) {
+            const calculatedMinutes = Math.ceil((qCount * sec) / 60);
+            update({
+                durationMinutes: calculatedMinutes,
+                settings: {
+                    ...newSettings,
+                    duration: calculatedMinutes
+                }
+            });
+        } else {
+            update({
+                settings: newSettings
+            });
+        }
+    };
+
+    const handleDurationChange = (val: string | number) => {
+        const min = val === '' ? 0 : Number(val);
+        update({
+            durationMinutes: min,
+            settings: {
+                ...data.settings,
+                duration: min
+            }
+        });
+    };
 
     return (
         <div className="space-y-6 max-w-2xl mx-auto">
@@ -68,90 +115,108 @@ export function StepSchedule({ data, update }: any) {
             </div>
 
             <Card className="p-6 space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-text flex items-center">
-                            <Calendar className="mr-2 h-4 w-4" /> Start Date & Time
-                        </label>
-                        <Input
-                            type="datetime-local"
-                            value={
-                                data.scheduledAt
-                                    ? new Date(new Date(data.scheduledAt).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-                                    : ''
-                            }
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (!val) {
-                                    update({ scheduledAt: null });
-                                } else {
-                                    update({ scheduledAt: new Date(val).toISOString() });
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-text flex items-center">
+                                <Calendar className="mr-2 h-4 w-4" /> Start Date & Time
+                            </label>
+                            <Input
+                                type="datetime-local"
+                                value={
+                                    data.scheduledAt
+                                        ? new Date(new Date(data.scheduledAt).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+                                        : ''
                                 }
-                            }}
-                        />
-                        {isPast && (
-                            <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
-                                <AlertTriangle className="h-3 w-3" /> Selected time is in the past.
-                            </p>
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (!val) {
+                                        update({ scheduledAt: null });
+                                    } else {
+                                        update({ scheduledAt: new Date(val).toISOString() });
+                                    }
+                                }}
+                            />
+                            {isPast && (
+                                <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
+                                    <AlertTriangle className="h-3 w-3" /> Selected time is in the past.
+                                </p>
+                            )}
+                        </div>
+
+                        {data.type === 'master' && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-text flex items-center">
+                                    <Calendar className="mr-2 h-4 w-4 text-red-500" /> End Date & Time (Validity)
+                                </label>
+                                <Input
+                                    type="datetime-local"
+                                    value={
+                                        data.settings?.validUntil
+                                            ? new Date(new Date(data.settings.validUntil).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+                                            : ''
+                                    }
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        update({
+                                            settings: { 
+                                                ...data.settings, 
+                                                validUntil: val ? new Date(val).toISOString() : null 
+                                            }
+                                        });
+                                    }}
+                                />
+                                <p className="text-xs text-muted">Test expires instantly after this.</p>
+                            </div>
                         )}
                     </div>
 
-                    {data.type === 'live' ? (
+                    <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-text flex items-center">
-                                <Clock className="mr-2 h-4 w-4" /> Time per Question (seconds)
+                            <label className="text-sm font-medium text-text flex items-center justify-between">
+                                <span className="flex items-center">
+                                    <Clock className="mr-2 h-4 w-4 text-primary" /> Time per Question (seconds)
+                                </span>
+                            </label>
+                            <Input
+                                type="number"
+                                placeholder="e.g. 30, 45, 60"
+                                value={data.settings?.timePerQuestion || ''}
+                                onChange={(e) => handleTimePerQuestionChange(e.target.value)}
+                            />
+                            <p className="text-[11px] text-muted">Entering seconds per question auto-calculates total test duration.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-text flex items-center justify-between">
+                                <span className="flex items-center">
+                                    <Clock className="mr-2 h-4 w-4 text-primary" /> Duration (minutes)
+                                </span>
+                                {Number(data.settings?.timePerQuestion) > 0 && (
+                                    <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">Auto-calculated</span>
+                                )}
                             </label>
                             <Input
                                 type="number"
                                 placeholder="e.g. 30"
-                                value={data.settings?.timePerQuestion || ''}
-                                onChange={(e) => update({
-                                    settings: { ...data.settings, timePerQuestion: Number(e.target.value) }
-                                })}
+                                value={data.durationMinutes || data.settings?.duration || ''}
+                                onChange={(e) => handleDurationChange(e.target.value)}
                             />
+                            <p className="text-[11px] text-muted">Total test time allocated for all questions.</p>
                         </div>
-                    ) : (
-                        <>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-text flex items-center">
-                                    <Clock className="mr-2 h-4 w-4" /> Duration (minutes)
-                                </label>
-                                <Input
-                                    type="number"
-                                    placeholder="e.g. 60"
-                                    value={data.durationMinutes || ''}
-                                    onChange={(e) => update({ durationMinutes: Number(e.target.value) })}
-                                />
-                            </div>
-                            
-                            {data.type === 'master' && (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-text flex items-center">
-                                        <Calendar className="mr-2 h-4 w-4 text-red-500" /> End Date & Time (Validity)
-                                    </label>
-                                    <Input
-                                        type="datetime-local"
-                                        value={
-                                            data.settings?.validUntil
-                                                ? new Date(new Date(data.settings.validUntil).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-                                                : ''
-                                        }
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            update({
-                                                settings: { 
-                                                    ...data.settings, 
-                                                    validUntil: val ? new Date(val).toISOString() : null 
-                                                }
-                                            });
-                                        }}
-                                    />
-                                    <p className="text-xs text-muted">Test expires instantly after this.</p>
-                                </div>
-                            )}
-                        </>
-                    )}
+                    </div>
                 </div>
+
+                {Number(data.settings?.timePerQuestion) > 0 && (
+                    <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary font-medium flex items-center justify-between">
+                        <span>
+                            ⚡ <strong>Auto-Calculated Duration:</strong> {questions.length || 0} question{(questions.length || 0) === 1 ? '' : 's'} × {data.settings.timePerQuestion}s = {questions.length > 0 ? `${Math.ceil((questions.length * Number(data.settings.timePerQuestion)) / 60)} mins (${questions.length * Number(data.settings.timePerQuestion)}s total)` : '0 mins'}
+                        </span>
+                        {questions.length === 0 && (
+                            <span className="text-muted text-[11px] italic">(Total test duration in minutes will update automatically when questions are added)</span>
+                        )}
+                    </div>
+                )}
 
                 <div className="pt-6 border-t border-neutral-300 dark:border-neutral-600 space-y-4">
                     <label className="text-sm font-medium text-text flex items-center">
