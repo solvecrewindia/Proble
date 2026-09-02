@@ -904,22 +904,6 @@ const MCQTest = () => {
                                                 </td>
                                                 <td className={cn("px-6 py-6 text-sm font-medium align-top", isCorrect ? "text-green-600 dark:text-green-400" : isSkipped ? "text-slate-500" : "text-red-600 dark:text-red-400")}>
                                                     <div>{formatAns(userAnswer, q.type)}</div>
-                                                    {hasKeywords && (
-                                                        <div className="mt-2.5 p-2 bg-slate-50 dark:bg-neutral-800/60 rounded border border-slate-200 dark:border-neutral-700 text-xs text-slate-700 dark:text-neutral-300">
-                                                            <div className="flex items-center gap-1 font-semibold text-[11px] text-slate-500 dark:text-neutral-400 mb-1">
-                                                                <Key className="w-3 h-3 text-primary" />
-                                                                <span>Your Explanation:</span>
-                                                                {isKeywordPassed ? (
-                                                                    <span className="ml-auto text-green-600 dark:text-green-400 font-bold text-[10px]">Keywords Matched</span>
-                                                                ) : (
-                                                                    <span className="ml-auto text-amber-600 dark:text-amber-400 font-bold text-[10px]">Keywords Missing</span>
-                                                                )}
-                                                            </div>
-                                                            <p className="italic text-slate-600 dark:text-neutral-300">
-                                                                {explanations[q.id] || <span className="text-muted">No explanation provided</span>}
-                                                            </p>
-                                                        </div>
-                                                    )}
                                                 </td>
                                                 <td className="px-6 py-6 text-sm font-medium text-slate-800 dark:text-neutral-200 align-top">
                                                     {formatAns(q.correct, q.type)}
