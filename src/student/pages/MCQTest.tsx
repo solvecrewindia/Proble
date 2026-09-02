@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { useAuth } from '../../shared/context/AuthContext';
-import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2, WifiOff, Clock, Lock } from 'lucide-react';
+import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2, WifiOff, Clock, Lock, Key } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import FullScreenLoader from '../../shared/components/FullScreenLoader';
 import { useAntiCheat } from '../hooks/useAntiCheat';
@@ -29,6 +29,8 @@ const MCQTest = () => {
     const [currentQuestion, setCurrentQuestion] = useState(1);
     // Persist answers: Record<questionId, selectedOptionT(number | number[] | string)>
     const [answers, setAnswers] = useState<Record<number, number | number[] | string>>({});
+    const [explanations, setExplanations] = useState<Record<number, string>>({});
+    const [validationError, setValidationError] = useState<string | null>(null);
     const [selectedLanguages, setSelectedLanguages] = useState<Record<number, string>>({});
     const [codeExecutionStatus, setCodeExecutionStatus] = useState<Record<number, boolean>>({});
     const [executionOutput, setExecutionOutput] = useState<Record<number, { stdout: string; stderr: string; }>>({});
@@ -85,6 +87,7 @@ const MCQTest = () => {
             if (savedData) {
                 const parsed = JSON.parse(savedData);
                 if (parsed.answers) setAnswers(parsed.answers);
+                if (parsed.explanations) setExplanations(parsed.explanations);
                 // Logic to set selectedLanguages if it exists
                 if (parsed.selectedLanguages) setSelectedLanguages(parsed.selectedLanguages);
                 if (parsed.codeExecutionStatus) setCodeExecutionStatus(parsed.codeExecutionStatus);
@@ -105,6 +108,7 @@ const MCQTest = () => {
         const storageKey = `quiz_progress_${user.id}_${id}`;
         const dataToSave = {
             answers,
+            explanations,
             selectedLanguages,
             codeExecutionStatus,
             currentQuestion,
@@ -116,31 +120,14 @@ const MCQTest = () => {
         }, 500); // Debounce save by 500ms
 
         return () => clearTimeout(timeoutId);
-    }, [answers, selectedLanguages, codeExecutionStatus, currentQuestion, id, user, showResults, loading]);
+    }, [answers, explanations, selectedLanguages, codeExecutionStatus, currentQuestion, id, user, showResults, loading]);
     // --- PERSISTENCE LOGIC END ---
-
-
-
-    // Helper: finish test (Defined before useAntiCheat to be safe, though hoisting applies to functions not consts. 
-    // We define it as const inside render, so it must be defined before use)
-    // Actually, onAutoSubmit calls it. onAutoSubmit is a callback. 
-    // The safest way with const is to rely on closure capture or define it early.
-    // However, it depends on state like questions/answers.
-    // It's circular if onAutoSubmit calls it but it relies on state.
-    // The standard way is defining it here.
-
-    // We need to define calculateAndShowResults BEFORE useAntiCheat if we pass it directly.
-    // But since useAntiCheat is a hook, we pass a closure `() => calculateAndShowResults()`.
-    // The closure captures the variable. The variable must be initialized by the time the callback executes.
-    // It will be.
-
-    // BUT! I will define it first to be clean.
 
     // Save Progress (Debounced)
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Save Progress (Debounced)
-    const saveProgress = useCallback((currentAnswers: any) => {
+    const saveProgress = useCallback((currentAnswers: any, currentExplanations?: any) => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
         saveTimeoutRef.current = setTimeout(async () => {
@@ -149,17 +136,22 @@ const MCQTest = () => {
                 if (!user || !id || id === 'combined' || !testActive) return;
 
                 console.log("Auto-saving draft...");
+                const answersPayload = {
+                    ...(typeof currentAnswers === 'object' ? currentAnswers : {}),
+                    _explanations: currentExplanations || explanations
+                };
+
                 await supabase.from('attempts').upsert({
                     quiz_id: id,
                     student_id: user.id,
-                    answers: currentAnswers,
+                    answers: answersPayload,
                     status: 'in-progress'
                 }, { onConflict: 'student_id, quiz_id' });
             } catch (err) {
                 console.error("Failed to save draft:", err);
             }
         }, 2000);
-    }, [id, testActive]);
+    }, [id, testActive, explanations]);
 
     const calculateAndShowResults = useCallback(async () => {
         setIsSubmitting(true);
@@ -175,49 +167,45 @@ const MCQTest = () => {
                 return;
             }
 
-            // ZERO-TRUST SECURE GRADING
-            // 1. Prepare answers mapping (DB ID -> User Answer)
-            const answerPayload: Record<string, any> = {};
-            questions.forEach(q => {
-                if (answers[q.id] !== undefined) {
-                    answerPayload[q.dbId] = answers[q.id];
-                }
-            });
-
-            // 2. Call Secure RPC
-            const { data: secureResult, error: rpcError } = await supabase.rpc('evaluate_quiz_answers', {
-                p_quiz_id: id,
-                p_student_answers: answerPayload
-            });
-
+            // ZERO-TRUST SECURE GRADING & KEYWORD VERIFICATION
             let calculatedScore = 0;
 
-            if (rpcError) {
-                console.error("RPC Grading failed, falling back to local (if data exists):", rpcError);
-                // Fallback local grading (only works if user is faculty/admin and actually received correct_answers)
-                questions.forEach((q) => {
-                    const userAnswer = answers[q.id];
-                    if (q.type === 'msq') {
-                        const correctArr = Array.isArray(q.correct) ? q.correct : [];
-                        const userArr = Array.isArray(userAnswer) ? userAnswer : [];
-                        if (userArr.length === correctArr.length &&
-                            userArr.every((val: any) => correctArr.includes(val))) {
-                            calculatedScore++;
-                        }
-                    } else if (q.type === 'range') {
-                        const userVal = Number(userAnswer);
-                        if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
-                            calculatedScore++;
-                        }
-                    } else if (q.type === 'code') {
-                        if (codeExecutionStatus[q.id]) calculatedScore++;
-                    } else {
-                        if (userAnswer === q.correct) calculatedScore++;
+            questions.forEach((q) => {
+                const userAnswer = answers[q.id];
+                let isOptionCorrect = false;
+
+                if (q.type === 'msq') {
+                    const correctArr = Array.isArray(q.correct) ? q.correct : [];
+                    const userArr = Array.isArray(userAnswer) ? userAnswer : [];
+                    if (userArr.length === correctArr.length &&
+                        userArr.every((val: any) => correctArr.includes(val))) {
+                        isOptionCorrect = true;
                     }
-                });
-            } else if (secureResult) {
-                calculatedScore = secureResult.score;
-            }
+                } else if (q.type === 'range') {
+                    const userVal = Number(userAnswer);
+                    if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
+                        isOptionCorrect = true;
+                    }
+                } else if (q.type === 'code') {
+                    if (codeExecutionStatus[q.id]) isOptionCorrect = true;
+                } else {
+                    if (userAnswer === q.correct) isOptionCorrect = true;
+                }
+
+                // Check keyword criteria if question has keywords defined
+                let isKeywordPassed = true;
+                if (q.keywords && Array.isArray(q.keywords) && q.keywords.length > 0) {
+                    const userExpl = (explanations[q.id] || '').toLowerCase().replace(/[^\w\s]/g, ' ');
+                    isKeywordPassed = q.keywords.some((kw: string) => {
+                        const cleanKw = kw.toLowerCase().trim();
+                        return cleanKw.length > 0 && userExpl.includes(cleanKw);
+                    });
+                }
+
+                if (isOptionCorrect && isKeywordPassed) {
+                    calculatedScore++;
+                }
+            });
 
             setScore(calculatedScore);
             setShowResults(true);
@@ -455,7 +443,11 @@ const MCQTest = () => {
 
                         if (draftAttempt && draftAttempt.answers) {
                             console.log("Restoring Draft Data:", draftAttempt.answers);
-                            setAnswers(draftAttempt.answers);
+                            const draftData = draftAttempt.answers;
+                            if (draftData._explanations) {
+                                setExplanations(draftData._explanations);
+                            }
+                            setAnswers(draftData);
                         }
                     }
                 }
@@ -497,6 +489,21 @@ const MCQTest = () => {
                             parsedChoices = Object.values(q.choices);
                         }
 
+                        // Extract keywords if present
+                        const extractedKeywords: string[] = (() => {
+                            if (q.keywords) {
+                                return Array.isArray(q.keywords) ? q.keywords : String(q.keywords).split(',').map((s: string) => s.trim()).filter(Boolean);
+                            }
+                            if (Array.isArray(q.choices) && q.choices.length > 0 && q.choices[0]?.keywords) {
+                                const kw = q.choices[0].keywords;
+                                return Array.isArray(kw) ? kw : String(kw).split(',').map((s: string) => s.trim()).filter(Boolean);
+                            }
+                            if (q.explanation && typeof q.explanation === 'string' && q.explanation.trim().length > 0) {
+                                return q.explanation.split(',').map((s: string) => s.trim()).filter(Boolean);
+                            }
+                            return [];
+                        })();
+
                         return {
                             id: index + 1,
                             dbId: q.id,
@@ -504,6 +511,7 @@ const MCQTest = () => {
                             question: q.text || '',
                             imageUrl: q.image_url ? `${q.image_url}?t=${Date.now()}` : null,
                             options: parsedChoices,
+                            keywords: extractedKeywords,
                             correct: (() => {
                                 try {
                                     if (derivedType === 'msq') return JSON.parse(q.correct_answer || '[]');
@@ -593,7 +601,10 @@ const MCQTest = () => {
     }, [id, loading, showResults, calculateAndShowResults]);
 
     const handleOptionSelect = useCallback((optionIndex: number) => {
+        setValidationError(null);
         const currentQ = questions[currentQuestion - 1];
+        if (!currentQ) return;
+
         if (currentQ.type === 'msq') {
             setAnswers(prev => {
                 const current = (prev[currentQuestion] as number[]) || [];
@@ -603,17 +614,68 @@ const MCQTest = () => {
                 } else {
                     next = { ...prev, [currentQuestion]: [...current, optionIndex] };
                 }
-                saveProgress(next);
+                saveProgress(next, explanations);
                 return next;
             });
         } else {
             setAnswers(prev => {
                 const next = { ...prev, [currentQuestion]: optionIndex };
-                saveProgress(next);
+                saveProgress(next, explanations);
                 return next;
             });
         }
-    }, [currentQuestion, questions, saveProgress]);
+    }, [currentQuestion, questions, saveProgress, explanations]);
+
+    const handleExplanationChange = useCallback((val: string) => {
+        setValidationError(null);
+        setExplanations(prev => {
+            const next = { ...prev, [currentQuestion]: val };
+            saveProgress(answers, next);
+            return next;
+        });
+    }, [currentQuestion, answers, saveProgress]);
+
+    const handleNextQuestion = useCallback(() => {
+        const currentQ = questions[currentQuestion - 1];
+        if (!currentQ) return;
+
+        // 1. Check if option / answer is selected
+        const userAnswer = answers[currentQuestion];
+        let hasAnswer = false;
+
+        if (currentQ.type === 'msq') {
+            hasAnswer = Array.isArray(userAnswer) && userAnswer.length > 0;
+        } else if (currentQ.type === 'range') {
+            hasAnswer = userAnswer !== undefined && userAnswer !== null && String(userAnswer).trim() !== '';
+        } else if (currentQ.type === 'code') {
+            hasAnswer = (typeof userAnswer === 'string' && userAnswer.trim() !== '') || Boolean(currentQ.correct?.starterCode);
+        } else {
+            hasAnswer = userAnswer !== undefined && userAnswer !== null && userAnswer !== '';
+        }
+
+        if (!hasAnswer) {
+            setValidationError("Please select an answer before proceeding.");
+            return;
+        }
+
+        // 2. Check if explanation is required (keywords configured)
+        const hasKeywords = currentQ.keywords && Array.isArray(currentQ.keywords) && currentQ.keywords.length > 0;
+        if (hasKeywords) {
+            const userExpl = (explanations[currentQuestion] || '').trim();
+            if (!userExpl) {
+                setValidationError("Please write your explanation in the box below before proceeding.");
+                return;
+            }
+        }
+
+        // Clear validation error and advance
+        setValidationError(null);
+        if (currentQuestion === questions.length) {
+            calculateAndShowResults();
+        } else {
+            setCurrentQuestion(prev => Math.min(questions.length, prev + 1));
+        }
+    }, [currentQuestion, questions, answers, explanations, calculateAndShowResults]);
 
     const handleRunCode = async () => {
         const q = questions[currentQuestion - 1];
@@ -775,8 +837,8 @@ const MCQTest = () => {
                                     {questions.map((q, index) => {
                                         const userAnswer = answers[q.id];
 
-                                        // Determine correctness
-                                        let isCorrect = false;
+                                        // Determine option correctness
+                                        let isOptionCorrect = false;
                                         const isSkipped = userAnswer === undefined || userAnswer === null || userAnswer === '' || (Array.isArray(userAnswer) && userAnswer.length === 0);
 
                                         if (!isSkipped) {
@@ -785,19 +847,32 @@ const MCQTest = () => {
                                                 const userArr = Array.isArray(userAnswer) ? userAnswer : [];
                                                 if (userArr.length === correctArr.length &&
                                                     userArr.every((val: any) => correctArr.includes(val))) {
-                                                    isCorrect = true;
+                                                    isOptionCorrect = true;
                                                 }
                                             } else if (q.type === 'range') {
                                                 const userVal = Number(userAnswer);
                                                 if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
-                                                    isCorrect = true;
+                                                    isOptionCorrect = true;
                                                 }
                                             } else if (q.type === 'code') {
-                                                isCorrect = codeExecutionStatus[q.id] || false;
+                                                isOptionCorrect = codeExecutionStatus[q.id] || false;
                                             } else {
-                                                if (userAnswer === q.correct) isCorrect = true;
+                                                if (userAnswer === q.correct) isOptionCorrect = true;
                                             }
                                         }
+
+                                        // Check keyword criteria if question has keywords defined
+                                        const hasKeywords = q.keywords && Array.isArray(q.keywords) && q.keywords.length > 0;
+                                        let isKeywordPassed = true;
+                                        if (hasKeywords) {
+                                            const userExpl = (explanations[q.id] || '').toLowerCase().replace(/[^\w\s]/g, ' ');
+                                            isKeywordPassed = q.keywords.some((kw: string) => {
+                                                const cleanKw = kw.toLowerCase().trim();
+                                                return cleanKw.length > 0 && userExpl.includes(cleanKw);
+                                            });
+                                        }
+
+                                        const isCorrect = isOptionCorrect && isKeywordPassed;
 
                                         // Format Helper
                                         const formatAns = (ans: any, type: string) => {
@@ -828,7 +903,23 @@ const MCQTest = () => {
                                                     <MathText text={q.question} as="span" />
                                                 </td>
                                                 <td className={cn("px-6 py-6 text-sm font-medium align-top", isCorrect ? "text-green-600 dark:text-green-400" : isSkipped ? "text-slate-500" : "text-red-600 dark:text-red-400")}>
-                                                    {formatAns(userAnswer, q.type)}
+                                                    <div>{formatAns(userAnswer, q.type)}</div>
+                                                    {hasKeywords && (
+                                                        <div className="mt-2.5 p-2 bg-slate-50 dark:bg-neutral-800/60 rounded border border-slate-200 dark:border-neutral-700 text-xs text-slate-700 dark:text-neutral-300">
+                                                            <div className="flex items-center gap-1 font-semibold text-[11px] text-slate-500 dark:text-neutral-400 mb-1">
+                                                                <Key className="w-3 h-3 text-primary" />
+                                                                <span>Your Explanation:</span>
+                                                                {isKeywordPassed ? (
+                                                                    <span className="ml-auto text-green-600 dark:text-green-400 font-bold text-[10px]">Keywords Matched</span>
+                                                                ) : (
+                                                                    <span className="ml-auto text-amber-600 dark:text-amber-400 font-bold text-[10px]">Keywords Missing</span>
+                                                                )}
+                                                            </div>
+                                                            <p className="italic text-slate-600 dark:text-neutral-300">
+                                                                {explanations[q.id] || <span className="text-muted">No explanation provided</span>}
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-6 text-sm font-medium text-slate-800 dark:text-neutral-200 align-top">
                                                     {formatAns(q.correct, q.type)}
@@ -1230,13 +1321,55 @@ const MCQTest = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* Conditional Explanation & Keyword Box */}
+                        {activeQuestion.keywords && activeQuestion.keywords.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700/80 space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-xs md:text-sm font-semibold text-text flex items-center gap-1.5">
+                                        <Key className="w-4 h-4 text-primary shrink-0" />
+                                        <span>Explain Your Answer & Reasoning</span>
+                                        <span className="text-red-500 font-bold">*</span>
+                                    </label>
+                                    <span className="text-[11px] text-muted font-mono font-medium">
+                                        {(explanations[currentQuestion] || '').trim().length} chars
+                                    </span>
+                                </div>
+                                <textarea
+                                    value={explanations[currentQuestion] || ''}
+                                    onChange={(e) => handleExplanationChange(e.target.value)}
+                                    placeholder="Type your explanation and reasoning here... (Make sure to include relevant concepts to receive full credit)"
+                                    rows={3}
+                                    className={cn(
+                                        "w-full bg-background border-2 rounded-xl p-3 text-sm focus:outline-none transition-all resize-y text-text placeholder:text-muted/60",
+                                        validationError && !(explanations[currentQuestion] || '').trim()
+                                            ? "border-red-500 ring-2 ring-red-500/20"
+                                            : "border-neutral-200 dark:border-neutral-700 focus:border-primary"
+                                    )}
+                                />
+                                <p className="text-[11px] text-muted">
+                                    * An explanation is required for this question before moving to the next question.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Validation Error Banner */}
+                        {validationError && (
+                            <div className="mt-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2.5 text-red-600 dark:text-red-400 text-xs font-medium animate-in fade-in slide-in-from-bottom-2">
+                                <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+                                <span>{validationError}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Navigation Bar (Desktop) */}
                     <div className="bg-surface border border-neutral-200 dark:border-neutral-700 rounded-xl p-3 flex justify-between items-center shadow-sm sticky bottom-4">
                         {!isPerQuestionMode && (
                             <button
-                                onClick={() => setCurrentQuestion(prev => Math.max(1, prev - 1))}
+                                onClick={() => {
+                                    setValidationError(null);
+                                    setCurrentQuestion(prev => Math.max(1, prev - 1));
+                                }}
                                 disabled={currentQuestion === 1}
                                 className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm text-text hover:bg-neutral-100 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
@@ -1245,10 +1378,7 @@ const MCQTest = () => {
                         )}
 
                         <button
-                            onClick={() => {
-                                if (currentQuestion === questions.length) calculateAndShowResults();
-                                else setCurrentQuestion(prev => Math.min(questions.length, prev + 1));
-                            }}
+                            onClick={handleNextQuestion}
                             className={cn(
                                 "flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm text-white transition-all shadow-md ml-auto",
                                 currentQuestion === questions.length

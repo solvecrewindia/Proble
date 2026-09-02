@@ -80,22 +80,33 @@ export default function QuizCreate() {
                 .eq('quiz_id', id);
 
             if (qs) {
-                setQuestions(qs.map(q => ({
-                    id: q.id,
-                    stem: q.text,
-                    options: q.choices,
-                    type: q.type, // Ensure type is passed
-                    correct: (() => {
-                        try {
-                            if (q.type === 'code' || q.type === 'msq' || q.type === 'range') {
-                                return JSON.parse(q.correct_answer || '{}');
+                setQuestions(qs.map(q => {
+                    const extractedKeywords = (() => {
+                        if (q.keywords) return q.keywords;
+                        if (Array.isArray(q.choices) && q.choices.length > 0 && q.choices[0]?.keywords) return q.choices[0].keywords;
+                        if (q.explanation && typeof q.explanation === 'string' && q.explanation.trim().length > 0) return q.explanation;
+                        return '';
+                    })();
+
+                    return {
+                        id: q.id,
+                        stem: q.text,
+                        options: Array.isArray(q.choices) ? q.choices.map((c: any) => typeof c === 'object' ? c.text : c) : (q.choices || []),
+                        optionImages: Array.isArray(q.choices) ? q.choices.map((c: any) => typeof c === 'object' ? c.image : '') : [],
+                        type: q.type, // Ensure type is passed
+                        keywords: extractedKeywords,
+                        correct: (() => {
+                            try {
+                                if (q.type === 'code' || q.type === 'msq' || q.type === 'range') {
+                                    return JSON.parse(q.correct_answer || '{}');
+                                }
+                                return q.correct_answer;
+                            } catch (e) {
+                                return q.correct_answer;
                             }
-                            return q.correct_answer;
-                        } catch (e) {
-                            return q.correct_answer;
-                        }
-                    })()
-                })));
+                        })()
+                    };
+                }));
             }
         };
 
@@ -185,13 +196,26 @@ export default function QuizCreate() {
             }
 
             if (questions.length > 0) {
-                const questionsPayload = questions.map(q => ({
-                    quiz_id: savedQuiz.id,
-                    text: q.stem,
-                    type: q.type,
-                    choices: q.options || [],
-                    correct_answer: typeof q.correct === 'object' ? JSON.stringify(q.correct) : String(q.correct ?? ''),
-                }));
+                const questionsPayload = questions.map(q => {
+                    const kwString = Array.isArray(q.keywords) ? q.keywords.join(', ') : String(q.keywords || '');
+                    const kwArray = kwString.split(',').map((s: string) => s.trim()).filter(Boolean);
+
+                    return {
+                        quiz_id: savedQuiz.id,
+                        text: q.stem,
+                        type: q.type || 'mcq',
+                        image_url: q.imageUrl || null,
+                        choices: Array.isArray(q.options)
+                            ? q.options.map((opt: any, i: number) => ({
+                                text: typeof opt === 'object' ? opt.text : opt,
+                                image: q.optionImages?.[i] || (typeof opt === 'object' ? opt.image : null),
+                                ...(i === 0 && kwArray.length > 0 ? { keywords: kwArray } : {})
+                              }))
+                            : q.options || [],
+                        correct_answer: typeof q.correct === 'object' ? JSON.stringify(q.correct) : String(q.correct ?? ''),
+                        explanation: kwString || (q.explanation || null),
+                    };
+                });
                 const qResult = await supabase.from('questions').insert(questionsPayload);
                 if (qResult.error) throw qResult.error;
             }

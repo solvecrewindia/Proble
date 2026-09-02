@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download, PlusCircle, MinusCircle } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download, PlusCircle, MinusCircle, Key } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression';
@@ -88,8 +88,8 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
             e.stopPropagation();
         }
         try {
-            const headers = ['Question No', 'Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer'];
-            const sampleRow = ['Q1', 'Sample Question?', 'Option A', 'Option B', 'Option C', 'Option D', 'A'];
+            const headers = ['Question No', 'Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer', 'Keywords'];
+            const sampleRow = ['Q1', 'Sample Question?', 'Option A', 'Option B', 'Option C', 'Option D', 'A', 'keyword1, keyword2'];
 
             const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
             const wb = XLSX.utils.book_new();
@@ -150,39 +150,36 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                 setImportStatus('Parsing Excel...');
                 const data = e.target?.result;
                 const workbook = XLSX.read(data, { type: 'binary' });
-                const sheetName = workbook.SheetNames[0];
-                const sheet = workbook.Sheets[sheetName];
-                const jsonData = XLSX.utils.sheet_to_json(sheet);
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-                if (jsonData.length === 0) {
-                    throw new Error("Excel sheet is empty");
+                if (!jsonData || jsonData.length === 0) {
+                    throw new Error("Excel file is empty");
                 }
 
-                setImportStatus(`Processing ${jsonData.length} questions...`);
+                // Find Keys with Case-Insensitive matching
+                const firstRow = jsonData[0] as any;
+                const headers = Object.keys(firstRow);
 
-                // Fuzzy Header Helper
-                // Collect all keys from all rows to ensure we don't miss columns if the first row is sparse
-                const headersSet = new Set<string>();
-                (jsonData as any[]).forEach(row => {
-                    Object.keys(row).forEach(k => headersSet.add(k));
-                });
-                const headers = Array.from(headersSet);
                 const findHeadeKey = (patterns: RegExp[]) => {
-                    return headers.find(h => patterns.some(p => p.test(h))) || '';
+                    return headers.find(h => patterns.some(p => p.test(h.trim())));
                 };
 
-                // Identify keys dynamically
-                const keyQNo = findHeadeKey([/Question\s*No/i, /Q\.?\s*No/i, /^No$/i]);
-                const keyQText = findHeadeKey([/^Question$/i, /^Stem$/i, /Question\s+Text/i]); // Strict match to avoid "Question No"
+                const keyQNo = findHeadeKey([/Question\s*No/i, /Q\.?\s*No/i, /Q#/i, /No/i]);
+                const keyQText = findHeadeKey([/Question/i, /Question\s*Text/i, /Stem/i]);
                 const keyOpt1 = findHeadeKey([/Option\s*1/i, /Option\s*A/i]);
                 const keyOpt2 = findHeadeKey([/Option\s*2/i, /Option\s*B/i]);
                 const keyOpt3 = findHeadeKey([/Option\s*3/i, /Option\s*C/i]);
                 const keyOpt4 = findHeadeKey([/Option\s*4/i, /Option\s*D/i]);
                 const keyCorrect = findHeadeKey([/Correct\s*Answer/i, /Answer/i, /Key/i]);
+                const keyKeywords = findHeadeKey([/Keywords/i, /Key\s*Words/i, /Explanation\s*Keywords/i]);
 
                 if (!keyOpt1 || !keyCorrect) {
                     throw new Error(`Missing required columns (Option 1, Correct Answer). Found: ${headers.join(', ')}`);
                 }
+
+                setImportStatus(`Processing ${jsonData.length} questions...`);
 
                 const newQuestions: Question[] = [];
                 let mappedCount = 0;
@@ -318,13 +315,16 @@ export function StepQuestions({ questions, setQuestions, quizId }: any) {
                         }
                     }
 
+                    const keywordsRaw = keyKeywords ? row[keyKeywords] : '';
+                    const keywordsList = keywordsRaw ? String(keywordsRaw).split(',').map((s: string) => s.trim()).filter(Boolean) : undefined;
+
                     newQuestions.push({
                         id: uuidv4(),
                         quizId: quizId || '',
                         type: type,
                         stem: questionText || '',
                         options: type === 'true_false' ? ['True', 'False'] : [opt1, opt2, opt3, opt4].map(o => String(o || '')),
-
+                        keywords: keywordsList,
                         correct: correct,
                         weight: 1,
                         imageUrl: qImageUrl,
@@ -1025,6 +1025,26 @@ print(result)`}
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* Explanation Keywords (Optional) */}
+                                        <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700/80">
+                                            <div className="flex flex-col gap-1.5">
+                                                <label className="text-xs font-semibold text-text flex items-center gap-1.5">
+                                                    <Key className="w-3.5 h-3.5 text-primary" />
+                                                    <span>Required Explanation Keywords</span>
+                                                    <span className="text-[10px] text-muted font-normal">(comma-separated)</span>
+                                                </label>
+                                                <Input
+                                                    placeholder="e.g. photosynthesis, chlorophyll, sunlight (leave empty if not required)"
+                                                    value={Array.isArray(q.keywords) ? q.keywords.join(', ') : (q.keywords || '')}
+                                                    onChange={(e) => updateQuestion(index, { keywords: e.target.value })}
+                                                    className="h-9 text-xs font-mono"
+                                                />
+                                                <p className="text-[10px] text-muted">
+                                                    If keywords are provided, students must select an option and write an explanation containing these keywords to proceed and get the mark. If left empty, the explanation box will not be shown.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </Card>

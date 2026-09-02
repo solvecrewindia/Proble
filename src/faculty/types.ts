@@ -37,6 +37,9 @@ export interface Question {
     optionImages?: string[];
     correct?: number | number[] | string | { min: number; max: number } | { language: string; allowedLanguages?: string[]; starterCode: string; driverCode?: string; testCases: { input: string; output: string }[] };
     weight: number;
+    keywords?: string[] | string;
+    explanation?: string;
+    tags?: string[];
 }
 
 export interface Quiz {

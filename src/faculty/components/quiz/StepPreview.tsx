@@ -1,4 +1,4 @@
-import { Clock, AlertCircle, Code2 } from 'lucide-react';
+import { Clock, AlertCircle, Code2, Key } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { MathText } from '../../../shared/components/MathText';
@@ -137,6 +137,22 @@ export function StepPreview({ data, questions }: any) {
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            )}
+
+                            {/* Keywords Preview */}
+                            {q.keywords && (Array.isArray(q.keywords) ? q.keywords.length > 0 : String(q.keywords).trim().length > 0) && (
+                                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg space-y-1">
+                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                                        <Key className="w-3.5 h-3.5" />
+                                        <span>Required Explanation Keywords</span>
+                                    </div>
+                                    <p className="text-xs font-mono text-muted">
+                                        {Array.isArray(q.keywords) ? q.keywords.join(', ') : String(q.keywords)}
+                                    </p>
+                                    <p className="text-[10px] text-muted">
+                                        * Students will be shown an explanation box and must include these keywords to proceed and receive marks.
+                                    </p>
                                 </div>
                             )}
                         </CardContent>

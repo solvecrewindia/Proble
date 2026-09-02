@@ -102,35 +102,45 @@ export default function AdminQuizCreate() {
 
                     setQuizData(quiz);
 
-                    const formattedQuestions = (qData || []).map((q: any) => ({
-                        id: q.id,
-                        quizId: q.quiz_id,
-                        type: q.type || 'mcq', // Use DB type
-                        stem: q.text,
-                        imageUrl: q.image_url,
-                        options: Array.isArray(q.choices) ? q.choices.map((c: any) => c.text || '') : [],
-                        optionImages: Array.isArray(q.choices) ? q.choices.map((c: any) => c.image || '') : [],
-                        // Parse correct answer: could be int (MCQ) or JSON string of array (MSQ)
-                        correct: (() => {
-                            if (q.type === 'msq') {
-                                try {
-                                    const parsed = JSON.parse(q.correct_answer);
-                                    return Array.isArray(parsed) ? parsed : [];
-                                } catch {
-                                    return [];
+                    const formattedQuestions = (qData || []).map((q: any) => {
+                        const extractedKeywords = (() => {
+                            if (q.keywords) return q.keywords;
+                            if (Array.isArray(q.choices) && q.choices.length > 0 && q.choices[0]?.keywords) return q.choices[0].keywords;
+                            if (q.explanation && typeof q.explanation === 'string' && q.explanation.trim().length > 0) return q.explanation;
+                            return '';
+                        })();
+
+                        return {
+                            id: q.id,
+                            quizId: q.quiz_id,
+                            type: q.type || 'mcq', // Use DB type
+                            stem: q.text,
+                            imageUrl: q.image_url,
+                            options: Array.isArray(q.choices) ? q.choices.map((c: any) => c.text || '') : [],
+                            optionImages: Array.isArray(q.choices) ? q.choices.map((c: any) => c.image || '') : [],
+                            keywords: extractedKeywords,
+                            // Parse correct answer: could be int (MCQ) or JSON string of array (MSQ)
+                            correct: (() => {
+                                if (q.type === 'msq') {
+                                    try {
+                                        const parsed = JSON.parse(q.correct_answer);
+                                        return Array.isArray(parsed) ? parsed : [];
+                                    } catch {
+                                        return [];
+                                    }
                                 }
-                            }
-                            if (q.type === 'range') {
-                                try {
-                                    return JSON.parse(q.correct_answer);
-                                } catch {
-                                    return {};
+                                if (q.type === 'range') {
+                                    try {
+                                        return JSON.parse(q.correct_answer);
+                                    } catch {
+                                        return {};
+                                    }
                                 }
-                            }
-                            return typeof q.correct_answer === 'string' ? parseInt(q.correct_answer) : (q.correct_answer || 0);
-                        })(),
-                        weight: 1
-                    }));
+                                return typeof q.correct_answer === 'string' ? parseInt(q.correct_answer) : (q.correct_answer || 0);
+                            })(),
+                            weight: 1
+                        };
+                    });
 
                     setQuestions(formattedQuestions);
 
@@ -246,21 +256,28 @@ export default function AdminQuizCreate() {
             }
 
             if (questions.length > 0) {
-                const questionsPayload = questions.map(q => ({
-                    quiz_id: quizId,
-                    type: q.type || 'mcq', // Save type
-                    text: q.stem,
-                    image_url: q.imageUrl || null,
-                    choices: q.options?.map((opt: string, i: number) => ({
-                        text: opt,
-                        image: q.optionImages?.[i] || null
-                    })) || [],
-                    // Serialize correct answer: string for MCQ index, JSON string for MSQ array
-                    correct_answer: (q.type === 'msq' || q.type === 'range')
-                        ? JSON.stringify(q.correct || (q.type === 'msq' ? [] : {}))
-                        : String(q.correct || 0),
-                    tags: q.tags || ['practice']
-                }));
+                const questionsPayload = questions.map(q => {
+                    const kwString = Array.isArray(q.keywords) ? q.keywords.join(', ') : String(q.keywords || '');
+                    const kwArray = kwString.split(',').map((s: string) => s.trim()).filter(Boolean);
+
+                    return {
+                        quiz_id: quizId,
+                        type: q.type || 'mcq', // Save type
+                        text: q.stem,
+                        image_url: q.imageUrl || null,
+                        choices: q.options?.map((opt: string, i: number) => ({
+                            text: opt,
+                            image: q.optionImages?.[i] || null,
+                            ...(i === 0 && kwArray.length > 0 ? { keywords: kwArray } : {})
+                        })) || [],
+                        // Serialize correct answer: string for MCQ index, JSON string for MSQ array
+                        correct_answer: (q.type === 'msq' || q.type === 'range')
+                            ? JSON.stringify(q.correct || (q.type === 'msq' ? [] : {}))
+                            : String(q.correct || 0),
+                        tags: q.tags || ['practice'],
+                        explanation: kwString || (q.explanation || null),
+                    };
+                });
                 const qResult = await supabase.from('questions').insert(questionsPayload);
                 if (qResult.error) {
                     console.error("AdminQuizCreate: Questions insert error", qResult.error);
