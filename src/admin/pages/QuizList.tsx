@@ -50,8 +50,11 @@ const QuizList = () => {
                 // Fetch Modules List
                 let query = supabase.from('modules').select('*');
                 if (categoryTitle !== 'GLOBAL') {
-                    const dbCat = categoryTitle === 'PROBLE ORIGINALS' ? 'ORIGINALS' : categoryTitle;
-                    query = query.eq('category', dbCat);
+                    if (categoryTitle === 'PROBLE ORIGINALS' || categoryTitle === 'ORIGINALS') {
+                        query = query.or('category.eq.ORIGINALS,category.eq.PROBLE ORIGINALS');
+                    } else {
+                        query = query.eq('category', categoryTitle);
+                    }
                 }
                 const { data, error } = await query;
                 if (error) throw error;
@@ -61,11 +64,11 @@ const QuizList = () => {
                 let query = supabase.from('quizzes').select('*');
 
                 if (categoryTitle === 'GLOBAL') {
-                    query = query.eq('type', 'global');
-                } else if (categoryTitle === 'PROBLE ORIGINALS') {
-                    query = query.contains('settings', { category: 'ORIGINALS' });
+                    query = query.or('type.eq.global,settings->>category.eq.GLOBAL,settings->>category.eq.Global');
+                } else if (categoryTitle === 'PROBLE ORIGINALS' || categoryTitle === 'ORIGINALS') {
+                    query = query.or('type.eq.originals,type.eq.proble originals,settings->>category.eq.ORIGINALS,settings->>category.eq.PROBLE ORIGINALS');
                 } else {
-                    query = query.contains('settings', { category: categoryTitle });
+                    query = query.or(`settings->>category.eq.${categoryTitle},type.eq.${categoryTitle.toLowerCase()}`);
                 }
 
                 query = query.is('module_id', null);

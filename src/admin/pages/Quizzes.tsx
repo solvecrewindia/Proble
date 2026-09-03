@@ -22,7 +22,7 @@ const Quizzes = () => {
             const { count: originalsCount } = await supabase
                 .from('quizzes')
                 .select('*', { count: 'exact', head: true })
-                .or('type.eq.originals,settings->>category.eq.ORIGINALS');
+                .or('type.eq.originals,type.eq.proble originals,settings->>category.eq.ORIGINALS,settings->>category.eq.PROBLE ORIGINALS');
 
             // NPTEL
             const { count: nptelCount } = await supabase
