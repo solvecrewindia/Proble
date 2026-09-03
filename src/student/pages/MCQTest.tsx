@@ -3,13 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { useAuth } from '../../shared/context/AuthContext';
-import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2, WifiOff, Clock, Lock, Key } from 'lucide-react';
+import { Moon, Sun, Loader2, X, ZoomIn, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, ShieldAlert, Calculator as CalculatorIcon, Play, RotateCcw, Code2, WifiOff, Clock, Key, Sparkles } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import FullScreenLoader from '../../shared/components/FullScreenLoader';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 import { QuizTimer } from '../components/QuizTimer';
 import { Calculator } from '../../shared/components/Calculator';
 import { MathText } from '../../shared/components/MathText';
+import { evaluateTestWithAI, QuestionEvaluationResult, QuestionEvaluationInput } from '../services/aiEvaluationService';
 
 const formatSeconds = (totalSec: number) => {
     if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
@@ -39,16 +40,36 @@ const MCQTest = () => {
     // Results State
     const [showResults, setShowResults] = useState(false);
     const [score, setScore] = useState(0);
+    const [aiEvaluations, setAiEvaluations] = useState<Record<number, QuestionEvaluationResult>>({});
+    const [isAiEvaluating, setIsAiEvaluating] = useState(false);
 
     const [loading, setLoading] = useState(true);
     const [testActive, setTestActive] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+    const [quizType, setQuizType] = useState<string>('');
     const [quizSettings, setQuizSettings] = useState<any>(null);
     const [quizModuleId, setQuizModuleId] = useState<string | null>(null);
     const [showCalculator, setShowCalculator] = useState(false);
     const [perQuestionTimeLeft, setPerQuestionTimeLeft] = useState<number | null>(null);
+
+    const isProbleOriginals = useMemo(() => {
+        return (
+            quizType?.toLowerCase() === 'originals' ||
+            quizSettings?.category?.toUpperCase() === 'ORIGINALS' ||
+            quizSettings?.category?.toUpperCase() === 'PROBLE ORIGINALS'
+        );
+    }, [quizType, quizSettings]);
+
+    const useKeywords = useMemo(() => {
+        return Boolean(quizSettings?.useKeywords);
+    }, [quizSettings]);
+
+    // AI Reason Evaluation is active ONLY for Proble Originals when keywords mode is OFF
+    const isAiEvaluationMode = useMemo(() => {
+        return isProbleOriginals && !useKeywords;
+    }, [isProbleOriginals, useKeywords]);
 
     const isPerQuestionMode = useMemo(() => {
         return Boolean(quizSettings?.timePerQuestion && Number(quizSettings.timePerQuestion) > 0);
@@ -167,45 +188,122 @@ const MCQTest = () => {
                 return;
             }
 
-            // ZERO-TRUST SECURE GRADING & KEYWORD VERIFICATION
             let calculatedScore = 0;
 
-            questions.forEach((q) => {
-                const userAnswer = answers[q.id];
-                let isOptionCorrect = false;
-
-                if (q.type === 'msq') {
-                    const correctArr = Array.isArray(q.correct) ? q.correct : [];
-                    const userArr = Array.isArray(userAnswer) ? userAnswer : [];
-                    if (userArr.length === correctArr.length &&
-                        userArr.every((val: any) => correctArr.includes(val))) {
-                        isOptionCorrect = true;
+            // Helper to get readable string of answer
+            const getAnswerText = (ans: any, q: any) => {
+                if (ans === undefined || ans === null || ans === '' || (Array.isArray(ans) && ans.length === 0)) return 'Skipped';
+                if (q.type === 'mcq' || q.type === 'true_false') {
+                    if (Array.isArray(q.options) && q.options[ans] !== undefined) {
+                        const optVal = typeof q.options[ans] === 'object' && q.options[ans] !== null ? (q.options[ans].text ?? '') : q.options[ans];
+                        return String(optVal);
                     }
-                } else if (q.type === 'range') {
-                    const userVal = Number(userAnswer);
-                    if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
-                        isOptionCorrect = true;
-                    }
-                } else if (q.type === 'code') {
-                    if (codeExecutionStatus[q.id]) isOptionCorrect = true;
-                } else {
-                    if (userAnswer === q.correct) isOptionCorrect = true;
+                    return `Option ${Number(ans) + 1}`;
                 }
+                if (q.type === 'msq' && Array.isArray(ans)) {
+                    return ans.map((a: any) => {
+                        const optVal = Array.isArray(q.options) && q.options[a] !== undefined
+                            ? (typeof q.options[a] === 'object' && q.options[a] !== null ? (q.options[a].text ?? '') : q.options[a])
+                            : `Option ${Number(a) + 1}`;
+                        return String(optVal);
+                    }).join(', ');
+                }
+                if (q.type === 'code') return 'Code Solution';
+                return String(ans);
+            };
 
-                // Check keyword criteria if question has keywords defined
-                let isKeywordPassed = true;
-                if (q.keywords && Array.isArray(q.keywords) && q.keywords.length > 0) {
-                    const userExpl = (explanations[q.id] || '').toLowerCase().replace(/[^\w\s]/g, ' ');
-                    isKeywordPassed = q.keywords.some((kw: string) => {
-                        const cleanKw = kw.toLowerCase().trim();
-                        return cleanKw.length > 0 && userExpl.includes(cleanKw);
+            // Check if this is Proble Originals in AI Reason Evaluation Mode
+            if (isAiEvaluationMode) {
+                setIsAiEvaluating(true);
+
+                const evalInputs: QuestionEvaluationInput[] = questions.map((q) => {
+                    const userAnswer = answers[q.id];
+                    let isOptionCorrect = false;
+
+                    if (q.type === 'msq') {
+                        const correctArr = Array.isArray(q.correct) ? q.correct : [];
+                        const userArr = Array.isArray(userAnswer) ? userAnswer : [];
+                        if (userArr.length === correctArr.length &&
+                            userArr.every((val: any) => correctArr.includes(val))) {
+                            isOptionCorrect = true;
+                        }
+                    } else if (q.type === 'range') {
+                        const userVal = Number(userAnswer);
+                        if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
+                            isOptionCorrect = true;
+                        }
+                    } else if (q.type === 'code') {
+                        if (codeExecutionStatus[q.id]) isOptionCorrect = true;
+                    } else {
+                        if (userAnswer === q.correct) isOptionCorrect = true;
+                    }
+
+                    return {
+                        id: q.id,
+                        dbId: q.dbId,
+                        question: q.question,
+                        type: q.type,
+                        selectedAnswer: userAnswer,
+                        selectedAnswerText: getAnswerText(userAnswer, q),
+                        correctAnswer: q.correct,
+                        correctAnswerText: getAnswerText(q.correct, q),
+                        isOptionCorrect,
+                        studentReason: explanations[q.id] || ''
+                    };
+                });
+
+                try {
+                    const aiResult = await evaluateTestWithAI(evalInputs);
+                    setAiEvaluations(aiResult.evaluations);
+                    calculatedScore = aiResult.totalScore;
+                } catch (aiErr) {
+                    console.error("AI Evaluation failed, falling back:", aiErr);
+                    // Fallback
+                    evalInputs.forEach(inp => {
+                        if (inp.isOptionCorrect) calculatedScore++;
                     });
+                } finally {
+                    setIsAiEvaluating(false);
                 }
+            } else {
+                // Standard Keyword / Direct Evaluation Mode
+                questions.forEach((q) => {
+                    const userAnswer = answers[q.id];
+                    let isOptionCorrect = false;
 
-                if (isOptionCorrect && isKeywordPassed) {
-                    calculatedScore++;
-                }
-            });
+                    if (q.type === 'msq') {
+                        const correctArr = Array.isArray(q.correct) ? q.correct : [];
+                        const userArr = Array.isArray(userAnswer) ? userAnswer : [];
+                        if (userArr.length === correctArr.length &&
+                            userArr.every((val: any) => correctArr.includes(val))) {
+                            isOptionCorrect = true;
+                        }
+                    } else if (q.type === 'range') {
+                        const userVal = Number(userAnswer);
+                        if (!isNaN(userVal) && q.correct && userVal >= q.correct.min && userVal <= q.correct.max) {
+                            isOptionCorrect = true;
+                        }
+                    } else if (q.type === 'code') {
+                        if (codeExecutionStatus[q.id]) isOptionCorrect = true;
+                    } else {
+                        if (userAnswer === q.correct) isOptionCorrect = true;
+                    }
+
+                    // Check keyword criteria if question has keywords defined
+                    let isKeywordPassed = true;
+                    if (q.keywords && Array.isArray(q.keywords) && q.keywords.length > 0) {
+                        const userExpl = (explanations[q.id] || '').toLowerCase().replace(/[^\w\s]/g, ' ');
+                        isKeywordPassed = q.keywords.some((kw: string) => {
+                            const cleanKw = kw.toLowerCase().trim();
+                            return cleanKw.length > 0 && userExpl.includes(cleanKw);
+                        });
+                    }
+
+                    if (isOptionCorrect && isKeywordPassed) {
+                        calculatedScore++;
+                    }
+                });
+            }
 
             setScore(calculatedScore);
             setShowResults(true);
@@ -399,6 +497,7 @@ const MCQTest = () => {
                     .single();
 
                 if (quizData) {
+                    if (quizData.type) setQuizType(quizData.type);
                     if (quizData.settings) setQuizSettings(quizData.settings);
                     if (quizData.module_id) setQuizModuleId(quizData.module_id);
 
@@ -658,17 +757,29 @@ const MCQTest = () => {
             return;
         }
 
-        // 2. Check if explanation is required (keywords configured)
-        const hasKeywords = currentQ.keywords && Array.isArray(currentQ.keywords) && currentQ.keywords.length > 0;
-        if (hasKeywords) {
+        // 2. Check if explanation is required (AI Evaluation Mode or Keywords Mode)
+        if (isAiEvaluationMode) {
             const userExpl = (explanations[currentQuestion] || '').trim();
             if (!userExpl) {
-                setValidationError("Please write your explanation in the box below before proceeding.");
+                setValidationError("Please explain your reasoning in the box below before proceeding (AI Evaluation).");
                 return;
             }
-            if (userExpl.length < 20) {
-                setValidationError("Please write at least 20 characters in your explanation before proceeding.");
+            if (userExpl.length < 15) {
+                setValidationError("Please write at least 15 characters of reasoning for AI evaluation before proceeding.");
                 return;
+            }
+        } else {
+            const hasKeywords = currentQ.keywords && Array.isArray(currentQ.keywords) && currentQ.keywords.length > 0;
+            if (hasKeywords) {
+                const userExpl = (explanations[currentQuestion] || '').trim();
+                if (!userExpl) {
+                    setValidationError("Please write your explanation in the box below before proceeding.");
+                    return;
+                }
+                if (userExpl.length < 20) {
+                    setValidationError("Please write at least 20 characters in your explanation before proceeding.");
+                    return;
+                }
             }
         }
 
@@ -679,7 +790,7 @@ const MCQTest = () => {
         } else {
             setCurrentQuestion(prev => Math.min(questions.length, prev + 1));
         }
-    }, [currentQuestion, questions, answers, explanations, calculateAndShowResults]);
+    }, [currentQuestion, questions, answers, explanations, isAiEvaluationMode, calculateAndShowResults]);
 
     const handleRunCode = async () => {
         const q = questions[currentQuestion - 1];
@@ -866,6 +977,7 @@ const MCQTest = () => {
                                         }
 
                                         // Check keyword criteria if question has keywords defined
+                                        const aiEval = aiEvaluations[q.id];
                                         const hasKeywords = q.keywords && Array.isArray(q.keywords) && q.keywords.length > 0;
                                         let isKeywordPassed = true;
                                         if (hasKeywords) {
@@ -876,7 +988,11 @@ const MCQTest = () => {
                                             });
                                         }
 
-                                        const isCorrect = isOptionCorrect && isKeywordPassed;
+                                        // In AI mode, use AI score; otherwise standard logic
+                                        const isAiModeActive = isAiEvaluationMode || Boolean(aiEval);
+                                        const qScore = aiEval ? aiEval.score : (isOptionCorrect && isKeywordPassed ? 1 : 0);
+                                        const isFull = qScore >= 1;
+                                        const isHalf = qScore >= 0.5 && qScore < 1;
 
                                         // Format Helper
                                         const formatAns = (ans: any, type: string) => {
@@ -905,8 +1021,29 @@ const MCQTest = () => {
                                                 <td className="px-6 py-6 text-sm font-bold text-slate-400 dark:text-neutral-500 align-top">{index + 1}</td>
                                                 <td className="px-6 py-6 text-sm text-slate-700 dark:text-neutral-300 font-medium align-top leading-relaxed max-w-md">
                                                     <MathText text={q.question} as="span" />
+                                                    
+                                                    {/* AI Reasoning & Feedback Box */}
+                                                    {(aiEval || explanations[q.id]) && (
+                                                        <div className="mt-3 pt-2.5 border-t border-slate-200/80 dark:border-neutral-800 text-xs space-y-1.5">
+                                                            {explanations[q.id] && (
+                                                                <div className="text-slate-600 dark:text-neutral-400">
+                                                                    <span className="font-bold text-slate-800 dark:text-neutral-200">Your Reason: </span>
+                                                                    <span className="italic font-normal">"{explanations[q.id]}"</span>
+                                                                </div>
+                                                            )}
+                                                            {aiEval?.feedback && (
+                                                                <div className="flex items-start gap-1.5 p-2 rounded-lg bg-primary/10 text-primary text-[11px] font-medium border border-primary/20">
+                                                                    <Sparkles className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                                                    <div>
+                                                                        <span className="font-bold">AI Examiner Analysis: </span>
+                                                                        <span className="font-normal">{aiEval.feedback}</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </td>
-                                                <td className={cn("px-6 py-6 text-sm font-medium align-top", isCorrect ? "text-green-600 dark:text-green-400" : isSkipped ? "text-slate-500" : "text-red-600 dark:text-red-400")}>
+                                                <td className={cn("px-6 py-6 text-sm font-medium align-top", isFull ? "text-green-600 dark:text-green-400" : isHalf ? "text-amber-600 dark:text-amber-400" : isSkipped ? "text-slate-500" : "text-red-600 dark:text-red-400")}>
                                                     <div>{formatAns(userAnswer, q.type)}</div>
                                                 </td>
                                                 <td className="px-6 py-6 text-sm font-medium text-slate-800 dark:text-neutral-200 align-top">
@@ -915,9 +1052,15 @@ const MCQTest = () => {
                                                 <td className="px-6 py-6 align-top text-right">
                                                     <span className={cn(
                                                         "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
-                                                        isCorrect ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" : isSkipped ? "bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-400" : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                                                        isSkipped
+                                                            ? "bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-400"
+                                                            : isFull
+                                                            ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                                                            : isHalf
+                                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                                                            : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
                                                     )}>
-                                                        {isCorrect ? "Mastered" : isSkipped ? "Not Attended" : "Revision"}
+                                                        {isSkipped ? "Not Attended" : isFull ? (isAiModeActive ? "Mastered (+1.0)" : "Mastered") : isHalf ? "Partial (+0.5)" : "Revision"}
                                                     </span>
                                                 </td>
                                             </tr>
@@ -1310,38 +1453,55 @@ const MCQTest = () => {
                             )}
                         </div>
 
-                        {/* Conditional Explanation & Keyword Box */}
-                        {activeQuestion.keywords && activeQuestion.keywords.length > 0 && (
+                        {/* Conditional Explanation & Keyword / AI Box */}
+                        {(isAiEvaluationMode || (activeQuestion.keywords && activeQuestion.keywords.length > 0)) && (
                             <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700/80 space-y-2">
                                 <div className="flex justify-between items-center">
                                     <label className="text-xs md:text-sm font-semibold text-text flex items-center gap-1.5">
-                                        <Key className="w-4 h-4 text-primary shrink-0" />
-                                        <span>Explain Your Answer & Reasoning</span>
+                                        {isAiEvaluationMode ? (
+                                            <>
+                                                <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                                                <span>Explain Your Answer & Reasoning</span>
+                                                <span className="text-[10px] bg-primary/20 text-primary font-extrabold uppercase px-1.5 py-0.5 rounded tracking-wider">AI Evaluated</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Key className="w-4 h-4 text-primary shrink-0" />
+                                                <span>Explain Your Answer & Reasoning</span>
+                                            </>
+                                        )}
                                         <span className="text-red-500 font-bold">*</span>
                                     </label>
                                     <span className={cn(
                                         "text-[11px] font-mono font-medium transition-colors",
-                                        (explanations[currentQuestion] || '').trim().length >= 20
+                                        (explanations[currentQuestion] || '').trim().length >= (isAiEvaluationMode ? 15 : 20)
                                             ? "text-green-600 dark:text-green-400 font-semibold"
                                             : "text-muted"
                                     )}>
-                                        {(explanations[currentQuestion] || '').trim().length} / 20 min chars
+                                        {(explanations[currentQuestion] || '').trim().length} / {isAiEvaluationMode ? '15' : '20'} min chars
                                     </span>
                                 </div>
                                 <textarea
                                     value={explanations[currentQuestion] || ''}
                                     onChange={(e) => handleExplanationChange(e.target.value)}
-                                    placeholder="Type your explanation here..."
+                                    placeholder={isAiEvaluationMode ? "Explain why your answer is correct. AI will analyze your reasoning and assign marks..." : "Type your explanation here..."}
                                     rows={3}
                                     className={cn(
                                         "w-full bg-background border-2 rounded-xl p-3 text-sm focus:outline-none transition-all resize-y text-text placeholder:text-muted/60",
-                                        validationError && (explanations[currentQuestion] || '').trim().length < 20
+                                        validationError && (explanations[currentQuestion] || '').trim().length < (isAiEvaluationMode ? 15 : 20)
                                             ? "border-red-500 ring-2 ring-red-500/20"
                                             : "border-neutral-200 dark:border-neutral-700 focus:border-primary"
                                     )}
                                 />
-                                <p className="text-[11px] text-muted">
-                                    * A minimum of 20 characters explanation is required for this question before moving to the next question.
+                                <p className="text-[11px] text-muted flex items-center gap-1.5">
+                                    {isAiEvaluationMode ? (
+                                        <>
+                                            <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 inline" />
+                                            <span>AI Reason Engine will evaluate your explanation upon test submission and award full or half marks based on accuracy and reasoning depth.</span>
+                                        </>
+                                    ) : (
+                                        <span>* A minimum of 20 characters explanation is required for this question before moving to the next question.</span>
+                                    )}
                                 </p>
                             </div>
                         )}
@@ -1434,6 +1594,33 @@ const MCQTest = () => {
                 <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-zoom-out" onClick={() => setZoomedImage(null)}>
                     <X className="absolute top-6 right-6 w-10 h-10 text-white/70 hover:text-white transition-colors" />
                     <img src={zoomedImage} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+                </div>
+            )}
+
+            {/* AI Evaluation Loading Overlay */}
+            {isAiEvaluating && (
+                <div className="fixed inset-0 z-[110] bg-background/90 backdrop-blur-md flex flex-col items-center justify-center p-6 space-y-6 text-center animate-in fade-in duration-300">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
+                        <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-primary/30 animate-bounce">
+                            <Sparkles className="w-10 h-10 animate-spin" style={{ animationDuration: '4s' }} />
+                        </div>
+                    </div>
+                    <div className="space-y-2 max-w-md">
+                        <h3 className="text-2xl font-black text-text tracking-tight flex items-center justify-center gap-2">
+                            <span>AI Reason Engine Evaluating</span>
+                            <span className="flex h-2 w-2 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                            </span>
+                        </h3>
+                        <p className="text-sm text-muted">
+                            Analyzing your written explanations, comparing logical depth with questions, and calculating your score...
+                        </p>
+                    </div>
+                    <div className="w-48 h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                        <div className="w-full h-full bg-primary animate-pulse" />
+                    </div>
                 </div>
             )}
 

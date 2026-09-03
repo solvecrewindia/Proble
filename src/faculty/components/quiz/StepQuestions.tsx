@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download, PlusCircle, MinusCircle, Key } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download, PlusCircle, MinusCircle, Key, Sparkles } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression';
@@ -13,7 +13,11 @@ import type { Question } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import { ExistingQuizBrowser } from './ExistingQuizBrowser';
 
-export function StepQuestions({ questions, setQuestions, quizId }: any) {
+export function StepQuestions({ questions, setQuestions, quizId, quizData, data }: any) {
+    const qMeta = quizData || data || {};
+    const isOriginals = qMeta.type === 'originals' || qMeta.settings?.category?.toUpperCase() === 'ORIGINALS' || qMeta.settings?.category?.toUpperCase() === 'PROBLE ORIGINALS';
+    const useKeywords = Boolean(qMeta.settings?.useKeywords);
+    const isAiEvaluationMode = isOriginals && !useKeywords;
     const [activeType, setActiveType] = useState<Question['type']>('mcq');
     const [view, setView] = useState<'list' | 'import' | 'existing'>('list');
     const [error, setError] = useState<string | null>(null);
@@ -1100,24 +1104,39 @@ print(result)`}
                                             </div>
                                         )}
 
-                                        {/* Explanation Keywords (Optional) */}
+                                        {/* Explanation Keywords / AI Mode Section */}
                                         <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700/80">
-                                            <div className="flex flex-col gap-1.5">
-                                                <label className="text-xs font-semibold text-text flex items-center gap-1.5">
-                                                    <Key className="w-3.5 h-3.5 text-primary" />
-                                                    <span>Required Explanation Keywords</span>
-                                                    <span className="text-[10px] text-muted font-normal">(comma-separated)</span>
-                                                </label>
-                                                <Input
-                                                    placeholder="e.g. photosynthesis, chlorophyll, sunlight (leave empty if not required)"
-                                                    value={Array.isArray(q.keywords) ? q.keywords.join(', ') : (q.keywords || '')}
-                                                    onChange={(e) => updateQuestion(index, { keywords: e.target.value })}
-                                                    className="h-9 text-xs font-mono"
-                                                />
-                                                <p className="text-[10px] text-muted">
-                                                    If keywords are provided, students must select an option and write an explanation containing these keywords to proceed and get the mark. If left empty, the explanation box will not be shown.
-                                                </p>
-                                            </div>
+                                            {isAiEvaluationMode ? (
+                                                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-text">
+                                                    <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                                    <div className="space-y-0.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-primary">AI Reason Evaluation Active</span>
+                                                            <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.2 rounded font-semibold uppercase">No Keywords Needed</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-muted">
+                                                            Students will be prompted to explain their reasoning in the quiz text box. AI will evaluate their answer & explanation automatically upon test submission.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col gap-1.5">
+                                                    <label className="text-xs font-semibold text-text flex items-center gap-1.5">
+                                                        <Key className="w-3.5 h-3.5 text-primary" />
+                                                        <span>Required Explanation Keywords</span>
+                                                        <span className="text-[10px] text-muted font-normal">(comma-separated)</span>
+                                                    </label>
+                                                    <Input
+                                                        placeholder="e.g. photosynthesis, chlorophyll, sunlight (leave empty if not required)"
+                                                        value={Array.isArray(q.keywords) ? q.keywords.join(', ') : (q.keywords || '')}
+                                                        onChange={(e) => updateQuestion(index, { keywords: e.target.value })}
+                                                        className="h-9 text-xs font-mono"
+                                                    />
+                                                    <p className="text-[10px] text-muted">
+                                                        If keywords are provided, students must select an option and write an explanation containing these keywords to proceed and get the mark. If left empty, the explanation box will not be shown.
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

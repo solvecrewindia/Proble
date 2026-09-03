@@ -108,6 +108,7 @@ export function AdminStepQuestions({ data, questions, setQuestions, quizId }: an
                             questions={practiceQuestions}
                             setQuestions={setPracticeQuestions}
                             quizId={quizId}
+                            quizData={data}
                         />
                     </div>
                 ) : (
@@ -117,6 +118,7 @@ export function AdminStepQuestions({ data, questions, setQuestions, quizId }: an
                             questions={mockQuestions}
                             setQuestions={setMockQuestions}
                             quizId={quizId}
+                            quizData={data}
                         />
                     </div>
                 )}

@@ -63,6 +63,8 @@ export interface Quiz {
         allowedDomain?: string | null;
         scheduledAt?: string | null;
         validUntil?: string | null;
+        useKeywords?: boolean;
+        evaluationMode?: 'ai' | 'keywords';
     };
     created_by: string; // Foreign Key to profiles
     createdAt: string;
