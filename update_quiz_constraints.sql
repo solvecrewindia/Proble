@@ -1,28 +1,53 @@
--- Run this in your Supabase SQL Editor to fix the constraint issue
+-- =========================================================================
+-- RUN THIS SCRIPT IN YOUR SUPABASE SQL EDITOR
+-- Dashboard URL: https://supabase.com/dashboard/project/brtdqrzmsylfqvsyzfaf/sql
+-- =========================================================================
 
--- 1. First, find out if there are any other unexpected types (Optional but helpful)
--- SELECT DISTINCT type FROM public.quizzes;
-
--- 2. Drop existing constraints
+-- 1. Drop the old restrictive check constraints on quizzes
 ALTER TABLE public.quizzes DROP CONSTRAINT IF EXISTS quizzes_type_check;
 ALTER TABLE public.quizzes DROP CONSTRAINT IF EXISTS quizzes_status_check;
 
--- 3. Add updated, inclusive constraints
--- This includes all values used by both Faculty and Admin flows
+-- 2. Re-create the type constraint with ALL supported quiz types
+-- (Including 'live', 'originals', 'master', 'global', etc.)
 ALTER TABLE public.quizzes ADD CONSTRAINT quizzes_type_check 
   CHECK (type IN (
-    'master', 'global', 'live', 
-    'nptel', 'gate', 'srmist', 'placement', 'course'
+    'master', 
+    'global', 
+    'live', 
+    'originals',
+    'course', 
+    'srmist', 
+    'gate', 
+    'nptel', 
+    'placement'
   ));
 
+-- 3. Re-create the status constraint with ALL supported statuses
 ALTER TABLE public.quizzes ADD CONSTRAINT quizzes_status_check 
   CHECK (status IN (
-    'draft', 'active', 'paused', 'completed', 
-    'ongoing', 'scheduled', 'ended'
+    'draft', 
+    'active', 
+    'ongoing', 
+    'scheduled', 
+    'paused', 
+    'completed', 
+    'ended'
   ));
 
--- NOTE: If this still fails, it means you have a row with a value not listed above.
--- You can run this to find the offending rows:
--- SELECT id, title, type, status FROM public.quizzes 
--- WHERE type NOT IN ('master', 'global', 'live', 'nptel', 'gate', 'srmist', 'placement', 'course')
--- OR status NOT IN ('draft', 'active', 'paused', 'completed', 'ongoing', 'scheduled', 'ended');
+-- 4. Enable Realtime replication for quizzes and attempts (if not already enabled)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'quizzes'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.quizzes;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'attempts'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.attempts;
+  END IF;
+END $$;
