@@ -128,10 +128,11 @@ const JoinTest = () => {
         try {
             if (!user) throw new Error("Please login to continue");
 
+            const cleanCode = codeToVerify.trim().toUpperCase();
             const { data: quizDataList, error: quizError } = await supabase
                 .from('quizzes')
                 .select('*')
-                .eq('code', codeToVerify)
+                .ilike('code', cleanCode)
                 .limit(1);
 
             if (quizError) throw quizError;

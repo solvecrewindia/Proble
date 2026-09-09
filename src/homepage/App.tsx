@@ -126,25 +126,32 @@ function App({ searchQuery = '' }: AppProps) {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!joinCode) return;
+    const cleanCode = joinCode.trim().toUpperCase();
+    if (!cleanCode) return;
     setJoining(true);
 
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('quizzes')
-        .select('id')
-        .eq('code', joinCode)
-        .eq('type', 'master')
-        .single();
+        .select('id, type, settings')
+        .ilike('code', cleanCode)
+        .maybeSingle();
+
+      if (error) throw error;
 
       if (data) {
-        navigate(`/course/details/${data.id}`);
+        const isLive = data.type === 'live' || Boolean(data.settings?.isLive);
+        if (isLive) {
+          navigate(`/student/live/${data.id}`);
+        } else {
+          navigate(`/student/join?code=${cleanCode}`);
+        }
       } else {
         alert('Invalid code or quiz not found.');
       }
     } catch (err) {
-      console.error(err);
-      alert('Error joining quiz.');
+      console.error('Error joining quiz:', err);
+      alert('Error joining quiz. Please check the code and try again.');
     } finally {
       setJoining(false);
     }
