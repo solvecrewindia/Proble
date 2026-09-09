@@ -1329,19 +1329,9 @@ export default function StudentLiveQuiz() {
                             Results Mode
                         </span>
                     ) : isSubmitted ? (
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                <CheckCircle className="w-3.5 h-3.5" /> Submitted
-                            </span>
-                            <Button
-                                onClick={() => setIsSubmitted(false)}
-                                variant="outline"
-                                size="sm"
-                                className="text-xs h-8 px-2.5 rounded-lg"
-                            >
-                                Edit
-                            </Button>
-                        </div>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                            <CheckCircle className="w-3.5 h-3.5" /> Submitted
+                        </span>
                     ) : (
                         <Button
                             onClick={handleSubmitAnswer}
@@ -1592,19 +1582,9 @@ export default function StudentLiveQuiz() {
                         <div className="max-w-xl w-full mx-auto mt-6 pt-4 border-t border-border flex justify-end">
                             {viewMode === 'voting' ? (
                                 isSubmitted ? (
-                                    <div className="w-full flex items-center justify-between gap-3 animate-in fade-in">
-                                        <div className="flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-                                            <CheckCircle className="w-5 h-5 shrink-0" />
-                                            <span>Answer Submitted! Waiting for instructor...</span>
-                                        </div>
-                                        <Button
-                                            onClick={() => setIsSubmitted(false)}
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-xs"
-                                        >
-                                            Edit
-                                        </Button>
+                                    <div className="w-full flex items-center justify-center gap-2.5 text-emerald-600 dark:text-emerald-400 font-bold text-sm py-3 px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 animate-in fade-in">
+                                        <CheckCircle className="w-5 h-5 shrink-0" />
+                                        <span>Answer Submitted! Waiting for instructor...</span>
                                     </div>
                                 ) : (
                                     <Button
