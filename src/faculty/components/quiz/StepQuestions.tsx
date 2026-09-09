@@ -18,8 +18,8 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
     const qMeta = quizData || data || {};
     const isOriginals = qMeta.type === 'originals' || qMeta.settings?.category?.toUpperCase() === 'ORIGINALS' || qMeta.settings?.category?.toUpperCase() === 'PROBLE ORIGINALS';
     const useKeywords = Boolean(qMeta.settings?.useKeywords);
-    const isAiEvaluationMode = isOriginals && !useKeywords;
-    const [activeType, setActiveType] = useState<Question['type']>('mcq');
+    const isLiveCoding = Boolean(qMeta.settings?.setsConfig?.enabled) || Boolean(qMeta.settings?.isCodingTest);
+    const [activeType, setActiveType] = useState<Question['type']>(isLiveCoding ? 'code' : 'mcq');
     const [view, setView] = useState<'list' | 'import' | 'existing'>('list');
     const [error, setError] = useState<string | null>(null);
     const [uploading, setUploading] = useState<{ [key: string]: boolean }>({});
@@ -834,28 +834,32 @@ if __name__ == "__main__":
                     Question List
                     <span className="ml-2 text-xs bg-surface px-2 py-0.5 rounded-full text-muted">{questions.length}</span>
                 </button>
-                <button
-                    className={cn(
-                        "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
-                        view === 'import'
-                            ? "border-primary text-primary"
-                            : "border-transparent text-muted hover:text-text hover:border-neutral-300 dark:border-neutral-600"
-                    )}
-                    onClick={() => setView('import')}
-                >
-                    Bulk Import
-                </button>
-                <button
-                    className={cn(
-                        "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
-                        view === 'existing'
-                            ? "border-primary text-primary"
-                            : "border-transparent text-muted hover:text-text hover:border-neutral-300 dark:border-neutral-600"
-                    )}
-                    onClick={() => setView('existing')}
-                >
-                    Select from Existing Quiz
-                </button>
+                {activeType !== 'code' && (
+                    <>
+                        <button
+                            className={cn(
+                                "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
+                                view === 'import'
+                                    ? "border-primary text-primary"
+                                    : "border-transparent text-muted hover:text-text hover:border-neutral-300 dark:border-neutral-600"
+                            )}
+                            onClick={() => setView('import')}
+                        >
+                            Bulk Import
+                        </button>
+                        <button
+                            className={cn(
+                                "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
+                                view === 'existing'
+                                    ? "border-primary text-primary"
+                                    : "border-transparent text-muted hover:text-text hover:border-neutral-300 dark:border-neutral-600"
+                            )}
+                            onClick={() => setView('existing')}
+                        >
+                            Select from Existing Quiz
+                        </button>
+                    </>
+                )}
             </div>
 
 
@@ -1557,7 +1561,13 @@ if __name__ == "__main__":
                                 <select
                                     className="h-9 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-2"
                                     value={activeType}
-                                    onChange={(e) => setActiveType(e.target.value as any)}
+                                    onChange={(e) => {
+                                        const newType = e.target.value as any;
+                                        setActiveType(newType);
+                                        if (newType === 'code') {
+                                            setView('list');
+                                        }
+                                    }}
                                 >
                                     <option value="mcq">Multiple Choice</option>
                                     <option value="true_false">True / False</option>
