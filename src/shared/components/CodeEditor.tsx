@@ -307,40 +307,30 @@ export function CodeEditor({
         setTimeout(() => setCopied(false), 2000);
     };
 
-    // Auto-discover annotations if none passed: Look for # TODO lines
+    // Only use annotations if explicitly passed - no auto-badges that force line expansion
     const resolvedAnnotations = useMemo(() => {
         if (annotations && annotations.length > 0) return annotations;
-
-        const autoList: CodeEditorAnnotation[] = [];
-        lines.forEach((l, idx) => {
-            if (l.includes('# TODO:')) {
-                const text = l.split('# TODO:')[1]?.trim() || 'Implement solution';
-                autoList.push({
-                    line: idx + 1,
-                    label: text.slice(0, 32) + (text.length > 32 ? '...' : ''),
-                    type: 'todo'
-                });
-            }
-        });
-        return autoList;
-    }, [annotations, lines]);
+        return [];
+    }, [annotations]);
 
     const activeBreadcrumb = breadcrumbs || ['assessment', fileName, `Ln ${cursorPosition.line}`];
 
     return (
         <div
             className={cn(
-                "w-full flex flex-col rounded-2xl overflow-hidden transition-colors duration-200 border shadow-md",
+                "w-full flex flex-col overflow-hidden transition-colors duration-200",
+                !className?.includes('rounded-') && "rounded-2xl",
+                !className?.includes('border-') && "border shadow-sm",
                 isDark
-                    ? "bg-[#0d1219] border-neutral-800 text-neutral-200 shadow-xl"
-                    : "bg-white border-border text-slate-900 shadow-sm",
+                    ? "bg-[#0d1219] text-neutral-200 border-neutral-800"
+                    : "bg-white text-slate-900 border-border",
                 className
             )}
         >
             {/* Header Toolbar: Aligned with Home UI */}
             <div
                 className={cn(
-                    "px-4 py-2.5 flex items-center justify-between border-b select-none transition-colors",
+                    "px-4 py-2.5 flex items-center justify-between border-b select-none transition-colors shrink-0",
                     isDark
                         ? "bg-[#141b24] border-neutral-800/90 text-neutral-300"
                         : "bg-surface-highlight border-border text-slate-700"
@@ -422,7 +412,7 @@ export function CodeEditor({
             {/* Breadcrumb Path Bar */}
             <div
                 className={cn(
-                    "px-4 py-1.5 border-b flex items-center justify-between text-[11px] font-mono select-none transition-colors",
+                    "px-4 py-1.5 border-b flex items-center justify-between text-[11px] font-mono select-none transition-colors shrink-0",
                     isDark
                         ? "bg-[#10151f] border-neutral-800/60 text-neutral-400"
                         : "bg-slate-50 border-border text-slate-500"
@@ -456,16 +446,16 @@ export function CodeEditor({
             {/* Editor Workspace: Gutter + Syntax Layer + Textarea */}
             <div
                 className={cn(
-                    "relative flex font-mono text-xs md:text-sm overflow-hidden",
+                    "relative flex-1 flex font-mono text-xs md:text-sm overflow-hidden min-h-0",
                     isDark ? "bg-[#0d1219]" : "bg-white"
                 )}
-                style={{ minHeight }}
+                style={minHeight && minHeight !== '100%' ? { minHeight } : { flex: 1, minHeight: 0 }}
             >
                 {/* Line Numbers Gutter */}
                 <div
                     ref={gutterRef}
                     className={cn(
-                        "w-12 md:w-14 py-3 select-none text-right pr-3 font-mono text-xs md:text-sm leading-6 shrink-0 border-r overflow-hidden transition-colors",
+                        "w-12 md:w-14 py-3 select-none text-right pr-3 font-mono text-xs md:text-sm leading-6 shrink-0 border-r overflow-hidden transition-colors h-full",
                         isDark
                             ? "bg-[#0d1219] border-neutral-800/80 text-neutral-600"
                             : "bg-[#f8fafc] border-border text-slate-400"
@@ -501,7 +491,7 @@ export function CodeEditor({
                 </div>
 
                 {/* Code Workspace with Background Highlighting & Foreground Input */}
-                <div className="relative flex-1 overflow-hidden">
+                <div className="relative flex-1 overflow-hidden h-full">
                     {/* Background Syntax Highlight Overlay */}
                     <div
                         ref={highlightRef}
@@ -513,44 +503,22 @@ export function CodeEditor({
                     >
                         {lines.map((line, i) => {
                             const isCurrent = (i + 1) === cursorPosition.line;
-                            const annot = resolvedAnnotations.find(a => a.line === (i + 1));
 
                             return (
                                 <div
                                     key={i}
                                     className={cn(
-                                        "h-6 relative flex items-center justify-between",
+                                        "h-6 relative flex items-center",
                                         isCurrent && (isDark ? "bg-neutral-800/40 rounded" : "bg-primary/5 rounded")
                                     )}
                                 >
                                     <span className="inline-block">{tokenizeLine(line, isDark)}</span>
-
-                                    {/* Non-Clipping Inlay Annotation Pill */}
-                                    {annot && (
-                                        <div className="ml-4 shrink-0 inline-flex items-center gap-1.5 pointer-events-none select-none max-w-[180px] sm:max-w-[240px] truncate">
-                                            <div
-                                                className={cn(
-                                                    "px-2 py-0.5 rounded-md text-[10px] font-mono flex items-center gap-1 border shadow-xs truncate",
-                                                    annot.type === 'todo'
-                                                        ? isDark
-                                                            ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                                                            : "bg-amber-100 text-amber-800 border-amber-300"
-                                                        : isDark
-                                                            ? "bg-primary/20 text-primary border-primary/30"
-                                                            : "bg-primary/10 text-primary border-primary/20"
-                                                )}
-                                            >
-                                                <Sparkles className="w-2.5 h-2.5 shrink-0" />
-                                                <span className="font-semibold truncate">{annot.label}</span>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             );
                         })}
                     </div>
 
-                    {/* Foreground Transparent Editable Textarea */}
+                    {/* Foreground Transparent Editable Textarea - zero horizontal scroll */}
                     <textarea
                         ref={textareaRef}
                         value={value}
@@ -570,7 +538,7 @@ export function CodeEditor({
                         autoCorrect="off"
                         style={{ tabSize: 4 }}
                         className={cn(
-                            "absolute inset-0 w-full h-full p-3 font-mono text-xs md:text-sm leading-6 bg-transparent text-transparent resize-none outline-none border-none whitespace-pre overflow-auto font-normal selection:bg-primary/25 custom-scrollbar",
+                            "absolute inset-0 w-full h-full p-3 font-mono text-xs md:text-sm leading-6 bg-transparent text-transparent resize-none outline-none border-none whitespace-pre overflow-y-auto overflow-x-hidden font-normal selection:bg-primary/25 custom-scrollbar",
                             isDark ? "caret-white" : "caret-slate-900"
                         )}
                     />
@@ -580,7 +548,7 @@ export function CodeEditor({
             {/* Bottom Status Bar & Action Controls */}
             <div
                 className={cn(
-                    "border-t px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono select-none transition-colors",
+                    "border-t px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono select-none transition-colors shrink-0",
                     isDark
                         ? "bg-[#141b24] border-neutral-800 text-neutral-400"
                         : "bg-surface-highlight border-border text-slate-600"

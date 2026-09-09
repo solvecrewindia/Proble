@@ -1026,7 +1026,7 @@ export default function StudentLiveQuiz() {
     const isLocked = isSubmitted || viewMode === 'results';
 
     return (
-        <div className="min-h-screen font-sans flex flex-col bg-background text-text relative">
+        <div className="h-screen w-screen font-sans flex flex-col bg-background text-text overflow-hidden relative select-none">
             {/* Offline Alert */}
             {isOffline && (
                 <div className="fixed inset-0 z-[110] bg-background/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in">
@@ -1037,10 +1037,11 @@ export default function StudentLiveQuiz() {
             )}
 
             {/* Header */}
-            <header className="sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between bg-surface/80 backdrop-blur-md border-b border-border">
-                <div className="flex items-center gap-4">
+            <header className="h-14 shrink-0 px-4 md:px-6 flex items-center justify-between bg-surface border-b border-border z-30">
+                {/* Left: Logo + Live status */}
+                <div className="flex items-center gap-3">
                     <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-7 w-auto object-contain rounded-md" />
-                    <div className="flex items-center gap-2 px-3 py-1 bg-surface rounded-full border border-border">
+                    <div className="flex items-center gap-2 px-2.5 py-1 bg-surface-highlight rounded-full border border-border">
                         <div className={cn("w-2 h-2 rounded-full", realtimeStatus === 'connected' ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
                         <span className="text-xs font-semibold text-muted hidden sm:inline">
                             {realtimeStatus === 'connected' ? 'Live Session' : 'Syncing...'}
@@ -1048,45 +1049,105 @@ export default function StudentLiveQuiz() {
                     </div>
                 </div>
 
-                {/* Live Host-Directed Elapsed Stopwatch */}
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary font-mono font-bold text-sm">
-                        <Clock className="w-4 h-4 text-primary" />
+                {/* Center: Question Progress + Live Host Stopwatch */}
+                <div className="flex items-center gap-2 md:gap-3">
+                    <span className="font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        Question {currentQuestionIndex + 1} of {questions.length}
+                    </span>
+
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-highlight border border-border text-primary font-mono font-bold text-xs">
+                        <Clock className="w-3.5 h-3.5 text-primary" />
                         <span>{formatSeconds(elapsedTime)}</span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={fetchQuizState} title="Refresh sync">
-                        <RotateCcw className="w-4 h-4 text-muted" />
+                    <Button variant="ghost" size="sm" onClick={fetchQuizState} title="Refresh sync" className="h-7 w-7 p-0">
+                        <RotateCcw className="w-3.5 h-3.5 text-muted" />
                     </Button>
+                </div>
+
+                {/* Right: Quick Action / Status Mode */}
+                <div className="flex items-center gap-2">
+                    {viewMode === 'results' ? (
+                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            Results Mode
+                        </span>
+                    ) : isSubmitted ? (
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                <CheckCircle className="w-3.5 h-3.5" /> Submitted
+                            </span>
+                            <Button
+                                onClick={() => setIsSubmitted(false)}
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-8 px-2.5 rounded-lg"
+                            >
+                                Edit
+                            </Button>
+                        </div>
+                    ) : (
+                        <Button
+                            onClick={handleSubmitAnswer}
+                            disabled={currentQuestion.type === 'code' ? isExecutingCode : selectedOption === null}
+                            size="sm"
+                            className="h-8 px-4 font-bold text-xs shadow-md bg-primary hover:bg-primary-600 text-white rounded-xl"
+                        >
+                            {currentQuestion.type === 'code'
+                                ? (codePassedStatus[currentQuestion.id] ? "Submit Solution ✓" : "Submit Code")
+                                : "Submit Answer"}
+                        </Button>
+                    )}
                 </div>
             </header>
 
-            {/* Main Question Workspace */}
-            <main className="flex-1 container mx-auto max-w-4xl p-6 flex flex-col justify-center relative z-10">
-                <Card className="rounded-2xl p-6 md:p-8 flex flex-col gap-6 shadow-xl border border-border bg-surface">
-                    {/* Meta Bar */}
-                    <div className="flex justify-between items-center pb-2 border-b border-border">
-                        <span className="font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 text-primary">
-                            Question {currentQuestionIndex + 1} of {questions.length}
-                        </span>
+            {/* Main Full-Screen Workspace */}
+            {currentQuestion.type === 'code' ? (
+                <div className="flex-1 min-h-0 flex flex-col md:flex-row w-full overflow-hidden">
+                    {/* Left Panel: Problem Statement & Requirements */}
+                    <div className="w-full md:w-[40%] lg:w-[35%] xl:w-[32%] shrink-0 border-r border-border bg-surface flex flex-col h-full overflow-hidden">
+                        {/* Left Header */}
+                        <div className="px-5 py-3 border-b border-border bg-surface-highlight flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-2">
+                                <Code2 className="w-4 h-4 text-primary" />
+                                <span className="text-xs font-bold text-text uppercase tracking-wider">Problem Description</span>
+                            </div>
+                            <span className="text-[11px] font-mono text-muted">
+                                {((currentQuestion.correct as any)?.testCases || []).length} Test Cases
+                            </span>
+                        </div>
 
-                        {viewMode === 'results' ? (
-                            <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                                Results Mode
-                            </span>
-                        ) : (
-                            <span className="text-xs font-medium text-muted flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Host active
-                            </span>
-                        )}
+                        {/* Left Scrollable Content */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                            <MathText text={currentQuestion.stem} className="text-base md:text-lg font-bold leading-relaxed text-text" as="h2" />
+
+                            {/* Submission status if submitted */}
+                            {isSubmitted && (
+                                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2.5">
+                                    <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                    <div>
+                                        <p className="font-bold">Solution Submitted</p>
+                                        <p className="opacity-90 text-[11px]">Waiting for instructor to advance to the next challenge.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Left Footer Action */}
+                        <div className="p-4 border-t border-border bg-surface-highlight shrink-0">
+                            {viewMode === 'voting' && !isSubmitted && (
+                                <Button
+                                    onClick={handleSubmitAnswer}
+                                    disabled={isExecutingCode}
+                                    className="w-full h-10 font-bold text-xs rounded-xl shadow-md"
+                                >
+                                    {codePassedStatus[currentQuestion.id] ? "Submit Solution ✓" : "Run & Submit Code"}
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Question Stem */}
-                    <MathText text={currentQuestion.stem} className="text-xl md:text-2xl font-bold leading-relaxed text-text" as="h2" />
-
-                    {/* Code Question UI or MCQ Options */}
-                    {currentQuestion.type === 'code' ? (
-                        <div className="space-y-4">
-                            {/* Modern Coding Space */}
+                    {/* Right Panel: Full-Height Code Editor + Docked Console */}
+                    <div className="flex-1 min-h-0 flex flex-col h-full bg-background overflow-hidden relative">
+                        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                             <CodeEditor
                                 value={codeAnswers[currentQuestion.id] ?? (currentQuestion.correct as any)?.starterCode ?? ''}
                                 onChange={(val) => setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: val }))}
@@ -1104,46 +1165,41 @@ export default function StudentLiveQuiz() {
                                 runButtonText="Run & Test Code"
                                 allPassed={codePassedStatus[currentQuestion.id]}
                                 testCasesCount={((currentQuestion.correct as any)?.testCases || []).length}
-                                minHeight="360px"
+                                className="h-full flex-1 rounded-none border-0 shadow-none"
+                                minHeight="100%"
                             />
+                        </div>
 
-                            {/* Verification Status Pill (When run) */}
-                            {codeExecutionResult[currentQuestion.id] && (
-                                <div className="flex items-center justify-between px-1">
-                                    <div className="flex items-center gap-2">
+                        {/* Output Console (Docked at bottom of right panel when run) */}
+                        {codeExecutionResult[currentQuestion.id] && (
+                            <div className="h-56 shrink-0 border-t border-border bg-surface flex flex-col overflow-hidden shadow-2xl z-20 animate-in slide-in-from-bottom duration-200">
+                                <div className="px-4 py-2 border-b border-border bg-surface-highlight flex items-center justify-between shrink-0">
+                                    <div className="flex items-center gap-2 text-xs font-mono">
+                                        <Code2 className="w-3.5 h-3.5 text-primary" />
+                                        <span className="font-bold text-text">Output Console</span>
                                         {codePassedStatus[currentQuestion.id] ? (
-                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-in fade-in">
-                                                <CheckCircle2 className="w-4 h-4" /> All Test Cases Passed!
-                                            </div>
+                                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                                                <CheckCircle2 className="w-3 h-3" /> PASSED ALL
+                                            </span>
                                         ) : (
-                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-in fade-in">
-                                                <X className="w-4 h-4" /> Some Test Cases Failed. Check console below.
-                                            </div>
+                                            <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold text-[10px] flex items-center gap-1">
+                                                <X className="w-3 h-3" /> FAILED
+                                            </span>
                                         )}
                                     </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCodeExecutionResult(prev => ({ ...prev, [currentQuestion.id]: null }))}
+                                        className="p-1 rounded text-muted hover:text-text text-xs"
+                                        title="Close Console"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
-                            )}
 
-                            {/* Execution Output Console */}
-                            {codeExecutionResult[currentQuestion.id] && (
-                                <div className="rounded-2xl p-4 md:p-5 bg-surface-highlight border border-border text-xs font-mono space-y-3 shadow-md animate-in slide-in-from-top-2 duration-200">
-                                    <div className="flex items-center justify-between pb-2 border-b border-border">
-                                        <span className="text-text font-bold flex items-center gap-1.5">
-                                            <Code2 className="w-3.5 h-3.5 text-primary" /> Output Console
-                                        </span>
-                                        {codePassedStatus[currentQuestion.id] ? (
-                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                                                <CheckCircle2 className="w-3.5 h-3.5" /> PASSED ALL
-                                            </span>
-                                        ) : (
-                                            <span className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
-                                                <X className="w-3.5 h-3.5" /> FAILED
-                                            </span>
-                                        )}
-                                    </div>
-
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar text-xs font-mono">
                                     {codeExecutionResult[currentQuestion.id]?.combinedStderr && (
-                                        <div className="text-rose-700 dark:text-rose-300 bg-rose-500/10 p-3 rounded-xl border border-rose-500/30 whitespace-pre-wrap font-mono text-xs">
+                                        <div className="text-rose-700 dark:text-rose-300 bg-rose-500/10 p-3 rounded-xl border border-rose-500/30 whitespace-pre-wrap">
                                             {codeExecutionResult[currentQuestion.id]?.combinedStderr}
                                         </div>
                                     )}
@@ -1174,11 +1230,24 @@ export default function StudentLiveQuiz() {
                                         </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    ) : (
-                        /* Standard MCQ Options */
-                        <div className="flex flex-col gap-3">
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                /* Full-Screen MCQ View */
+                <div className="flex-1 min-h-0 flex flex-col md:flex-row w-full overflow-hidden">
+                    {/* Left: Problem Stem */}
+                    <div className="w-full md:w-1/2 border-r border-border bg-surface flex flex-col h-full overflow-y-auto p-8 space-y-4 custom-scrollbar">
+                        <span className="font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 text-primary w-fit">
+                            Question {currentQuestionIndex + 1}
+                        </span>
+                        <MathText text={currentQuestion.stem} className="text-2xl font-bold leading-relaxed text-text" as="h2" />
+                    </div>
+
+                    {/* Right: Options & Submit */}
+                    <div className="flex-1 bg-background flex flex-col justify-between p-8 overflow-y-auto custom-scrollbar">
+                        <div className="flex flex-col gap-3.5 max-w-xl w-full mx-auto">
                             {currentQuestion.options?.map((option: string, idx: number) => {
                                 const isSelected = selectedOption === idx;
                                 const isCorrectCheck = viewMode === 'results' && (
@@ -1221,49 +1290,43 @@ export default function StudentLiveQuiz() {
                                 );
                             })}
                         </div>
-                    )}
 
-                    {/* Footer Actions */}
-                    <div className="mt-4 pt-4 border-t border-border flex justify-end">
-                        {viewMode === 'voting' ? (
-                            isSubmitted ? (
-                                <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in">
-                                    <div className="flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-                                        <CheckCircle className="w-5 h-5 shrink-0" />
-                                        <span>Answer Submitted! Waiting for instructor...</span>
+                        {/* Footer Actions */}
+                        <div className="max-w-xl w-full mx-auto mt-6 pt-4 border-t border-border flex justify-end">
+                            {viewMode === 'voting' ? (
+                                isSubmitted ? (
+                                    <div className="w-full flex items-center justify-between gap-3 animate-in fade-in">
+                                        <div className="flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                                            <CheckCircle className="w-5 h-5 shrink-0" />
+                                            <span>Answer Submitted! Waiting for instructor...</span>
+                                        </div>
+                                        <Button
+                                            onClick={() => setIsSubmitted(false)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs"
+                                        >
+                                            Edit
+                                        </Button>
                                     </div>
+                                ) : (
                                     <Button
-                                        onClick={() => setIsSubmitted(false)}
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs"
+                                        onClick={handleSubmitAnswer}
+                                        disabled={selectedOption === null}
+                                        className="w-full h-12 text-base font-bold shadow-lg"
                                     >
-                                        Edit / Re-submit
+                                        Submit Answer
                                     </Button>
-                                </div>
+                                )
                             ) : (
-                                <Button
-                                    onClick={handleSubmitAnswer}
-                                    disabled={
-                                        currentQuestion.type === 'code'
-                                            ? isExecutingCode
-                                            : selectedOption === null
-                                    }
-                                    className="w-full sm:w-auto h-12 text-base px-8 font-bold shadow-lg"
-                                >
-                                    {currentQuestion.type === 'code'
-                                        ? (codePassedStatus[currentQuestion.id] ? "Submit Solution →" : "Run & Submit Code")
-                                        : "Submit Answer"}
-                                </Button>
-                            )
-                        ) : (
-                            <div className="text-center w-full p-4 bg-surface rounded-xl text-muted text-sm font-medium">
-                                Question review in progress. Next challenge starts shortly.
-                            </div>
-                        )}
+                                <div className="text-center w-full p-3 bg-surface rounded-xl text-muted text-sm font-medium">
+                                    Question review in progress. Next challenge starts shortly.
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </Card>
-            </main>
+                </div>
+            )}
         </div>
     );
 }
