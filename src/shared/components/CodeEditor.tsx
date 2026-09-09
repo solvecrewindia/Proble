@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Copy, Check, RotateCcw, Code2, Play, Sparkles, Terminal, FileCode, CheckCircle2 } from 'lucide-react';
+import { Copy, Check, RotateCcw, Code2, Play, Sparkles, Terminal, FileCode, CheckCircle2, Sun, Moon, FlaskConical } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useTheme } from '../context/ThemeContext';
 
 export interface CodeEditorAnnotation {
     line: number;
@@ -27,14 +28,15 @@ interface CodeEditorProps {
     annotations?: CodeEditorAnnotation[];
     className?: string;
     minHeight?: string;
+    testCasesCount?: number;
+    editorTheme?: 'auto' | 'light' | 'dark';
 }
 
-// Tokenize Python / TypeScript code into colored syntax spans
-function tokenizeLine(lineText: string): React.ReactNode[] {
+// Tokenize Python / TypeScript code into theme-aware colored syntax spans
+function tokenizeLine(lineText: string, isDark: boolean): React.ReactNode[] {
     if (!lineText) return [' '];
 
     const tokens: React.ReactNode[] = [];
-    let remaining = lineText;
     let keyIdx = 0;
 
     // Regex for syntax highlighting
@@ -43,7 +45,7 @@ function tokenizeLine(lineText: string): React.ReactNode[] {
     let match;
     while ((match = regex.exec(lineText)) !== null) {
         const [
-            full,
+            ,
             comment,
             funcDef,
             classDef,
@@ -65,7 +67,13 @@ function tokenizeLine(lineText: string): React.ReactNode[] {
                     key={keyIdx++}
                     className={cn(
                         "italic",
-                        isTodo ? "text-amber-400 font-bold bg-amber-500/10 px-1 rounded" : "text-neutral-500 dark:text-neutral-400"
+                        isTodo
+                            ? isDark
+                                ? "text-amber-400 font-bold bg-amber-500/15 px-1 rounded"
+                                : "text-amber-700 font-bold bg-amber-100/90 px-1 rounded"
+                            : isDark
+                                ? "text-neutral-500"
+                                : "text-slate-400"
                     )}
                 >
                     {comment}
@@ -75,64 +83,63 @@ function tokenizeLine(lineText: string): React.ReactNode[] {
             const parts = funcDef.split(/\s+/);
             tokens.push(
                 <span key={keyIdx++}>
-                    <span className="text-pink-400 font-semibold">{parts[0]}</span>
+                    <span className={isDark ? "text-pink-400 font-semibold" : "text-indigo-600 font-semibold"}>{parts[0]}</span>
                     {' '}
-                    <span className="text-yellow-300 font-bold">{parts[1]}</span>
+                    <span className={isDark ? "text-yellow-300 font-bold" : "text-blue-600 font-bold"}>{parts[1]}</span>
                 </span>
             );
         } else if (classDef) {
             const parts = classDef.split(/\s+/);
             tokens.push(
                 <span key={keyIdx++}>
-                    <span className="text-pink-400 font-semibold">{parts[0]}</span>
+                    <span className={isDark ? "text-pink-400 font-semibold" : "text-indigo-600 font-semibold"}>{parts[0]}</span>
                     {' '}
-                    <span className="text-cyan-300 font-bold">{parts[1]}</span>
+                    <span className={isDark ? "text-cyan-300 font-bold" : "text-purple-600 font-bold"}>{parts[1]}</span>
                 </span>
             );
         } else if (stringLit) {
             tokens.push(
-                <span key={keyIdx++} className="text-emerald-400">
+                <span key={keyIdx++} className={isDark ? "text-emerald-400" : "text-emerald-600"}>
                     {stringLit}
                 </span>
             );
         } else if (keyword) {
             tokens.push(
-                <span key={keyIdx++} className="text-pink-400 font-semibold">
+                <span key={keyIdx++} className={isDark ? "text-pink-400 font-semibold" : "text-indigo-600 font-semibold"}>
                     {keyword}
                 </span>
             );
         } else if (builtin) {
             tokens.push(
-                <span key={keyIdx++} className="text-cyan-400">
+                <span key={keyIdx++} className={isDark ? "text-cyan-400 font-medium" : "text-teal-700 font-medium"}>
                     {builtin}
                 </span>
             );
         } else if (hexColor) {
-            // Hex color code with preview swatch (like in user screenshot!)
             tokens.push(
-                <span key={keyIdx++} className="inline-flex items-center gap-1 text-purple-300 font-mono">
+                <span key={keyIdx++} className="inline-flex items-center gap-1 font-mono">
                     <span
-                        className="inline-block w-2.5 h-2.5 rounded-full border border-white/20 shrink-0 shadow-sm"
+                        className="inline-block w-2.5 h-2.5 rounded-full border border-black/20 dark:border-white/20 shrink-0 shadow-sm"
                         style={{ backgroundColor: hexColor }}
                     />
-                    <span>{hexColor}</span>
+                    <span className={isDark ? "text-purple-300" : "text-purple-700"}>{hexColor}</span>
                 </span>
             );
         } else if (numberLit) {
             tokens.push(
-                <span key={keyIdx++} className="text-amber-300 font-mono">
+                <span key={keyIdx++} className={cn("font-mono", isDark ? "text-amber-300" : "text-amber-600")}>
                     {numberLit}
                 </span>
             );
         } else if (operator) {
             tokens.push(
-                <span key={keyIdx++} className="text-sky-300">
+                <span key={keyIdx++} className={isDark ? "text-sky-300" : "text-slate-600 font-medium"}>
                     {operator}
                 </span>
             );
         } else if (identifier) {
             tokens.push(
-                <span key={keyIdx++} className="text-neutral-200">
+                <span key={keyIdx++} className={isDark ? "text-neutral-200" : "text-slate-800"}>
                     {identifier}
                 </span>
             );
@@ -142,7 +149,7 @@ function tokenizeLine(lineText: string): React.ReactNode[] {
             );
         } else {
             tokens.push(
-                <span key={keyIdx++} className="text-neutral-300">{other}</span>
+                <span key={keyIdx++} className={isDark ? "text-neutral-300" : "text-slate-700"}>{other}</span>
             );
         }
     }
@@ -166,8 +173,22 @@ export function CodeEditor({
     allPassed = false,
     annotations = [],
     className,
-    minHeight = '340px'
+    minHeight = '360px',
+    testCasesCount,
+    editorTheme = 'auto'
 }: CodeEditorProps) {
+    const { theme: appTheme } = useTheme();
+
+    // Local theme toggle for editor: defaults to app theme, but student can toggle
+    const [localTheme, setLocalTheme] = useState<'light' | 'dark' | null>(null);
+
+    const isDark = useMemo(() => {
+        if (localTheme) return localTheme === 'dark';
+        if (editorTheme === 'dark') return true;
+        if (editorTheme === 'light') return false;
+        return appTheme === 'dark';
+    }, [localTheme, editorTheme, appTheme]);
+
     const [copied, setCopied] = useState(false);
     const [cursorPosition, setCursorPosition] = useState({ line: 1, col: 1 });
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -293,10 +314,10 @@ export function CodeEditor({
         const autoList: CodeEditorAnnotation[] = [];
         lines.forEach((l, idx) => {
             if (l.includes('# TODO:')) {
-                const text = l.split('# TODO:')[1]?.trim() || 'Write logic here';
+                const text = l.split('# TODO:')[1]?.trim() || 'Implement solution';
                 autoList.push({
                     line: idx + 1,
-                    label: text.slice(0, 45) + (text.length > 45 ? '...' : ''),
+                    label: text.slice(0, 32) + (text.length > 32 ? '...' : ''),
                     type: 'todo'
                 });
             }
@@ -304,44 +325,71 @@ export function CodeEditor({
         return autoList;
     }, [annotations, lines]);
 
-    const activeBreadcrumb = breadcrumbs || ['src', fileName, `line ${cursorPosition.line}`];
+    const activeBreadcrumb = breadcrumbs || ['assessment', fileName, `Ln ${cursorPosition.line}`];
 
     return (
-        <div className={cn(
-            "flex flex-col rounded-2xl overflow-hidden border border-neutral-800 bg-[#0d1117] shadow-2xl transition-all",
-            className
-        )}>
-            {/* VS Code Window Title Bar & Tabs */}
-            <div className="bg-[#161b22] border-b border-neutral-800/80 px-3 py-2 flex items-center justify-between select-none">
-                {/* Left: Window Controls + Tab */}
-                <div className="flex items-center gap-3">
-                    {/* macOS Dots */}
-                    <div className="flex items-center gap-1.5 px-1">
-                        <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]" />
-                        <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]" />
-                        <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]" />
+        <div
+            className={cn(
+                "w-full flex flex-col rounded-2xl overflow-hidden transition-colors duration-200 border shadow-md",
+                isDark
+                    ? "bg-[#0d1219] border-neutral-800 text-neutral-200 shadow-xl"
+                    : "bg-white border-border text-slate-900 shadow-sm",
+                className
+            )}
+        >
+            {/* Header Toolbar: Aligned with Home UI */}
+            <div
+                className={cn(
+                    "px-4 py-2.5 flex items-center justify-between border-b select-none transition-colors",
+                    isDark
+                        ? "bg-[#141b24] border-neutral-800/90 text-neutral-300"
+                        : "bg-surface-highlight border-border text-slate-700"
+                )}
+            >
+                {/* Left: File Badge & Language */}
+                <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-surface text-xs font-mono font-semibold shadow-xs border-border">
+                        <Code2 className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-text">{fileName}</span>
                     </div>
 
-                    {/* Active File Tab */}
-                    <div className="flex items-center gap-2 px-3 py-1 bg-[#0d1117] border-t-2 border-t-primary border-x border-neutral-800/80 rounded-t-lg text-xs font-mono text-neutral-200">
-                        <span className="text-yellow-400 font-bold">🐍</span>
-                        <span className="font-semibold">{fileName}</span>
-                        <span className="text-[10px] text-neutral-500 hover:text-neutral-300 cursor-pointer ml-1">×</span>
-                    </div>
+                    <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-mono font-bold uppercase tracking-wider">
+                        Python 3.10
+                    </span>
                 </div>
 
-                {/* Right Action Icons */}
+                {/* Right Action Icons: Theme Toggle, Reset, Copy */}
                 <div className="flex items-center gap-1.5">
+                    {/* Editor Theme Toggle */}
+                    <button
+                        type="button"
+                        onClick={() => setLocalTheme(isDark ? 'light' : 'dark')}
+                        title={isDark ? "Switch to light editor" : "Switch to dark editor"}
+                        className={cn(
+                            "p-1.5 rounded-lg text-xs transition-colors flex items-center gap-1",
+                            isDark
+                                ? "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800"
+                                : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/70"
+                        )}
+                    >
+                        {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-primary" />}
+                    </button>
+
                     {showReset && onReset && (
                         <button
                             type="button"
                             onClick={onReset}
                             disabled={disabled || readOnly}
-                            title="Reset to starter code"
-                            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors disabled:opacity-40 flex items-center gap-1 text-xs"
+                            title="Reset starter code"
+                            className={cn(
+                                "px-2 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 flex items-center gap-1.5",
+                                isDark
+                                    ? "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800"
+                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/70"
+                            )}
                         >
                             <RotateCcw className="w-3.5 h-3.5" />
-                            <span className="text-[11px] hidden sm:inline">Reset</span>
+                            <span className="hidden sm:inline text-[11px]">Reset</span>
                         </button>
                     )}
 
@@ -349,32 +397,47 @@ export function CodeEditor({
                         type="button"
                         onClick={handleCopy}
                         title="Copy code"
-                        className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors flex items-center gap-1 text-xs"
+                        className={cn(
+                            "px-2 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5",
+                            isDark
+                                ? "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800"
+                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/70"
+                        )}
                     >
                         {copied ? (
                             <>
-                                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="text-[11px] text-emerald-400">Copied</span>
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                <span className="text-[11px] text-emerald-500 font-semibold">Copied</span>
                             </>
                         ) : (
                             <>
                                 <Copy className="w-3.5 h-3.5" />
-                                <span className="text-[11px] hidden sm:inline">Copy</span>
+                                <span className="hidden sm:inline text-[11px]">Copy</span>
                             </>
                         )}
                     </button>
                 </div>
             </div>
 
-            {/* Breadcrumbs Row */}
-            <div className="bg-[#11151d] px-4 py-1.5 border-b border-neutral-800/60 flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                <div className="flex items-center gap-1.5">
-                    <FileCode className="w-3.5 h-3.5 text-primary" />
+            {/* Breadcrumb Path Bar */}
+            <div
+                className={cn(
+                    "px-4 py-1.5 border-b flex items-center justify-between text-[11px] font-mono select-none transition-colors",
+                    isDark
+                        ? "bg-[#10151f] border-neutral-800/60 text-neutral-400"
+                        : "bg-slate-50 border-border text-slate-500"
+                )}
+            >
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                    <FileCode className="w-3.5 h-3.5 text-primary shrink-0" />
                     {activeBreadcrumb.map((crumb, i) => (
                         <React.Fragment key={i}>
-                            {i > 0 && <span className="text-neutral-600">›</span>}
+                            {i > 0 && <span className="opacity-40">/</span>}
                             <span className={cn(
-                                i === activeBreadcrumb.length - 1 ? "text-neutral-200 font-semibold" : "text-neutral-400 hover:text-neutral-300"
+                                "truncate",
+                                i === activeBreadcrumb.length - 1
+                                    ? isDark ? "text-neutral-200 font-semibold" : "text-slate-800 font-semibold"
+                                    : "opacity-80"
                             )}>
                                 {crumb}
                             </span>
@@ -382,22 +445,31 @@ export function CodeEditor({
                     ))}
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold font-mono">
-                        Python 3.10
-                    </span>
-                </div>
+                {testCasesCount !== undefined && (
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-[10px]">
+                        <FlaskConical className="w-3 h-3" />
+                        <span>{testCasesCount} Test Cases</span>
+                    </div>
+                )}
             </div>
 
-            {/* Editor Body: Gutter + Syntax Layer + Textarea + Floating Annotations */}
+            {/* Editor Workspace: Gutter + Syntax Layer + Textarea */}
             <div
-                className="relative flex font-mono text-xs md:text-sm bg-[#0d1117] overflow-hidden"
+                className={cn(
+                    "relative flex font-mono text-xs md:text-sm overflow-hidden",
+                    isDark ? "bg-[#0d1219]" : "bg-white"
+                )}
                 style={{ minHeight }}
             >
                 {/* Line Numbers Gutter */}
                 <div
                     ref={gutterRef}
-                    className="w-12 md:w-14 py-3 bg-[#0d1117] text-neutral-600 select-none text-right pr-3 font-mono text-xs md:text-sm leading-6 shrink-0 border-r border-neutral-800/80 overflow-hidden"
+                    className={cn(
+                        "w-12 md:w-14 py-3 select-none text-right pr-3 font-mono text-xs md:text-sm leading-6 shrink-0 border-r overflow-hidden transition-colors",
+                        isDark
+                            ? "bg-[#0d1219] border-neutral-800/80 text-neutral-600"
+                            : "bg-[#f8fafc] border-border text-slate-400"
+                    )}
                 >
                     {Array.from({ length: lineCount }).map((_, i) => {
                         const lineNum = i + 1;
@@ -408,13 +480,19 @@ export function CodeEditor({
                             <div
                                 key={lineNum}
                                 className={cn(
-                                    "transition-colors flex items-center justify-end gap-1",
-                                    isCurrent ? "text-neutral-200 font-bold" : "hover:text-neutral-400",
-                                    hasAnnotation && "text-amber-400 font-semibold"
+                                    "transition-colors flex items-center justify-end gap-1 h-6",
+                                    isCurrent
+                                        ? isDark
+                                            ? "text-primary font-bold"
+                                            : "text-primary font-bold"
+                                        : isDark
+                                            ? "hover:text-neutral-400"
+                                            : "hover:text-slate-600",
+                                    hasAnnotation && "text-amber-500 font-semibold"
                                 )}
                             >
                                 {hasAnnotation && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block shrink-0" />
                                 )}
                                 <span>{lineNum}</span>
                             </div>
@@ -427,7 +505,11 @@ export function CodeEditor({
                     {/* Background Syntax Highlight Overlay */}
                     <div
                         ref={highlightRef}
-                        className="absolute inset-0 p-3 font-mono text-xs md:text-sm leading-6 pointer-events-none overflow-hidden whitespace-pre font-normal text-neutral-300 select-none"
+                        className={cn(
+                            "absolute inset-0 p-3 font-mono text-xs md:text-sm leading-6 pointer-events-none overflow-hidden whitespace-pre font-normal select-none",
+                            isDark ? "text-neutral-200" : "text-slate-800"
+                        )}
+                        style={{ tabSize: 4 }}
                     >
                         {lines.map((line, i) => {
                             const isCurrent = (i + 1) === cursorPosition.line;
@@ -437,26 +519,29 @@ export function CodeEditor({
                                 <div
                                     key={i}
                                     className={cn(
-                                        "min-h-[1.5rem] relative flex items-center",
-                                        isCurrent && "bg-neutral-800/25 rounded"
+                                        "h-6 relative flex items-center justify-between",
+                                        isCurrent && (isDark ? "bg-neutral-800/40 rounded" : "bg-primary/5 rounded")
                                     )}
                                 >
-                                    <span className="inline-block">{tokenizeLine(line)}</span>
+                                    <span className="inline-block">{tokenizeLine(line, isDark)}</span>
 
-                                    {/* Inlay Connector Line & Floating Tooltip Pill (matching user screenshot!) */}
+                                    {/* Non-Clipping Inlay Annotation Pill */}
                                     {annot && (
-                                        <div className="ml-4 inline-flex items-center gap-2 pointer-events-auto select-none opacity-90 hover:opacity-100 transition-opacity">
-                                            {/* Connector Line */}
-                                            <div className="w-6 h-[1px] bg-neutral-600" />
-                                            {/* Annotation Badge Pill */}
-                                            <div className={cn(
-                                                "px-2.5 py-0.5 rounded-md text-[11px] font-mono flex items-center gap-1.5 shadow-md border",
-                                                annot.type === 'todo'
-                                                    ? "bg-pink-600/90 text-white border-pink-500/40"
-                                                    : "bg-neutral-800 text-neutral-200 border-neutral-700"
-                                            )}>
-                                                <Sparkles className="w-3 h-3 text-white" />
-                                                <span className="font-semibold">{annot.label}</span>
+                                        <div className="ml-4 shrink-0 inline-flex items-center gap-1.5 pointer-events-none select-none max-w-[180px] sm:max-w-[240px] truncate">
+                                            <div
+                                                className={cn(
+                                                    "px-2 py-0.5 rounded-md text-[10px] font-mono flex items-center gap-1 border shadow-xs truncate",
+                                                    annot.type === 'todo'
+                                                        ? isDark
+                                                            ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                                                            : "bg-amber-100 text-amber-800 border-amber-300"
+                                                        : isDark
+                                                            ? "bg-primary/20 text-primary border-primary/30"
+                                                            : "bg-primary/10 text-primary border-primary/20"
+                                                )}
+                                            >
+                                                <Sparkles className="w-2.5 h-2.5 shrink-0" />
+                                                <span className="font-semibold truncate">{annot.label}</span>
                                             </div>
                                         </div>
                                     )}
@@ -483,33 +568,46 @@ export function CodeEditor({
                         autoCapitalize="off"
                         autoComplete="off"
                         autoCorrect="off"
-                        className="absolute inset-0 w-full h-full p-3 font-mono text-xs md:text-sm leading-6 bg-transparent text-transparent caret-white resize-none outline-none border-none whitespace-pre overflow-auto font-normal selection:bg-primary/30"
+                        style={{ tabSize: 4 }}
+                        className={cn(
+                            "absolute inset-0 w-full h-full p-3 font-mono text-xs md:text-sm leading-6 bg-transparent text-transparent resize-none outline-none border-none whitespace-pre overflow-auto font-normal selection:bg-primary/25 custom-scrollbar",
+                            isDark ? "caret-white" : "caret-slate-900"
+                        )}
                     />
                 </div>
             </div>
 
             {/* Bottom Status Bar & Action Controls */}
-            <div className="bg-[#161b22] border-t border-neutral-800 px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-neutral-400 select-none">
+            <div
+                className={cn(
+                    "border-t px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono select-none transition-colors",
+                    isDark
+                        ? "bg-[#141b24] border-neutral-800 text-neutral-400"
+                        : "bg-surface-highlight border-border text-slate-600"
+                )}
+            >
                 {/* Left: Cursor position, encoding, spaces */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 md:gap-4 flex-wrap">
                     <div className="flex items-center gap-1.5">
                         <Terminal className="w-3.5 h-3.5 text-primary" />
-                        <span className="font-semibold text-neutral-300">Ln {cursorPosition.line}, Col {cursorPosition.col}</span>
+                        <span className={cn("font-semibold", isDark ? "text-neutral-200" : "text-slate-800")}>
+                            Ln {cursorPosition.line}, Col {cursorPosition.col}
+                        </span>
                     </div>
-                    <span className="hidden sm:inline">Spaces: 4</span>
-                    <span className="hidden sm:inline">UTF-8</span>
-                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span className="hidden sm:inline opacity-70">Spaces: 4</span>
+                    <span className="hidden sm:inline opacity-70">UTF-8</span>
+                    <span className="text-emerald-500 font-semibold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         Python 3
                     </span>
                 </div>
 
-                {/* Right: Run Code Button */}
+                {/* Right: Run Code Button & Pass Notification */}
                 {onRun && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 ml-auto">
                         {allPassed && (
-                            <span className="hidden sm:flex items-center gap-1 text-emerald-400 text-xs font-bold font-sans">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> All Tests Passed!
+                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-sans">
+                                <CheckCircle2 className="w-4 h-4" /> All Passed
                             </span>
                         )}
                         <button
@@ -517,12 +615,12 @@ export function CodeEditor({
                             onClick={onRun}
                             disabled={isRunning || disabled}
                             className={cn(
-                                "px-4 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer",
+                                "px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
                                 isRunning
-                                    ? "bg-neutral-800 text-neutral-400 cursor-not-allowed"
+                                    ? "bg-slate-300 dark:bg-neutral-800 text-slate-500 cursor-not-allowed"
                                     : allPassed
-                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                        : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
+                                        : "bg-primary hover:bg-primary-600 text-white shadow-primary/25"
                             )}
                         >
                             {isRunning ? (

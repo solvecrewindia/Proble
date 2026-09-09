@@ -566,28 +566,31 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                                         isRunning={isExecuting}
                                         runButtonText="Run Code"
                                         allPassed={codeExecutionStatus[currentQIndex] === true}
+                                        testCasesCount={((q.correct as any)?.testCases || []).length}
                                         minHeight="320px"
                                     />
 
                                     {(executionOutput[currentQIndex] || codeExecutionStatus[currentQIndex] !== undefined) && (
-                                        <div className="bg-neutral-900 rounded-lg p-4 font-mono text-xs overflow-auto max-h-48 border border-neutral-800">
-                                            <div className="flex items-center gap-2 mb-2 border-b border-neutral-800 pb-2">
-                                                <Code2 className="w-3 h-3 text-muted" />
-                                                <span className="text-muted">Output</span>
+                                        <div className="bg-surface-highlight rounded-2xl p-4 md:p-5 font-mono text-xs overflow-auto max-h-48 border border-border shadow-md">
+                                            <div className="flex items-center gap-2 mb-2 border-b border-border pb-2">
+                                                <Code2 className="w-3.5 h-3.5 text-primary" />
+                                                <span className="text-text font-bold">Output Console</span>
                                                 {codeExecutionStatus[currentQIndex] ? (
-                                                    <span className="ml-auto text-green-500 font-bold flex items-center gap-1">
-                                                        <CheckCircle2 className="w-3 h-3" /> Passed
+                                                    <span className="ml-auto text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                                                        <CheckCircle2 className="w-3.5 h-3.5" /> Passed
                                                     </span>
                                                 ) : codeExecutionStatus[currentQIndex] === false ? (
-                                                    <span className="ml-auto text-red-500 font-bold flex items-center gap-1">
-                                                        <X className="w-3 h-3" /> Failed
+                                                    <span className="ml-auto text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
+                                                        <X className="w-3.5 h-3.5" /> Failed
                                                     </span>
                                                 ) : null}
                                             </div>
                                             {executionOutput[currentQIndex]?.stderr && (
-                                                <div className="text-red-400 mb-2 whitespace-pre-wrap">{executionOutput[currentQIndex].stderr}</div>
+                                                <div className="text-rose-700 dark:text-rose-300 bg-rose-500/10 p-3 rounded-xl border border-rose-500/30 mb-2 whitespace-pre-wrap">
+                                                    {executionOutput[currentQIndex].stderr}
+                                                </div>
                                             )}
-                                            <div className="text-neutral-300 whitespace-pre-wrap">
+                                            <div className="text-text whitespace-pre-wrap">
                                                 {executionOutput[currentQIndex]?.stdout || 'No output'}
                                             </div>
                                         </div>

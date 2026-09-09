@@ -1086,7 +1086,7 @@ export default function StudentLiveQuiz() {
                     {/* Code Question UI or MCQ Options */}
                     {currentQuestion.type === 'code' ? (
                         <div className="space-y-4">
-                            {/* Modern VS Code Coding Space */}
+                            {/* Modern Coding Space */}
                             <CodeEditor
                                 value={codeAnswers[currentQuestion.id] ?? (currentQuestion.correct as any)?.starterCode ?? ''}
                                 onChange={(val) => setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: val }))}
@@ -1103,72 +1103,71 @@ export default function StudentLiveQuiz() {
                                 isRunning={isExecutingCode}
                                 runButtonText="Run & Test Code"
                                 allPassed={codePassedStatus[currentQuestion.id]}
+                                testCasesCount={((currentQuestion.correct as any)?.testCases || []).length}
                                 minHeight="360px"
                             />
 
-                            {/* Verification Status Pill */}
-                            <div className="flex items-center justify-between px-1">
-                                <div className="flex items-center gap-2">
-                                    {codePassedStatus[currentQuestion.id] ? (
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-in fade-in">
-                                            <CheckCircle2 className="w-4 h-4" /> All Test Cases Passed!
-                                        </div>
-                                    ) : codeExecutionResult[currentQuestion.id] && !codePassedStatus[currentQuestion.id] ? (
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-in fade-in">
-                                            <X className="w-4 h-4" /> Some Test Cases Failed. Check console below.
-                                        </div>
-                                    ) : (
-                                        <span className="text-xs text-muted font-mono">
-                                            {((currentQuestion.correct as any)?.testCases || []).length} test cases defined
-                                        </span>
-                                    )}
+                            {/* Verification Status Pill (When run) */}
+                            {codeExecutionResult[currentQuestion.id] && (
+                                <div className="flex items-center justify-between px-1">
+                                    <div className="flex items-center gap-2">
+                                        {codePassedStatus[currentQuestion.id] ? (
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-in fade-in">
+                                                <CheckCircle2 className="w-4 h-4" /> All Test Cases Passed!
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-in fade-in">
+                                                <X className="w-4 h-4" /> Some Test Cases Failed. Check console below.
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Execution Output Console */}
                             {codeExecutionResult[currentQuestion.id] && (
-                                <div className="rounded-xl p-4 bg-neutral-900 border border-neutral-800 text-xs font-mono space-y-3 shadow-xl animate-in slide-in-from-top-2 duration-200">
-                                    <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-                                        <span className="text-neutral-400 flex items-center gap-1.5">
-                                            <Code2 className="w-3.5 h-3.5" /> Output Console
+                                <div className="rounded-2xl p-4 md:p-5 bg-surface-highlight border border-border text-xs font-mono space-y-3 shadow-md animate-in slide-in-from-top-2 duration-200">
+                                    <div className="flex items-center justify-between pb-2 border-b border-border">
+                                        <span className="text-text font-bold flex items-center gap-1.5">
+                                            <Code2 className="w-3.5 h-3.5 text-primary" /> Output Console
                                         </span>
                                         {codePassedStatus[currentQuestion.id] ? (
-                                            <span className="text-emerald-400 font-bold flex items-center gap-1">
+                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                                                 <CheckCircle2 className="w-3.5 h-3.5" /> PASSED ALL
                                             </span>
                                         ) : (
-                                            <span className="text-rose-400 font-bold flex items-center gap-1">
+                                            <span className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
                                                 <X className="w-3.5 h-3.5" /> FAILED
                                             </span>
                                         )}
                                     </div>
 
                                     {codeExecutionResult[currentQuestion.id]?.combinedStderr && (
-                                        <div className="text-rose-300 bg-rose-950/40 p-3 rounded-lg border border-rose-900/50 whitespace-pre-wrap">
+                                        <div className="text-rose-700 dark:text-rose-300 bg-rose-500/10 p-3 rounded-xl border border-rose-500/30 whitespace-pre-wrap font-mono text-xs">
                                             {codeExecutionResult[currentQuestion.id]?.combinedStderr}
                                         </div>
                                     )}
 
                                     {codeExecutionResult[currentQuestion.id]?.results && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                                             {codeExecutionResult[currentQuestion.id]!.results.map(tc => (
                                                 <div
                                                     key={tc.index}
                                                     className={cn(
-                                                        "p-3 rounded-lg border flex flex-col gap-1",
+                                                        "p-3 rounded-xl border flex flex-col gap-1.5 shadow-xs transition-colors",
                                                         tc.passed
-                                                            ? "bg-emerald-950/20 border-emerald-900/40 text-emerald-300"
-                                                            : "bg-rose-950/20 border-rose-900/40 text-rose-300"
+                                                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200"
+                                                            : "bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-200"
                                                     )}
                                                 >
                                                     <div className="flex justify-between font-bold text-[11px]">
                                                         <span>Test Case {tc.index}</span>
                                                         <span>{tc.passed ? '✓ PASSED' : '✗ FAILED'}</span>
                                                     </div>
-                                                    <div className="text-[11px] text-neutral-300 font-mono space-y-0.5">
-                                                        <div><span className="text-neutral-500">Input:</span> {tc.input || '(empty)'}</div>
-                                                        <div><span className="text-neutral-500">Expected:</span> {tc.expected}</div>
-                                                        <div><span className="text-neutral-500">Output:</span> {tc.actual}</div>
+                                                    <div className="text-[11px] font-mono space-y-0.5">
+                                                        <div><span className="text-muted">Input:</span> <span className="text-text font-medium">{tc.input || '(empty)'}</span></div>
+                                                        <div><span className="text-muted">Expected:</span> <span className="text-emerald-600 dark:text-emerald-400 font-medium">{tc.expected}</span></div>
+                                                        <div><span className="text-muted">Output:</span> <span className={tc.passed ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-rose-600 dark:text-rose-400 font-medium"}>{tc.actual}</span></div>
                                                     </div>
                                                 </div>
                                             ))}
