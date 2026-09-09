@@ -1432,9 +1432,9 @@ if __name__ == "__main__":
                                             </div>
                                         )}
 
-                                        {/* Explanation Keywords / AI Mode Section */}
-                                        <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700/80">
-                                            {isAiEvaluationMode ? (
+                                        {/* AI Evaluation Mode Notice (Only when active for Proble Originals) */}
+                                        {isAiEvaluationMode && q.type !== 'code' && (
+                                            <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700/80">
                                                 <div className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-text">
                                                     <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                                                     <div className="space-y-0.5">
@@ -1447,25 +1447,8 @@ if __name__ == "__main__":
                                                         </p>
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                <div className="flex flex-col gap-1.5">
-                                                    <label className="text-xs font-semibold text-text flex items-center gap-1.5">
-                                                        <Key className="w-3.5 h-3.5 text-primary" />
-                                                        <span>Required Explanation Keywords</span>
-                                                        <span className="text-[10px] text-muted font-normal">(comma-separated)</span>
-                                                    </label>
-                                                    <Input
-                                                        placeholder="e.g. photosynthesis, chlorophyll, sunlight (leave empty if not required)"
-                                                        value={Array.isArray(q.keywords) ? q.keywords.join(', ') : (q.keywords || '')}
-                                                        onChange={(e) => updateQuestion(index, { keywords: e.target.value })}
-                                                        className="h-9 text-xs font-mono"
-                                                    />
-                                                    <p className="text-[10px] text-muted">
-                                                        If keywords are provided, students must select an option and write an explanation containing these keywords to proceed and get the mark. If left empty, the explanation box will not be shown.
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </Card>
