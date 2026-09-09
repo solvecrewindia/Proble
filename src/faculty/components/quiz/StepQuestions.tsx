@@ -42,6 +42,24 @@ def calculate_mse():
     y = [float(x) for x in lines[0].split()]
     y_pred = [float(x) for x in lines[1].split()]
     
+    # TODO: Calculate Mean Squared Error (MSE) between y and y_pred
+    # Formula: MSE = (1/n) * sum((y_i - y_pred_i)**2)
+    # Print the calculated MSE rounded to 4 decimal places (e.g. 0.8750)
+    pass
+
+if __name__ == '__main__':
+    calculate_mse()`,
+            solutionCode: `# Python 3 - Mean Squared Error (MSE)
+import sys
+
+def calculate_mse():
+    lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+    if len(lines) < 2:
+        return
+    
+    y = [float(x) for x in lines[0].split()]
+    y_pred = [float(x) for x in lines[1].split()]
+    
     mse = sum((actual - pred) ** 2 for actual, pred in zip(y, y_pred)) / len(y)
     print(f"{mse:.4f}")
 
@@ -68,6 +86,23 @@ def sigmoid():
         return
     
     values = [float(x) for x in data.split()]
+    
+    # TODO: Calculate sigmoid for each value: 1.0 / (1.0 + exp(-z))
+    # Print space-separated results rounded to 4 decimal places
+    pass
+
+if __name__ == '__main__':
+    sigmoid()`,
+            solutionCode: `# Python 3 - Sigmoid Activation
+import sys
+import math
+
+def sigmoid():
+    data = sys.stdin.read().strip()
+    if not data:
+        return
+    
+    values = [float(x) for x in data.split()]
     results = [1.0 / (1.0 + math.exp(-z)) for z in values]
     print(" ".join(f"{r:.4f}" for r in results))
 
@@ -85,6 +120,24 @@ if __name__ == '__main__':
             description: 'Calculate Euclidean distance between two n-dimensional vectors',
             stem: '### Machine Learning: Euclidean Distance\nCompute Euclidean distance between two vectors $p$ and $q$ in $n$-dimensional feature space.\n\n**Input Format:**\n- Line 1: Space-separated float values representing vector $p$\n- Line 2: Space-separated float values representing vector $q$\n\n**Output Format:**\n- Print the Euclidean distance rounded to 4 decimal places.',
             starterCode: `# Python 3 - Euclidean Distance
+import sys
+import math
+
+def euclidean_distance():
+    lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+    if len(lines) < 2:
+        return
+    
+    p = [float(x) for x in lines[0].split()]
+    q = [float(x) for x in lines[1].split()]
+    
+    # TODO: Calculate Euclidean distance between vectors p and q
+    # Print the distance rounded to 4 decimal places
+    pass
+
+if __name__ == '__main__':
+    euclidean_distance()`,
+            solutionCode: `# Python 3 - Euclidean Distance
 import sys
 import math
 
@@ -123,6 +176,23 @@ def predict():
     w, b = [float(v) for v in lines[0].split()]
     x_vals = [float(v) for v in lines[1].split()]
     
+    # TODO: Calculate predictions for each x in x_vals: y_pred = w * x + b
+    # Print space-separated predictions rounded to 2 decimal places
+    pass
+
+if __name__ == '__main__':
+    predict()`,
+            solutionCode: `# Python 3 - Linear Regression
+import sys
+
+def predict():
+    lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+    if len(lines) < 2:
+        return
+    
+    w, b = [float(v) for v in lines[0].split()]
+    x_vals = [float(v) for v in lines[1].split()]
+    
     preds = [w * x + b for x in x_vals]
     print(" ".join(f"{p:.2f}" for p in preds))
 
@@ -140,6 +210,23 @@ if __name__ == '__main__':
             description: 'Compute classification accuracy percentage given true and predicted labels',
             stem: '### Machine Learning: Classification Accuracy\nCalculate the classification accuracy score given ground truth binary labels and predicted binary labels.\n\n**Input Format:**\n- Line 1: Space-separated true binary labels (0 or 1)\n- Line 2: Space-separated predicted binary labels (0 or 1)\n\n**Output Format:**\n- Print accuracy percentage rounded to 2 decimal places (e.g. 83.33%).',
             starterCode: `# Python 3 - Classification Accuracy
+import sys
+
+def accuracy():
+    lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+    if len(lines) < 2:
+        return
+    
+    y_true = [int(x) for x in lines[0].split()]
+    y_pred = [int(x) for x in lines[1].split()]
+    
+    # TODO: Calculate accuracy: (correct_matches / total_samples) * 100
+    # Print formatted accuracy string e.g. 83.33%
+    pass
+
+if __name__ == '__main__':
+    accuracy()`,
+            solutionCode: `# Python 3 - Classification Accuracy
 import sys
 
 def accuracy():
@@ -196,11 +283,16 @@ if __name__ == "__main__":
         const driverCode = correct.driverCode || '';
         const testCases = correct.testCases || [];
 
+        // If starter code is just a scaffold with pass/TODO, test the reference solution so tests pass
+        const testCode = (correct.solutionCode && (starterCode.includes('pass') || !starterCode.trim()))
+            ? correct.solutionCode
+            : starterCode;
+
         setTestingCode(prev => ({ ...prev, [index]: true }));
         try {
             const res = await runTestCases({
                 language: lang,
-                studentCode: starterCode,
+                studentCode: testCode,
                 driverCode,
                 testCases,
             });
@@ -1097,6 +1189,7 @@ if __name__ == "__main__":
                                                                             language: 'python',
                                                                             allowedLanguages: ['python'],
                                                                             starterCode: preset.starterCode,
+                                                                            solutionCode: preset.solutionCode,
                                                                             driverCode: preset.driverCode,
                                                                             testCases: preset.testCases,
                                                                         }
