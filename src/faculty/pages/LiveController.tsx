@@ -3,10 +3,24 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
-import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause, Download, Code2, Clock, Trophy, BarChart3, Users, Play } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause, Download, Code2, Clock, Trophy, BarChart3, Users, Play, Eye, X, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MathText } from '../../shared/components/MathText';
 import type { Quiz } from '../types';
+
+interface StudentSubmission {
+    studentId: string;
+    name: string;
+    regNo: string | null;
+    answered: boolean;
+    passed: boolean;
+    passedCount?: number;
+    totalCount?: number;
+    timeTaken?: number;
+    points?: number;
+    code?: string;
+    option?: number;
+}
 
 const formatSeconds = (totalSec: number) => {
     if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
@@ -34,6 +48,8 @@ export default function LiveController() {
     const [participation, setParticipation] = useState(0);
     const [onlineCount, setOnlineCount] = useState(0);
     const [codeSubmissionStats, setCodeSubmissionStats] = useState<{ passed: number; failed: number; total: number }>({ passed: 0, failed: 0, total: 0 });
+    const [studentSubmissions, setStudentSubmissions] = useState<StudentSubmission[]>([]);
+    const [viewingStudentCode, setViewingStudentCode] = useState<{ name: string; code: string } | null>(null);
 
     // Elapsed timer increments while in voting mode
     useEffect(() => {
@@ -225,24 +241,50 @@ export default function LiveController() {
 
         const { data: attempts } = await supabase
             .from('attempts')
-            .select('answers, student_id')
+            .select('answers, student_id, score')
             .eq('quiz_id', id);
 
         if (attempts) {
             setOnlineCount(attempts.length);
 
+            const allStudentIds = attempts.map(a => a.student_id);
+            const profileMap: Record<string, any> = {};
+            if (allStudentIds.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, registration_number')
+                    .in('id', allStudentIds);
+                (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
+            }
+
             const newStats: Record<string, number> = {};
             let answeredCount = 0;
             let codePassed = 0;
             let codeFailed = 0;
+            const detailedSubmissions: StudentSubmission[] = [];
 
             attempts.forEach(attempt => {
-                const answers = attempt.answers || {};
+                let answers = attempt.answers || {};
+                if (typeof answers === 'string') {
+                    try { answers = JSON.parse(answers); } catch {}
+                }
                 const ans = answers[questionId];
+                const profile = profileMap[attempt.student_id];
+                const studentName = profile?.full_name || 'Student';
+                const regNo = profile?.registration_number || null;
+
                 if (ans !== undefined && ans !== null) {
                     if (typeof ans === 'number') {
                         newStats[ans] = (newStats[ans] || 0) + 1;
                         answeredCount++;
+                        detailedSubmissions.push({
+                            studentId: attempt.student_id,
+                            name: studentName,
+                            regNo,
+                            answered: true,
+                            passed: false,
+                            option: ans
+                        });
                     } else if (typeof ans === 'object') {
                         if (ans.type === 'code' || ans.code !== undefined) {
                             answeredCount++;
@@ -251,15 +293,54 @@ export default function LiveController() {
                             } else {
                                 codeFailed++;
                             }
+                            detailedSubmissions.push({
+                                studentId: attempt.student_id,
+                                name: studentName,
+                                regNo,
+                                answered: true,
+                                passed: Boolean(ans.passed),
+                                passedCount: ans.passedCount,
+                                totalCount: ans.totalCount,
+                                timeTaken: ans.timeTaken,
+                                points: ans.points,
+                                code: ans.code
+                            });
                         } else if (typeof ans.option === 'number') {
                             newStats[ans.option] = (newStats[ans.option] || 0) + 1;
                             answeredCount++;
+                            detailedSubmissions.push({
+                                studentId: attempt.student_id,
+                                name: studentName,
+                                regNo,
+                                answered: true,
+                                passed: Boolean(ans.passed),
+                                option: ans.option,
+                                timeTaken: ans.timeTaken,
+                                points: ans.points
+                            });
                         }
                     }
+                } else {
+                    detailedSubmissions.push({
+                        studentId: attempt.student_id,
+                        name: studentName,
+                        regNo,
+                        answered: false,
+                        passed: false
+                    });
                 }
             });
+
+            // Sort so answered/passed students appear at top
+            detailedSubmissions.sort((a, b) => {
+                if (a.answered && !b.answered) return -1;
+                if (!a.answered && b.answered) return 1;
+                return (b.points || 0) - (a.points || 0);
+            });
+
             setStats(newStats);
             setCodeSubmissionStats({ passed: codePassed, failed: codeFailed, total: answeredCount });
+            setStudentSubmissions(detailedSubmissions);
 
             const totalParticipants = attempts.length;
             const pct = totalParticipants > 0 ? Math.round((answeredCount / totalParticipants) * 100) : 0;
@@ -267,7 +348,7 @@ export default function LiveController() {
         }
     };
 
-    // Sub to attempts for real-time stats
+    // Sub to attempts for real-time stats and live updates
     useEffect(() => {
         if (!quiz || !quiz.questions || quiz.questions.length === 0) return;
 
@@ -279,9 +360,35 @@ export default function LiveController() {
         const pollInterval = setInterval(() => {
             if (currentQ?.id) fetchRealStats(currentQ.id);
             if (viewMode === 'leaderboard') fetchLiveLeaderboard();
-        }, 3000);
+        }, 2000);
 
-        return () => clearInterval(pollInterval);
+        // Instant Realtime updates via Postgres changes
+        let channel: any = null;
+        try {
+            channel = supabase
+                .channel(`live-host-sync-${id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'attempts',
+                        filter: `quiz_id=eq.${id}`
+                    },
+                    () => {
+                        if (currentQ?.id) fetchRealStats(currentQ.id);
+                        fetchLiveLeaderboard();
+                    }
+                )
+                .subscribe();
+        } catch (subErr) {
+            console.warn("Realtime sub error in host:", subErr);
+        }
+
+        return () => {
+            clearInterval(pollInterval);
+            if (channel) supabase.removeChannel(channel);
+        };
     }, [id, quiz, currentQuestionIndex, viewMode]);
 
     const updateQuizState = async (index: number, mode: 'voting' | 'results' | 'leaderboard' = 'voting') => {
@@ -438,16 +545,45 @@ export default function LiveController() {
                     </div>
                 </div>
 
-                {/* Host Control Header Badge with live elapsed timer */}
+                {/* Host Control Header Badge with live elapsed timer and view toggle */}
                 <div className="flex items-center gap-3">
                     <div className="px-3.5 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-mono font-bold flex items-center gap-2">
                         <Clock className="w-3.5 h-3.5" />
                         <span>Elapsed: {formatSeconds(elapsedTime)}</span>
                     </div>
 
-                    <div className="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        {viewMode === 'voting' ? 'Voting Active' : 'Leaderboard Active'}
+                    <div className="flex items-center p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-border">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setViewMode('voting');
+                                updateQuizState(currentQuestionIndex, 'voting');
+                            }}
+                            className={cn(
+                                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                                viewMode === 'voting'
+                                    ? "bg-primary text-white shadow-sm"
+                                    : "text-muted hover:text-text"
+                            )}
+                        >
+                            <BarChart3 className="w-3.5 h-3.5" /> Live Analysis
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setViewMode('leaderboard');
+                                fetchLiveLeaderboard();
+                                updateQuizState(currentQuestionIndex, 'leaderboard');
+                            }}
+                            className={cn(
+                                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                                viewMode === 'leaderboard'
+                                    ? "bg-amber-600 text-white shadow-sm"
+                                    : "text-muted hover:text-text"
+                            )}
+                        >
+                            <Trophy className="w-3.5 h-3.5" /> Leaderboard
+                        </button>
                     </div>
                 </div>
             </div>
@@ -525,7 +661,7 @@ export default function LiveController() {
                                     </div>
                                 </div>
                             ) : currentQuestion.type === 'code' ? (
-                                <div className="space-y-4 flex-1 overflow-y-auto">
+                                <div className="space-y-4 flex-1 overflow-y-auto pr-1">
                                     <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-primary font-bold text-sm">
                                             <Code2 className="w-4 h-4" />
@@ -565,6 +701,80 @@ export default function LiveController() {
                                             ))}
                                         </div>
                                     </div>
+
+                                    {/* Live Student Activity & Submissions Breakdown */}
+                                    <div className="space-y-2 pt-3 border-t border-border">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-text flex items-center gap-1.5">
+                                                <Users className="w-3.5 h-3.5 text-primary" /> Live Student Submissions ({studentSubmissions.filter(s => s.answered).length}/{onlineCount})
+                                            </span>
+                                            <span className="text-[11px] text-muted">Real-time sync</span>
+                                        </div>
+
+                                        <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                                            {studentSubmissions.map((sub) => (
+                                                <div
+                                                    key={sub.studentId}
+                                                    className="p-2.5 rounded-xl border border-border bg-surface flex items-center justify-between text-xs"
+                                                >
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[11px] shrink-0">
+                                                            {sub.name.substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-bold text-text truncate text-xs">{sub.name}</p>
+                                                            <div className="flex items-center gap-2 text-[10px] text-muted">
+                                                                {sub.regNo && <span className="font-mono">{sub.regNo}</span>}
+                                                                {sub.timeTaken && <span>⏱ {sub.timeTaken}s</span>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        {sub.answered ? (
+                                                            <>
+                                                                {sub.passed ? (
+                                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-[10px] flex items-center gap-1">
+                                                                        <CheckCircle className="w-3 h-3" />
+                                                                        {sub.passedCount !== undefined ? `${sub.passedCount}/${sub.totalCount} Cases` : 'Passed'}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold font-mono text-[10px] flex items-center gap-1">
+                                                                        <X className="w-3 h-3" />
+                                                                        {sub.passedCount !== undefined ? `${sub.passedCount}/${sub.totalCount} Cases` : 'Failed'}
+                                                                    </span>
+                                                                )}
+                                                                {sub.points !== undefined && (
+                                                                    <span className="font-bold text-primary text-xs font-mono">{sub.points} pts</span>
+                                                                )}
+                                                                {sub.code && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => setViewingStudentCode({ name: sub.name, code: sub.code || '' })}
+                                                                        className="h-7 text-[11px] px-2 flex items-center gap-1 border-primary/20 hover:bg-primary/10"
+                                                                    >
+                                                                        <Eye className="w-3 h-3" /> View Code
+                                                                    </Button>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium text-[10px] flex items-center gap-1">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                                Solving...
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {studentSubmissions.length === 0 && (
+                                                <div className="p-4 text-center text-muted text-xs bg-surface rounded-xl border border-dashed border-border">
+                                                    Waiting for students to join or run test cases...
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-3 flex-1 overflow-y-auto">
@@ -595,42 +805,47 @@ export default function LiveController() {
                     </Card>
 
                     {/* Controls: Host-Controlled Transitions */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                         <Button
                             variant="outline"
                             onClick={handlePrev}
                             disabled={currentQuestionIndex === 0}
-                            className="h-14 text-base"
+                            className="h-14 text-sm font-semibold"
                         >
-                            <ChevronLeft className="mr-2 h-5 w-5" /> Previous
+                            <ChevronLeft className="mr-1.5 h-4 w-4" /> Previous
                         </Button>
 
                         <Button
+                            variant="outline"
                             onClick={async () => {
-                                if (viewMode === 'voting') {
-                                    setViewMode('leaderboard');
-                                    fetchLiveLeaderboard();
-                                    await updateQuizState(currentQuestionIndex, 'leaderboard');
-                                } else {
-                                    handleNext();
-                                }
+                                const nextMode = viewMode === 'voting' ? 'leaderboard' : 'voting';
+                                setViewMode(nextMode);
+                                if (nextMode === 'leaderboard') fetchLiveLeaderboard();
+                                await updateQuizState(currentQuestionIndex, nextMode);
                             }}
                             className={cn(
-                                "h-14 text-base font-bold text-white transition-all shadow-lg",
+                                "h-14 text-sm font-bold border transition-all",
                                 viewMode === 'voting'
-                                    ? "bg-amber-600 hover:bg-amber-700"
-                                    : "bg-primary hover:bg-primary/90"
+                                    ? "border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                                    : "border-primary/40 text-primary hover:bg-primary/10"
                             )}
                         >
                             {viewMode === 'voting' ? (
                                 <>
-                                    <Trophy className="mr-2 h-5 w-5" /> Show Live Leaderboard
+                                    <Trophy className="mr-1.5 h-4 w-4" /> View Leaderboard
                                 </>
                             ) : (
                                 <>
-                                    {isLastQuestion ? "Finish Quiz" : "Next Question"} <ChevronRight className="ml-2 h-5 w-5" />
+                                    <BarChart3 className="mr-1.5 h-4 w-4" /> Live Analysis
                                 </>
                             )}
+                        </Button>
+
+                        <Button
+                            onClick={handleNext}
+                            className="h-14 text-sm font-bold text-white transition-all shadow-lg bg-primary hover:bg-primary/90"
+                        >
+                            {isLastQuestion ? "Finish Quiz" : "Next Question"} <ChevronRight className="ml-1.5 h-4 w-4" />
                         </Button>
                     </div>
                 </div>
@@ -702,6 +917,38 @@ export default function LiveController() {
                     </Card>
                 </div>
             </div>
+
+            {/* View Student Code Modal */}
+            {viewingStudentCode && (
+                <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+                    <div className="bg-surface border border-border rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl max-h-[85vh] flex flex-col animate-in zoom-in-95">
+                        <div className="flex items-center justify-between pb-3 border-b border-border">
+                            <div className="flex items-center gap-2">
+                                <Code2 className="w-5 h-5 text-primary" />
+                                <h3 className="font-bold text-base text-text">Code by {viewingStudentCode.name}</h3>
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setViewingStudentCode(null)}
+                                className="h-8 w-8 p-0 rounded-full"
+                            >
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto">
+                            <pre className="p-4 rounded-xl bg-neutral-900 text-neutral-100 font-mono text-xs overflow-x-auto leading-relaxed border border-neutral-800">
+                                <code>{viewingStudentCode.code}</code>
+                            </pre>
+                        </div>
+                        <div className="flex justify-end pt-2">
+                            <Button onClick={() => setViewingStudentCode(null)} size="sm">
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -432,6 +432,83 @@ export default function StudentLiveQuiz() {
             });
             setCodeExecutionResult(prev => ({ ...prev, [qId]: res }));
             setCodePassedStatus(prev => ({ ...prev, [qId]: res.allPassed }));
+
+            // Real-time sync of test progress to attempts so Host Live Analysis sees live updates
+            if (user && id) {
+                try {
+                    const totalTestCases = testCases.length;
+                    const passedCount = res.results?.filter((r: any) => r.passed).length || 0;
+                    const totalCases = totalTestCases > 0 ? totalTestCases : 1;
+                    const isFullyPassed = res.allPassed;
+                    const secondsTaken = Math.max(1, elapsedTime || 1);
+                    const casePoints = Math.round((passedCount / totalCases) * 1000);
+                    const speedBonus = passedCount > 0 ? Math.max(0, Math.round(500 * Math.max(0, 1 - (secondsTaken / 300)))) : 0;
+                    const pointsForThisQ = casePoints + speedBonus;
+
+                    const { data: curAttempt } = await supabase
+                        .from('attempts')
+                        .select('answers')
+                        .eq('quiz_id', id)
+                        .eq('student_id', user.id)
+                        .maybeSingle();
+
+                    let currentAnswers = curAttempt?.answers || {};
+                    if (typeof currentAnswers === 'string') {
+                        try { currentAnswers = JSON.parse(currentAnswers); } catch {}
+                    }
+
+                    const newAnswers = {
+                        ...currentAnswers,
+                        [qId]: {
+                            type: 'code',
+                            code: currentCode,
+                            passed: isFullyPassed,
+                            passedCount,
+                            totalCount: totalCases,
+                            timeTaken: secondsTaken,
+                            points: pointsForThisQ
+                        }
+                    };
+
+                    let cumulativeScore = 0;
+                    let totalPassed = 0;
+                    questions.forEach((qu) => {
+                        const ans = newAnswers[qu.id];
+                        if (ans && typeof ans === 'object') {
+                            cumulativeScore += (ans.points || 0);
+                            if (ans.passed) totalPassed++;
+                        } else if (ans !== undefined && ans !== null) {
+                            cumulativeScore += 1000;
+                            totalPassed++;
+                        }
+                    });
+
+                    if (curAttempt) {
+                        await supabase
+                            .from('attempts')
+                            .update({
+                                answers: newAnswers,
+                                score: cumulativeScore
+                            })
+                            .eq('quiz_id', id)
+                            .eq('student_id', user.id);
+                    } else {
+                        await supabase
+                            .from('attempts')
+                            .insert({
+                                quiz_id: id,
+                                student_id: user.id,
+                                status: 'in-progress',
+                                started_at: new Date().toISOString(),
+                                answers: newAnswers,
+                                score: cumulativeScore,
+                                flags: []
+                            });
+                    }
+                } catch (syncErr) {
+                    console.warn("Live test progress sync warning:", syncErr);
+                }
+            }
         } catch (err: any) {
             console.error("Execution error in live quiz:", err);
             setCodeExecutionResult(prev => ({
@@ -555,16 +632,31 @@ export default function StudentLiveQuiz() {
 
             const percentage = questions.length > 0 ? Math.round((totalPassed / questions.length) * 100) : 0;
 
-            // 3. Update 'attempts'
-            await supabase
-                .from('attempts')
-                .update({
-                    answers: newAnswers,
-                    score: cumulativeScore,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('quiz_id', id)
-                .eq('student_id', user.id);
+            // 3. Update or insert 'attempts'
+            if (attempt) {
+                const { error: updateErr } = await supabase
+                    .from('attempts')
+                    .update({
+                        answers: newAnswers,
+                        score: cumulativeScore
+                    })
+                    .eq('quiz_id', id)
+                    .eq('student_id', user.id);
+                if (updateErr) console.error("Error updating attempt:", updateErr);
+            } else {
+                const { error: insertErr } = await supabase
+                    .from('attempts')
+                    .insert({
+                        quiz_id: id,
+                        student_id: user.id,
+                        status: 'in-progress',
+                        started_at: new Date().toISOString(),
+                        answers: newAnswers,
+                        score: cumulativeScore,
+                        flags: []
+                    });
+                if (insertErr) console.error("Error inserting attempt:", insertErr);
+            }
 
             // 4. Update 'quiz_results'
             const { data: existingQR } = await supabase
