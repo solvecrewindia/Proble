@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import FullScreenLoader from '../../shared/components/FullScreenLoader';
@@ -8,19 +8,18 @@ import { Card } from '../../shared/components/Card';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { MathText } from '../../shared/components/MathText';
-import { CHARACTERS, getCharacterSrc } from '../../shared/utils/characters';
-import { User, Clock, CheckCircle, Loader2, WifiOff, Play, RotateCcw, Code2, CheckCircle2, X } from 'lucide-react';
-import gameBgVideo from '../../characters/videoplayback (1).mp4';
+import {
+    User, Clock, CheckCircle, Loader2, WifiOff, Play, RotateCcw,
+    Code2, CheckCircle2, X, Award, Flame, Users, Trophy, ChevronRight, Zap
+} from 'lucide-react';
 import { runTestCases, ExecutionResponse } from '../../shared/utils/codeExecution';
 
-const GAME_COLORS = [
-    "bg-red-500 hover:bg-red-600 border-red-700 shadow-[0_6px_0_rgb(185,28,28)] active:translate-y-1.5 active:shadow-none text-white",
-    "bg-blue-500 hover:bg-blue-600 border-blue-700 shadow-[0_6px_0_rgb(29,78,216)] active:translate-y-1.5 active:shadow-none text-white",
-    "bg-yellow-500 hover:bg-yellow-600 border-yellow-700 shadow-[0_6px_0_rgb(161,98,7)] active:translate-y-1.5 active:shadow-none text-white",
-    "bg-green-500 hover:bg-green-600 border-green-700 shadow-[0_6px_0_rgb(21,128,61)] active:translate-y-1.5 active:shadow-none text-white",
-    "bg-purple-500 hover:bg-purple-600 border-purple-700 shadow-[0_6px_0_rgb(126,34,206)] active:translate-y-1.5 active:shadow-none text-white",
-    "bg-pink-500 hover:bg-pink-600 border-pink-700 shadow-[0_6px_0_rgb(190,24,93)] active:translate-y-1.5 active:shadow-none text-white"
-];
+const formatSeconds = (totalSec: number) => {
+    if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
+    const mins = Math.floor(totalSec / 60);
+    const secs = Math.floor(totalSec % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
 
 export default function StudentLiveQuiz() {
     const { id } = useParams();
@@ -28,7 +27,7 @@ export default function StudentLiveQuiz() {
     const { user, isLoading: authLoading, refreshUser, signInAnonymously } = useAuth();
     const { theme } = useTheme();
 
-    // State
+    // Core Quiz State
     const [questions, setQuestions] = useState<any[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(-1);
     const [loading, setLoading] = useState(true);
@@ -36,9 +35,7 @@ export default function StudentLiveQuiz() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [status, setStatus] = useState<'waiting' | 'active' | 'completed'>('waiting');
     const [viewMode, setViewMode] = useState<'voting' | 'results' | 'leaderboard'>('voting');
-    const [isGameMode, setIsGameMode] = useState(false);
     const [startupCountdown, setStartupCountdown] = useState(0);
-    const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
     const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
     const [quizTitle, setQuizTitle] = useState('');
@@ -49,15 +46,15 @@ export default function StudentLiveQuiz() {
     const [codePassedStatus, setCodePassedStatus] = useState<Record<string, boolean>>({});
     const [isExecutingCode, setIsExecutingCode] = useState(false);
 
-    // Name prompt state
+    // Host-directed timing: elapsed stopwatch
+    const [elapsedTime, setElapsedTime] = useState<number>(0);
+    const questionStartTimeRef = useRef<number>(Date.now());
+
+    // Name prompt state (for guest quick join)
     const [nameInput, setNameInput] = useState('');
     const [regNoInput, setRegNoInput] = useState('');
     const [nameSaving, setNameSaving] = useState(false);
     const [nameError, setNameError] = useState('');
-
-    // Timer State
-    const [timeLeft, setTimeLeft] = useState<number | null>(null);
-    const [isTimeUp, setIsTimeUp] = useState(false);
 
     // Realtime Status
     const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
@@ -77,18 +74,39 @@ export default function StudentLiveQuiz() {
         };
     }, []);
 
+    // Elapsed timer for student visibility (controlled by host phase)
+    useEffect(() => {
+        if (viewMode !== 'voting' || currentQuestionIndex < 0) return;
+        const timer = setInterval(() => {
+            setElapsedTime(prev => prev + 1);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [viewMode, currentQuestionIndex]);
+
     const fetchParticipants = async () => {
         if (!id) return;
-        const { data: attemptsData } = await supabase.from('attempts').select('student_id').eq('quiz_id', id).eq('status', 'in-progress');
-        if (!attemptsData || attemptsData.length === 0) { setParticipants([]); return; }
-        
+        const { data: attemptsData } = await supabase
+            .from('attempts')
+            .select('student_id')
+            .eq('quiz_id', id)
+            .eq('status', 'in-progress');
+
+        if (!attemptsData || attemptsData.length === 0) {
+            setParticipants([]);
+            return;
+        }
+
         const studentIds = attemptsData.map(a => a.student_id);
-        const { data: profilesData } = await supabase.from('profiles').select('id, full_name, avatar_url').in('id', studentIds);
-        
+        const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, full_name, registration_number, avatar_url')
+            .in('id', studentIds);
+
         if (profilesData) {
             const mapped = profilesData.map((profile: any) => ({
                 id: profile.id,
                 name: profile.full_name || 'Unknown Student',
+                regNo: profile.registration_number,
                 avatarText: (profile.full_name || 'U').substring(0, 2).toUpperCase(),
                 avatarUrl: profile.avatar_url
             }));
@@ -109,26 +127,20 @@ export default function StudentLiveQuiz() {
 
             if (quizError) throw quizError;
 
-
             if (quizData) {
                 setQuizTitle(quizData.title);
             }
 
-            // Update Local State based on settings
+            // Update Local State based on host settings
             if (quizData.settings) {
-                if (quizData.settings.gameMode) {
-                    setIsGameMode(true);
-                }
                 if (typeof quizData.settings.currentQuestionIndex === 'number') {
                     setCurrentQuestionIndex((prev) => {
                         if (prev !== quizData.settings.currentQuestionIndex) {
-                            // Always show 3-2-1 countdown on every new question
                             setStartupCountdown(3);
-                            // New Question: Reset state
                             setSelectedOption(null);
                             setIsSubmitted(false);
-                            setIsTimeUp(false);
-                            setTimeLeft(null);
+                            setElapsedTime(0);
+                            questionStartTimeRef.current = Date.now();
                             return quizData.settings.currentQuestionIndex;
                         }
                         return prev;
@@ -136,17 +148,6 @@ export default function StudentLiveQuiz() {
                 }
                 if (quizData.settings.viewMode) {
                     setViewMode(quizData.settings.viewMode);
-                    if (quizData.settings.viewMode === 'results') {
-                        setTimeLeft(null);
-                    }
-                }
-                // Sync Timer
-                if (quizData.settings.questionExpiresAt && quizData.settings.viewMode === 'voting') {
-                    const expiresAt = new Date(quizData.settings.questionExpiresAt).getTime();
-                    const now = Date.now();
-                    const diff = Math.max(0, Math.ceil((expiresAt - now) / 1000));
-                    setTimeLeft(diff);
-                    if (diff === 0) setIsTimeUp(true);
                 }
             }
 
@@ -202,14 +203,8 @@ export default function StudentLiveQuiz() {
                     flags: []
                 });
             } else if (existingAttempt) {
-                // RESTORE SAVED ANSWER
+                // Restore saved answer for current question
                 const currentQIndex = quizData.settings?.currentQuestionIndex ?? 0;
-
-                // We need the ID of the current question to look up the answer.
-                // If we have questions in state, use them.
-                // If we don't, we likely just fetched them in the block above, but that variable is out of scope.
-                // So we do a quick lightweight fetch of just IDs to be safe and ensure sync.
-
                 let qIds: any[] = questions;
 
                 if (questions.length === 0) {
@@ -238,7 +233,6 @@ export default function StudentLiveQuiz() {
                         } else {
                             const savedOption = typeof savedRecord === 'object' ? savedRecord.option : savedRecord;
                             if (typeof savedOption === 'number') {
-                                // Only set if we haven't already selected something (prevents overwriting user's unsaved selection on pollen)
                                 setSelectedOption(prev => prev === null ? savedOption : prev);
                                 setIsSubmitted(true);
                             }
@@ -249,7 +243,6 @@ export default function StudentLiveQuiz() {
 
             setLoading(false);
             fetchParticipants();
-
         } catch (err) {
             console.error("Failed to sync session:", err);
         }
@@ -263,14 +256,13 @@ export default function StudentLiveQuiz() {
         }
         if (!id) return;
 
-        // Initial Fetch
         fetchQuizState();
 
-        // Polling Fallback (every 3 seconds)
+        // Polling Fallback (every 2.5 seconds)
         const pollInterval = setInterval(() => {
             fetchQuizState();
             fetchParticipants();
-        }, 3000);
+        }, 2500);
 
         // Realtime Subscription
         let channel: any = null;
@@ -287,7 +279,6 @@ export default function StudentLiveQuiz() {
                             filter: `id=eq.${id}`
                         },
                         (payload: any) => {
-                            console.log("Realtime Update Received:", payload);
                             const newSettings = payload.new.settings;
                             const newStatus = payload.new.status;
 
@@ -296,19 +287,14 @@ export default function StudentLiveQuiz() {
                             }
 
                             if (newSettings) {
-                                if (newSettings.gameMode !== undefined) {
-                                    setIsGameMode(newSettings.gameMode);
-                                }
                                 if (typeof newSettings.currentQuestionIndex === 'number') {
                                     setCurrentQuestionIndex((prev) => {
                                         if (prev !== newSettings.currentQuestionIndex) {
-                                            // Always show 3-2-1 countdown on every new question
                                             setStartupCountdown(3);
-                                            // New Question: Reset entire state
                                             setSelectedOption(null);
                                             setIsSubmitted(false);
-                                            setIsTimeUp(false);
-                                            setTimeLeft(null);
+                                            setElapsedTime(0);
+                                            questionStartTimeRef.current = Date.now();
                                             return newSettings.currentQuestionIndex;
                                         }
                                         return prev;
@@ -316,30 +302,15 @@ export default function StudentLiveQuiz() {
                                 }
                                 if (newSettings.viewMode) {
                                     setViewMode(newSettings.viewMode);
-                                    if (newSettings.viewMode === 'results') {
-                                        setTimeLeft(null); // Clear timer in results mode
-                                    }
-                                }
-
-                                // Sync Timer
-                                if (newSettings.questionExpiresAt && newSettings.viewMode === 'voting') {
-                                    const expiresAt = new Date(newSettings.questionExpiresAt).getTime();
-                                    const now = Date.now();
-                                    const diff = Math.max(0, Math.ceil((expiresAt - now) / 1000));
-                                    setTimeLeft(diff);
-                                    setIsTimeUp(diff === 0);
                                 }
                             }
                         }
                     )
                     .subscribe((status) => {
-                        console.log("Subscription Status:", status);
                         if (status === 'SUBSCRIBED') setRealtimeStatus('connected');
-                        else if (status === 'CHANNEL_ERROR') setRealtimeStatus('disconnected');
-                        else if (status === 'TIMED_OUT') setRealtimeStatus('disconnected');
+                        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('disconnected');
                     });
             } else {
-                console.warn("WebSockets not supported in this browser. Falling back to polling.");
                 setRealtimeStatus('disconnected');
             }
         } catch (err) {
@@ -351,57 +322,39 @@ export default function StudentLiveQuiz() {
             if (channel) supabase.removeChannel(channel);
             clearInterval(pollInterval);
         };
-
     }, [id, user, authLoading]);
 
-    // Leaderboard Fetcher
+    // Leaderboard Fetcher (Ordered strictly by score which incorporates test cases passed + timing)
     useEffect(() => {
-        if ((viewMode === 'leaderboard' || status === 'completed')) {
+        if (viewMode === 'leaderboard' || status === 'completed') {
             const fetchLeaderboard = async () => {
-                // ── PRIMARY: quiz_results with profiles join ──────────────────
-                const { data: qrData } = await supabase
-                    .from('quiz_results')
-                    .select(`
-                        score,
-                        student_id,
-                        profiles:student_id (
-                            full_name,
-                            avatar_url,
-                            registration_number
-                        )
-                    `)
-                    .eq('quiz_id', id)
-                    .order('score', { ascending: false })
-                    .limit(10);
+                const [{ data: qrData }, { data: attemptsData }] = await Promise.all([
+                    supabase
+                        .from('quiz_results')
+                        .select('score, student_id')
+                        .eq('quiz_id', id)
+                        .order('score', { ascending: false }),
+                    supabase
+                        .from('attempts')
+                        .select('student_id, score, answers')
+                        .eq('quiz_id', id)
+                ]);
 
-                // ── FALLBACK: attempts table ───────────────────────────────────
-                // If RLS is blocking quiz_results (only own row returned),
-                // fall back to attempts which everyone can read their own row from.
-                // We merge all unique student_ids from both sources.
-                const { data: attemptsData } = await supabase
-                    .from('attempts')
-                    .select('student_id, score')
-                    .eq('quiz_id', id)
-                    .eq('status', 'in-progress');
-
-                // Build a map: student_id → { score, source }
                 const scoreMap: Record<string, number> = {};
+                const answersMap: Record<string, any> = {};
 
-                // Seed from attempts (available to everyone for own row, faculty for all)
                 (attemptsData || []).forEach((a: any) => {
                     scoreMap[a.student_id] = a.score ?? 0;
+                    answersMap[a.student_id] = a.answers || {};
                 });
 
-                // Override/add from quiz_results (authoritative if accessible)
                 (qrData || []).forEach((r: any) => {
                     scoreMap[r.student_id] = r.score ?? 0;
                 });
 
-                // Collect all unique student ids
                 const allStudentIds = Object.keys(scoreMap);
                 if (allStudentIds.length === 0) return;
 
-                // Fetch profiles for all student ids in one request
                 const { data: profilesData } = await supabase
                     .from('profiles')
                     .select('id, full_name, avatar_url, registration_number')
@@ -410,29 +363,47 @@ export default function StudentLiveQuiz() {
                 const profileMap: Record<string, any> = {};
                 (profilesData || []).forEach((p: any) => { profileMap[p.id] = p; });
 
-                // Build enriched leaderboard sorted by score desc
+                const currentQ = questions[currentQuestionIndex];
+
                 const enriched = allStudentIds
                     .map(sid => {
                         const profile = profileMap[sid];
+                        const ans = answersMap[sid] || {};
+                        const curAns = currentQ?.id ? ans[currentQ.id] : null;
+
+                        let testCasesInfo: string | null = null;
+                        let timeTakenInfo: string | null = null;
+
+                        if (curAns && typeof curAns === 'object') {
+                            if (curAns.totalCount !== undefined) {
+                                testCasesInfo = `${curAns.passedCount ?? 0}/${curAns.totalCount} Cases`;
+                            }
+                            if (curAns.timeTaken) {
+                                timeTakenInfo = `${curAns.timeTaken}s`;
+                            }
+                        }
+
                         return {
                             student_id: sid,
-                            score: scoreMap[sid],
-                            name: profile?.full_name || 'Unknown Player',
+                            score: scoreMap[sid] || 0,
+                            name: profile?.full_name || 'Anonymous Student',
                             avatarUrl: profile?.avatar_url || null,
                             regNo: profile?.registration_number || null,
+                            testCasesInfo,
+                            timeTakenInfo,
                         };
                     })
                     .sort((a, b) => b.score - a.score)
-                    .slice(0, 10);
+                    .slice(0, 15);
 
                 setLeaderboardData(enriched);
             };
-            
+
             fetchLeaderboard();
             const polling = setInterval(fetchLeaderboard, 2000);
             return () => clearInterval(polling);
         }
-    }, [viewMode, status, id]);
+    }, [viewMode, status, id, currentQuestionIndex, questions]);
 
     // Countdown Interval
     useEffect(() => {
@@ -441,32 +412,6 @@ export default function StudentLiveQuiz() {
             return () => clearTimeout(timer);
         }
     }, [startupCountdown]);
-
-    // Timer Interval
-    useEffect(() => {
-        if (timeLeft === null || timeLeft === 0) return;
-
-        const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev === null || prev <= 1) {
-                    clearInterval(timer);
-                    setIsTimeUp(true);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [timeLeft]);
-
-    const handleSelectCharacter = async (charId: string) => {
-        setSelectedCharacter(charId);
-        if (user) {
-            await supabase.from('profiles').update({ avatar_url: charId }).eq('id', user.id);
-            fetchParticipants();
-        }
-    };
 
     const handleRunLiveCode = async () => {
         const q = questions[currentQuestionIndex];
@@ -480,7 +425,7 @@ export default function StudentLiveQuiz() {
         setIsExecutingCode(true);
         try {
             const res = await runTestCases({
-                language: 'python', // Strictly Python for ML
+                language: 'python',
                 studentCode: currentCode,
                 driverCode,
                 testCases,
@@ -514,92 +459,114 @@ export default function StudentLiveQuiz() {
         setIsSubmitted(true);
 
         try {
+            const questionId = currentQ.id;
+            const currentCode = codeAnswers[questionId] ?? currentQ.correct?.starterCode ?? '';
+            let execResult = codeExecutionResult[questionId];
+
+            // If code question and not executed yet, run test cases now before saving
+            if (isCodeQ && !execResult) {
+                setIsExecutingCode(true);
+                try {
+                    execResult = await runTestCases({
+                        language: 'python',
+                        studentCode: currentCode,
+                        driverCode: currentQ.correct?.driverCode || '',
+                        testCases: currentQ.correct?.testCases || []
+                    });
+                    setCodeExecutionResult(prev => ({ ...prev, [questionId]: execResult }));
+                    setCodePassedStatus(prev => ({ ...prev, [questionId]: execResult.allPassed }));
+                } catch (runErr) {
+                    console.error("Auto run error:", runErr);
+                } finally {
+                    setIsExecutingCode(false);
+                }
+            }
+
+            // Calculate score based on Test Cases Passed AND Timing
+            const totalTestCases = (currentQ.correct?.testCases || []).length;
+            const passedCount = execResult?.results?.filter((r: any) => r.passed).length || 0;
+            const totalCases = totalTestCases > 0 ? totalTestCases : 1;
+            const secondsTaken = Math.max(1, elapsedTime || 1);
+
+            let pointsForThisQ = 0;
+            let isFullyPassed = false;
+
+            if (isCodeQ) {
+                isFullyPassed = passedCount === totalCases && totalCases > 0;
+                // Proportional score for test cases passed:
+                const casePoints = Math.round((passedCount / totalCases) * 1000);
+                // Speed bonus up to 500 points decaying over 5 minutes (300s):
+                const speedBonus = passedCount > 0 ? Math.max(0, Math.round(500 * Math.max(0, 1 - (secondsTaken / 300)))) : 0;
+                pointsForThisQ = casePoints + speedBonus;
+            } else {
+                const isCorrect = (
+                    currentQ.correct === currentQ.options?.[selectedOption!] ||
+                    String(currentQ.correct) === String(selectedOption) ||
+                    currentQ.correct === selectedOption
+                );
+                isFullyPassed = isCorrect;
+                const speedBonus = isCorrect ? Math.max(0, Math.round(500 * Math.max(0, 1 - (secondsTaken / 60)))) : 0;
+                pointsForThisQ = isCorrect ? (1000 + speedBonus) : 0;
+            }
+
             // 1. Fetch current attempt to get existing answers
             const { data: attempt } = await supabase
                 .from('attempts')
                 .select('answers, score')
                 .eq('quiz_id', id)
                 .eq('student_id', user.id)
-                .single();
+                .maybeSingle();
 
             const currentAnswers = attempt?.answers || {};
-            const questionId = currentQ.id;
-
-            let pointsForThisQ = 0;
-            if (isCodeQ) {
-                const isPassed = Boolean(codePassedStatus[questionId]);
-                if (isPassed) {
-                    pointsForThisQ = 500 + Math.round((timeLeft || 0) * 8.5);
-                }
-            } else if (isGameMode) {
-                // Check if correct exactly now to decide points
-                const isCorrect = (
-                    currentQ.correct === currentQ.options?.[selectedOption!] ||
-                    String(currentQ.correct) === String(selectedOption) ||
-                    currentQ.correct === selectedOption
-                );
-                if (isCorrect) {
-                    pointsForThisQ = 500 + Math.round((timeLeft || 0) * 8.5);
-                }
-            }
-
-            const currentCode = codeAnswers[questionId] ?? currentQ.correct?.starterCode ?? '';
-            const answerPayload = isCodeQ
-                ? { type: 'code', code: currentCode, passed: Boolean(codePassedStatus[questionId]), points: pointsForThisQ }
-                : (isGameMode ? { option: selectedOption, points: pointsForThisQ } : selectedOption);
+            const answerPayload = isCodeQ ? {
+                type: 'code',
+                code: currentCode,
+                passed: isFullyPassed,
+                passedCount,
+                totalCount: totalCases,
+                timeTaken: secondsTaken,
+                points: pointsForThisQ
+            } : {
+                option: selectedOption,
+                passed: isFullyPassed,
+                timeTaken: secondsTaken,
+                points: pointsForThisQ
+            };
 
             const newAnswers = {
                 ...currentAnswers,
                 [questionId]: answerPayload
             };
 
-            // 2. Calculate current total score accurately
-            let totalCorrect = 0;
-            let cumulativeGamePoints = 0;
+            // 2. Sum cumulative points across all answered questions
+            let cumulativeScore = 0;
+            let totalPassed = 0;
 
             questions.forEach((q) => {
-                const answerRecord = newAnswers[q.id];
-                if (answerRecord !== undefined && answerRecord !== null) {
-                    if (q.type === 'code') {
-                        const isCodePassed = typeof answerRecord === 'object' && answerRecord !== null && Boolean(answerRecord.passed);
-                        if (isCodePassed) {
-                            totalCorrect++;
-                            cumulativeGamePoints += (answerRecord.points || 0);
-                        }
-                    } else {
-                        const isObject = typeof answerRecord === 'object';
-                        const answer = isObject ? answerRecord.option : answerRecord;
-
-                        // Check if answer matches correct_answer
-                        const isCorrect = (
-                            q.correct === q.options?.[answer] ||
-                            String(q.correct) === String(answer) ||
-                            q.correct === answer
-                        );
-                        if (isCorrect) {
-                            totalCorrect++;
-                        }
-                        if (isObject) {
-                            cumulativeGamePoints += (answerRecord.points || 0);
-                        }
-                    }
+                const ans = newAnswers[q.id];
+                if (ans && typeof ans === 'object') {
+                    cumulativeScore += (ans.points || 0);
+                    if (ans.passed) totalPassed++;
+                } else if (ans !== undefined && ans !== null) {
+                    cumulativeScore += 1000;
+                    totalPassed++;
                 }
             });
 
-            const percentage = (totalCorrect / questions.length) * 100;
+            const percentage = questions.length > 0 ? Math.round((totalPassed / questions.length) * 100) : 0;
 
-            // 3. Update 'attempts' with new answers and standard total correct score
+            // 3. Update 'attempts'
             await supabase
                 .from('attempts')
                 .update({
                     answers: newAnswers,
-                    score: totalCorrect,
+                    score: cumulativeScore,
                     updated_at: new Date().toISOString()
                 })
                 .eq('quiz_id', id)
                 .eq('student_id', user.id);
 
-            // 4. Safely Upsert into 'quiz_results' without relying on database constraints
+            // 4. Update 'quiz_results'
             const { data: existingQR } = await supabase
                 .from('quiz_results')
                 .select('id')
@@ -609,7 +576,7 @@ export default function StudentLiveQuiz() {
 
             if (existingQR) {
                 await supabase.from('quiz_results').update({
-                    score: isGameMode ? cumulativeGamePoints : totalCorrect,
+                    score: cumulativeScore,
                     total_questions: questions.length,
                     percentage: percentage
                 }).eq('id', existingQR.id);
@@ -617,15 +584,12 @@ export default function StudentLiveQuiz() {
                 await supabase.from('quiz_results').insert({
                     quiz_id: id,
                     student_id: user.id,
-                    score: isGameMode ? cumulativeGamePoints : totalCorrect,
+                    score: cumulativeScore,
                     total_questions: questions.length,
                     percentage: percentage,
                     created_at: new Date().toISOString()
                 });
             }
-
-            // Stay in voting mode — the leaderboard appears when the teacher pushes viewMode='leaderboard'
-            // This keeps all students in sync rather than each jumping to leaderboard individually
         } catch (err) {
             console.error("Failed to submit answer:", err);
         }
@@ -633,14 +597,13 @@ export default function StudentLiveQuiz() {
 
     if (loading || authLoading) return <FullScreenLoader />;
 
-    // --- QUICK JOIN / NAME PROMPT GATE ---
-    // Show a simplified entry screen if the user is not logged in or missing details
+    // --- QUICK JOIN / NAME PROMPT GATE (Clean modern design) ---
     if (!user || !user.full_name || !user.registration_number) {
         const handleQuickJoin = async () => {
             const name = nameInput.trim();
             const regNo = regNoInput.trim();
 
-            if (!name) { setNameError('Please enter your name.'); return; }
+            if (!name) { setNameError('Please enter your full name.'); return; }
             if (!regNo) { setNameError('Please enter your registration number.'); return; }
 
             setNameSaving(true);
@@ -648,8 +611,6 @@ export default function StudentLiveQuiz() {
 
             try {
                 let currentUser = user;
-
-                // 1. If not logged in, perform anonymous sign-in
                 if (!currentUser) {
                     const { user: newUser, error } = await signInAnonymously();
                     if (error) throw error;
@@ -657,7 +618,6 @@ export default function StudentLiveQuiz() {
                 }
 
                 if (currentUser) {
-                    // 2. Upsert profile with name and registration number
                     const { error: upsertError } = await supabase
                         .from('profiles')
                         .upsert({
@@ -669,8 +629,6 @@ export default function StudentLiveQuiz() {
                         });
 
                     if (upsertError) throw upsertError;
-
-                    // 3. Refresh user context to proceed
                     await refreshUser();
                 }
             } catch (err: any) {
@@ -682,368 +640,364 @@ export default function StudentLiveQuiz() {
         };
 
         return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white font-sans relative overflow-hidden">
-                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none z-0" />
-                <div className="z-10 relative flex flex-col items-center w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
-                    <div className="w-20 h-20 rounded-full bg-indigo-500/30 border-4 border-indigo-400 flex items-center justify-center mb-6">
-                        <User className="w-10 h-10 text-indigo-200" />
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-text font-sans">
+                <Card className="w-full max-w-md p-8 rounded-2xl shadow-xl border border-border space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                        <User className="w-8 h-8" />
                     </div>
-                    <h1 className="text-3xl font-black mb-2 tracking-wide text-center">Quick Join</h1>
-                    <p className="text-indigo-200 text-center mb-8 text-sm">Enter your details to attend the live test.</p>
+                    <div className="text-center space-y-1">
+                        <h1 className="text-2xl font-bold tracking-tight">Join Live Assessment</h1>
+                        <p className="text-sm text-muted">Enter your name and registration number to enter the live session.</p>
+                    </div>
 
-                    <div className="w-full space-y-4">
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-indigo-300 uppercase tracking-widest px-1">Full Name</label>
+                    <div className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted uppercase tracking-wider">Full Name</label>
                             <input
                                 type="text"
                                 value={nameInput}
                                 onChange={e => { setNameInput(e.target.value); setNameError(''); }}
-                                placeholder="Enter your full name..."
-                                className="w-full px-5 py-4 rounded-2xl bg-white/10 border-2 border-white/20 text-white placeholder-white/40 text-xl font-bold outline-none focus:border-indigo-400 focus:bg-white/20 transition-all font-sans"
+                                placeholder="e.g. Alex Johnson"
+                                className="w-full px-4 py-3 rounded-xl bg-surface border border-border text-text placeholder-muted focus:ring-2 focus:ring-primary focus:border-transparent outline-none font-medium text-sm transition-all"
                             />
                         </div>
 
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-indigo-300 uppercase tracking-widest px-1">Registration Number</label>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted uppercase tracking-wider">Registration Number</label>
                             <input
                                 type="text"
                                 value={regNoInput}
                                 onChange={e => { setRegNoInput(e.target.value); setNameError(''); }}
                                 onKeyDown={e => e.key === 'Enter' && handleQuickJoin()}
-                                placeholder="Enter registration number..."
-                                className="w-full px-5 py-4 rounded-2xl bg-white/10 border-2 border-white/20 text-white placeholder-white/40 text-xl font-bold outline-none focus:border-indigo-400 focus:bg-white/20 transition-all font-sans"
+                                placeholder="e.g. 21CS101"
+                                className="w-full px-4 py-3 rounded-xl bg-surface border border-border text-text placeholder-muted focus:ring-2 focus:ring-primary focus:border-transparent outline-none font-mono text-sm transition-all"
                             />
                         </div>
 
-                        {nameError && <p className="text-red-400 text-sm text-center">{nameError}</p>}
+                        {nameError && <p className="text-rose-500 text-xs text-center font-medium">{nameError}</p>}
 
-                        <button
+                        <Button
                             onClick={handleQuickJoin}
                             disabled={nameSaving}
-                            className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-400 active:scale-95 transition-all font-black text-xl text-white shadow-[0_6px_0_rgb(67,56,202)] active:shadow-none active:translate-y-1.5 disabled:opacity-60 flex items-center justify-center gap-3 mt-4"
+                            className="w-full py-3 h-12 rounded-xl text-base font-bold shadow-lg"
                         >
-                            {nameSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Start Test →'}
-                        </button>
+                            {nameSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Enter Live Session →'}
+                        </Button>
 
                         {!user && (
-                            <div className="text-center mt-6">
-                                <p className="text-white/40 text-xs">Or if you have an account:</p>
-                                <button
-                                    onClick={() => navigate('/login')}
-                                    className="text-indigo-300 hover:text-white text-sm font-bold underline mt-1"
-                                >
-                                    Login with Email/Google
-                                </button>
+                            <div className="text-center pt-2">
+                                <p className="text-muted text-xs">Have an account? <button onClick={() => navigate('/login')} className="text-primary font-bold hover:underline">Log in</button></p>
                             </div>
                         )}
                     </div>
-                </div>
+                </Card>
             </div>
         );
     }
 
-
-
-    if (status === 'completed' && !isGameMode) {
+    // --- COMPLETED SESSION SCREEN ---
+    if (status === 'completed') {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
-                <Card className="max-w-md w-full p-8 text-center space-y-6">
-                    <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
+                <Card className="max-w-md w-full p-8 text-center space-y-6 shadow-xl border border-border">
+                    <div className="w-20 h-20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto">
                         <CheckCircle className="w-10 h-10" />
                     </div>
-                    <h1 className="text-2xl font-bold text-text">Session Completed</h1>
-                    <p className="text-muted">The instructor has ended the session.</p>
-                    <Button onClick={() => navigate('/student/dashboard')} className="w-full">Return to Dashboard</Button>
+                    <div>
+                        <h1 className="text-2xl font-bold text-text">Session Completed</h1>
+                        <p className="text-muted mt-1 text-sm">The instructor has concluded this live assessment session.</p>
+                    </div>
+
+                    {leaderboardData.length > 0 && (
+                        <div className="p-4 rounded-xl bg-surface border border-border text-left space-y-3">
+                            <p className="text-xs font-bold text-muted uppercase tracking-wider">Top Scorers</p>
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {leaderboardData.slice(0, 5).map((d, i) => (
+                                    <div key={d.student_id} className="flex items-center justify-between text-sm py-1 border-b border-border/50 last:border-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-xs w-4 text-muted">#{i + 1}</span>
+                                            <span className="font-medium text-text">{d.name}</span>
+                                        </div>
+                                        <span className="font-bold text-primary">{d.score} pts</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <Button onClick={() => navigate('/student/dashboard')} className="w-full h-11 text-base font-bold">
+                        Return to Dashboard
+                    </Button>
                 </Card>
             </div>
         );
     }
 
     const currentQuestion = questions[currentQuestionIndex];
-    if (isGameMode && !selectedCharacter) {
-        return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white font-sans relative overflow-hidden">
-                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none z-0" />
-                <div className="z-10 relative flex flex-col items-center w-full max-w-2xl">
-                    <h1 className="text-5xl font-extrabold mb-8 tracking-wider animate-bounce drop-shadow-xl text-center font-[AmongUs]">Choose Your Character!</h1>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full">
-                        {CHARACTERS.map(char => (
-                            <button key={char.id} onClick={() => handleSelectCharacter(char.id)} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border-4 border-white/20 hover:border-white transition-all transform hover:scale-105 flex flex-col items-center justify-center">
-                                <img src={char.src} alt="Crewmate" className="w-24 h-24 object-contain drop-shadow-xl" />
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
-    if (!currentQuestion) {
-        if (isGameMode) {
-            return (
-                <div className="min-h-screen bg-black p-6 text-white font-sans flex flex-col relative overflow-hidden">
-                    <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none z-0" />
-                    <div className="z-10 relative flex flex-col h-full items-center justify-center pt-8 w-full">
-                        <div className="text-center mb-8">
-                            <h1 className="text-5xl md:text-6xl font-black mb-4 tracking-wider drop-shadow-lg font-[AmongUs]">Game Lobby</h1>
-                            <p className="text-xl text-indigo-200 drop-shadow-md">Waiting for {quizTitle || 'Quiz'} to start...</p>
+    // --- LIVE LOBBY / WAITING ROOM ---
+    if (!currentQuestion || currentQuestionIndex < 0) {
+        return (
+            <div className="min-h-screen bg-background text-text flex flex-col">
+                <header className="px-6 py-4 border-b border-border bg-surface/50 backdrop-blur-md flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-7 w-auto object-contain rounded-md" />
+                        <span className="text-sm font-bold tracking-tight">Live Test Room</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-surface rounded-full border border-border text-xs">
+                        <div className={cn("w-2 h-2 rounded-full", realtimeStatus === 'connected' ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
+                        <span className="font-medium text-muted">{realtimeStatus === 'connected' ? 'Connected' : 'Connecting...'}</span>
+                    </div>
+                </header>
+
+                <main className="flex-1 container mx-auto max-w-2xl p-6 flex flex-col justify-center items-center">
+                    <Card className="w-full p-8 md:p-10 text-center space-y-6 shadow-xl border border-border">
+                        <div className="relative mx-auto w-20 h-20 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+                            </span>
+                            <Clock className="w-10 h-10 animate-pulse" />
                         </div>
-                        <div className="max-w-5xl mx-auto w-full flex-1">
-                            <div className="flex items-center justify-center gap-2 mb-8 bg-white/10 mx-auto w-fit px-6 py-3 rounded-full font-bold text-xl">
-                                <User className="w-6 h-6" /> {participants.length} Players Waiting
+
+                        <div className="space-y-2">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Connected to Live Lobby
+                            </span>
+                            <h1 className="text-3xl font-extrabold text-text tracking-tight">
+                                {quizTitle || 'Live Assessment'}
+                            </h1>
+                            <p className="text-muted text-sm max-w-md mx-auto leading-relaxed">
+                                You are in the live room. Waiting for your instructor to start the challenge. Questions will appear automatically on your screen.
+                            </p>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-surface border border-border flex items-center justify-between text-left">
+                            <div>
+                                <p className="text-xs text-muted uppercase font-bold tracking-wider">Candidate</p>
+                                <p className="text-base font-bold text-text">{user.full_name || user.email}</p>
+                                {user.registration_number && (
+                                    <p className="text-xs font-mono text-muted">{user.registration_number}</p>
+                                )}
                             </div>
-                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
-                                {participants.map(p => (
-                                    <div key={p.id} className="bg-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 animate-in zoom-in duration-300 hover:scale-105 transition-transform group relative">
-                                        {getCharacterSrc(p.avatarUrl) ? (
-                                            <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-16 h-16 object-contain drop-shadow-md relative z-10 block" />
-                                        ) : (
-                                            <div className="w-16 h-16 rounded-full bg-indigo-500 border-4 border-indigo-400 flex items-center justify-center font-bold text-xl shadow-inner relative z-10">
-                                                {p.avatarText}
-                                            </div>
-                                        )}
-                                        <span className="text-white text-sm font-bold text-center truncate w-full drop-shadow-md">
+                            <div className="text-right">
+                                <p className="text-xs text-muted uppercase font-bold tracking-wider">Connected</p>
+                                <p className="text-2xl font-black text-primary">{participants.length} Students</p>
+                            </div>
+                        </div>
+
+                        {participants.length > 0 && (
+                            <div className="space-y-2 pt-2 text-left">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                                        <Users className="w-3.5 h-3.5" /> Joined Participants ({participants.length})
+                                    </p>
+                                    <span className="text-xs text-emerald-500 font-medium">Ready</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1">
+                                    {participants.map(p => (
+                                        <span key={p.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-border text-xs font-medium text-text shadow-sm">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                             {p.name}
                                         </span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
-                <Card className="max-w-md w-full p-8 text-center space-y-6 animate-pulse">
-                    <div className="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
-                        <Clock className="w-10 h-10" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-text">You are in the Lobby</h1>
-                    <p className="text-muted">Waiting for the instructor to start the quiz...</p>
-                </Card>
+                        )}
+                    </Card>
+                </main>
             </div>
         );
     }
 
-    // Determine detailed status
-    const isLocked = isSubmitted || isTimeUp || viewMode === 'results' || viewMode === 'leaderboard';
-
+    // Brief 3-2-1 transition animation between questions
     if (startupCountdown > 0) {
         return (
-            <div className="min-h-screen bg-indigo-950 flex flex-col items-center justify-center text-white font-sans relative overflow-hidden">
-                {/* Pulsing ring */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-[150vw] h-[150vw] bg-indigo-600/20 rounded-full animate-ping absolute" style={{ animationDuration: '1s' }} />
+            <div className="min-h-screen bg-background text-text flex flex-col items-center justify-center relative overflow-hidden font-sans">
+                <div className="relative z-10 flex flex-col items-center animate-in zoom-in duration-300">
+                    <span className="text-xs uppercase font-extrabold tracking-widest px-4 py-1.5 rounded-full bg-primary/10 text-primary mb-6">
+                        Question {(currentQuestionIndex ?? 0) + 1}
+                    </span>
+                    <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6 text-text">Get Ready!</h2>
+                    <div
+                        key={startupCountdown}
+                        className="text-8xl md:text-9xl font-black text-primary animate-in zoom-in-50 duration-400 drop-shadow-sm font-mono"
+                    >
+                        {startupCountdown}
+                    </div>
                 </div>
-                {isGameMode && (
-                    <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none z-0" />
-                )}
-                <h2 className={cn(
-                    "text-4xl md:text-6xl mb-8 z-10 tracking-widest uppercase drop-shadow-lg",
-                    isGameMode ? "font-[AmongUs] text-indigo-300" : "font-black text-white"
-                )}>Get Ready!</h2>
-                <div
-                    key={startupCountdown}
-                    className={cn(
-                        "text-[10rem] md:text-[12rem] font-black z-10 animate-in zoom-in spin-in-12 duration-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]",
-                        isGameMode ? "font-[AmongUs] text-white" : "text-indigo-300"
-                    )}
-                >
-                    {startupCountdown}
-                </div>
-                <p className="z-10 mt-6 text-white/50 text-lg tracking-widest uppercase">Question {(currentQuestionIndex ?? 0) + 1}</p>
             </div>
         );
     }
 
-    if (viewMode === 'leaderboard' && status !== 'completed') {
+    // --- LEADERBOARD PHASE ---
+    if (viewMode === 'leaderboard') {
         const myIndex = leaderboardData.findIndex(d => d.student_id === user?.id);
         const myRank = myIndex >= 0 ? myIndex + 1 : '-';
         const myScore = leaderboardData.find(d => d.student_id === user?.id)?.score || 0;
 
         return (
-            <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
-                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none z-0" />
-                <div className="z-10 relative flex flex-col h-full items-center p-8 w-full max-w-3xl mx-auto flex-1">
-                    <h1 className="text-4xl md:text-5xl font-black mb-8 tracking-wider drop-shadow-md text-white font-[AmongUs]">Live Rankings</h1>
-                    
-                    <div className="w-full flex-1 overflow-y-auto space-y-4 px-2 pb-32 animate-in slide-in-from-bottom-16 duration-500">
-                        {leaderboardData.map((d, i) => (
-                            <div key={d.student_id} className={cn(
-                                "flex items-center justify-between p-4 rounded-2xl backdrop-blur-md border transition-all transform hover:scale-105",
-                                d.student_id === user?.id ? "border-yellow-400 bg-yellow-500/20 shadow-[0_0_15px_rgba(250,204,21,0.2)]" : "border-white/10 bg-white/10"
-                            )}>
-                                <div className="flex items-center gap-4">
-                                    <span className={cn("text-2xl font-black w-8 text-center", i === 0 ? "text-yellow-400" : i === 1 ? "text-slate-300" : i === 2 ? "text-amber-600" : "text-white/50")}>{i + 1}</span>
-                                    {getCharacterSrc(d.avatarUrl) ? (
-                                        <img src={getCharacterSrc(d.avatarUrl)!} className="w-12 h-12 object-contain drop-shadow-md" />
-                                    ) : (
-                                        <div className="w-12 h-12 rounded-full bg-indigo-500 border-2 border-indigo-400 flex items-center justify-center font-bold">{d.name.substring(0, 2).toUpperCase()}</div>
-                                    )}
-                                    <div className="flex flex-col">
-                                        <span className="text-xl font-bold truncate max-w-[150px] sm:max-w-[300px]">{d.name}</span>
-                                        {d.regNo && <span className="text-xs text-white/50 font-mono">{d.regNo}</span>}
-                                    </div>
-                                </div>
-                                <span className={cn("text-2xl font-bold", d.student_id === user?.id ? "text-yellow-400" : "text-white")}>{d.score}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center">
-                        <div className="bg-white/10 backdrop-blur-lg rounded-2xl w-full max-w-md p-5 flex justify-between items-center text-xl font-bold border border-white/20 shadow-2xl">
-                            <span className="text-indigo-200 flex items-center">Rank <span className="text-white text-3xl ml-3">#{myRank}</span></span>
-                            <span className="text-indigo-200 flex items-center">Score <span className="text-yellow-400 text-3xl ml-3">{myScore}</span></span>
+            <div className="min-h-screen bg-background text-text font-sans flex flex-col">
+                <header className="px-6 py-4 border-b border-border bg-surface/50 backdrop-blur-md flex items-center justify-between sticky top-0 z-20">
+                    <div className="flex items-center gap-3">
+                        <Trophy className="w-6 h-6 text-amber-500" />
+                        <div>
+                            <h1 className="text-lg font-bold">Live Standings</h1>
+                            <p className="text-xs text-muted">Question {currentQuestionIndex + 1} of {questions.length}</p>
                         </div>
                     </div>
-                </div>
+                    <div className="text-xs text-muted font-medium bg-surface px-3 py-1.5 rounded-full border border-border animate-pulse flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-primary"></span>
+                        Instructor controlling next step...
+                    </div>
+                </header>
+
+                <main className="flex-1 container mx-auto max-w-3xl p-6 flex flex-col">
+                    <div className="w-full flex-1 overflow-y-auto space-y-3 pb-28 animate-in slide-in-from-bottom-6 duration-300">
+                        {leaderboardData.map((d, i) => {
+                            const isMe = d.student_id === user?.id;
+                            return (
+                                <div
+                                    key={d.student_id}
+                                    className={cn(
+                                        "flex items-center justify-between p-4 rounded-xl border transition-all shadow-sm",
+                                        isMe
+                                            ? "border-amber-500 bg-amber-500/10 dark:bg-amber-500/20 ring-2 ring-amber-500/30"
+                                            : "border-border bg-surface hover:bg-surface/80"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <span className={cn(
+                                            "text-xl font-black w-8 text-center shrink-0",
+                                            i === 0 ? "text-amber-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-700" : "text-muted"
+                                        )}>
+                                            {i + 1}
+                                        </span>
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                                            {d.name.substring(0, 2).toUpperCase()}
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="font-bold text-base text-text truncate">{d.name}</span>
+                                            <div className="flex items-center gap-2 text-xs text-muted">
+                                                {d.regNo && <span className="font-mono">{d.regNo}</span>}
+                                                {d.testCasesInfo && (
+                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono">
+                                                        ✓ {d.testCasesInfo}
+                                                    </span>
+                                                )}
+                                                {d.timeTakenInfo && (
+                                                    <span className="font-mono text-muted">⏱ {d.timeTakenInfo}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <span className={cn("text-xl font-black", isMe ? "text-amber-500" : "text-primary")}>
+                                            {d.score}
+                                        </span>
+                                        <span className="text-xs text-muted block font-medium">pts</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {leaderboardData.length === 0 && (
+                            <div className="text-center py-12 text-muted">Calculating live standings...</div>
+                        )}
+                    </div>
+
+                    {/* Bottom Floating My Rank Card */}
+                    <div className="fixed bottom-6 inset-x-0 px-6 flex justify-center pointer-events-none z-30">
+                        <div className="bg-surface/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl w-full max-w-md p-4 flex justify-between items-center pointer-events-auto">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-black text-lg">
+                                    #{myRank}
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted uppercase font-bold tracking-wider">Your Position</p>
+                                    <p className="text-sm font-bold text-text truncate max-w-[160px]">{user.full_name || 'You'}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-muted uppercase font-bold tracking-wider">Total Score</p>
+                                <p className="text-xl font-black text-amber-500">{myScore} pts</p>
+                            </div>
+                        </div>
+                    </div>
+                </main>
             </div>
         );
     }
 
-    if (status === 'completed' && isGameMode) {
-        return (
-            <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
-                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none z-0" />
-                <div className="z-10 relative flex flex-col h-full items-center p-8 w-full max-w-5xl mx-auto flex-1">
-                    <h1 className="text-5xl md:text-6xl font-black mb-12 tracking-wider drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] text-yellow-400 font-[AmongUs]">Top Crewmates</h1>
-                    
-                    <div className="flex-1 flex items-end justify-center gap-4 md:gap-8 max-h-[500px] w-full">
-                        {/* 2nd Place */}
-                        {leaderboardData[1] && (
-                            <div className="flex flex-col items-center animate-in slide-in-from-bottom-32 duration-700 delay-300 fill-mode-both w-1/3 max-w-[150px]">
-                                <span className="text-lg md:text-xl font-bold mb-2 truncate max-w-full text-center">{leaderboardData[1].name}</span>
-                                {getCharacterSrc(leaderboardData[1].avatarUrl) && <img src={getCharacterSrc(leaderboardData[1].avatarUrl)!} className="w-20 md:w-24 h-20 md:h-24 object-contain mb-[-10px] z-10 drop-shadow-lg" />}
-                                <div className="w-full h-32 md:h-40 bg-slate-300 drop-shadow-xl text-slate-800 flex flex-col items-center justify-start pt-4 rounded-t-xl border-x-4 border-t-4 border-slate-200">
-                                    <span className="text-3xl font-black">2</span>
-                                    <span className="font-bold">{leaderboardData[1].score}</span>
-                                </div>
-                            </div>
-                        )}
-                        
-                        {/* 1st Place */}
-                        {leaderboardData[0] && (
-                            <div className="flex flex-col items-center animate-in slide-in-from-bottom-48 duration-1000 delay-700 fill-mode-both z-20 w-1/3 max-w-[150px] mx-[-10px]">
-                                <span className="text-xl md:text-2xl font-bold mb-2 text-yellow-300 truncate max-w-full text-center drop-shadow-md">{leaderboardData[0].name}</span>
-                                {getCharacterSrc(leaderboardData[0].avatarUrl) && <img src={getCharacterSrc(leaderboardData[0].avatarUrl)!} className="w-28 md:w-36 h-28 md:h-36 object-contain mb-[-15px] z-10 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]" />}
-                                <div className="w-full h-40 md:h-52 bg-yellow-400 drop-shadow-2xl text-yellow-900 flex flex-col items-center justify-start pt-4 rounded-t-xl border-x-4 border-t-4 border-yellow-300">
-                                    <span className="text-5xl font-black">1</span>
-                                    <span className="font-bold text-lg">{leaderboardData[0].score}</span>
-                                </div>
-                            </div>
-                        )}
-                        
-                        {/* 3rd Place */}
-                        {leaderboardData[2] && (
-                            <div className="flex flex-col items-center animate-in slide-in-from-bottom-16 duration-500 delay-100 fill-mode-both w-1/3 max-w-[150px]">
-                                <span className="text-md md:text-lg font-bold mb-2 truncate max-w-full text-center">{leaderboardData[2].name}</span>
-                                {getCharacterSrc(leaderboardData[2].avatarUrl) && <img src={getCharacterSrc(leaderboardData[2].avatarUrl)!} className="w-16 md:w-20 h-16 md:h-20 object-contain mb-[-10px] z-10 drop-shadow-md" />}
-                                <div className="w-full h-24 md:h-28 bg-amber-600 drop-shadow-xl text-amber-100 flex flex-col items-center justify-start pt-4 rounded-t-xl border-x-4 border-t-4 border-amber-500">
-                                    <span className="text-3xl font-black">3</span>
-                                    <span className="font-bold">{leaderboardData[2].score}</span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="mt-12 animate-in fade-in zoom-in delay-1000 fill-mode-both">
-                        <Button onClick={() => navigate('/student/dashboard')} className="px-8 h-12 text-lg font-bold bg-white/20 hover:bg-white/30 text-white border border-white/40 backdrop-blur-md">
-                            Return to Dashboard
-                        </Button>
-                    </div>
-
-                </div>
-            </div>
-        );
-    }
+    // --- ACTIVE QUESTION PHASE ---
+    const isLocked = isSubmitted || viewMode === 'results';
 
     return (
-        <div className={cn("min-h-screen font-sans flex flex-col relative", isGameMode ? "text-white bg-black" : "bg-background text-text")}>
-            {isGameMode && (
-                <video src={gameBgVideo} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none z-0 disabled" />
-            )}
-            
-            {/* --- OFFLINE PROTECTION OVERLAY --- */}
-            {isOffline && status === 'active' && (
-                <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
-                    <WifiOff className="w-24 h-24 text-yellow-500 mb-6 animate-pulse" />
-                    <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight">Connection Lost</h2>
-                    <p className="text-xl text-white/80 max-w-xl leading-relaxed">
-                        Please check your internet connection.
-                        <br />Your progress is saved locally. The quiz will resume once reconnected.
-                    </p>
+        <div className="min-h-screen font-sans flex flex-col bg-background text-text relative">
+            {/* Offline Alert */}
+            {isOffline && (
+                <div className="fixed inset-0 z-[110] bg-background/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in">
+                    <WifiOff className="w-20 h-20 text-amber-500 mb-4 animate-pulse" />
+                    <h2 className="text-3xl font-extrabold text-text mb-2">Connection Lost</h2>
+                    <p className="text-muted max-w-md">Your progress is preserved locally. The assessment will resume once internet is restored.</p>
                 </div>
             )}
 
             {/* Header */}
-            <header className={cn("sticky top-0 z-50 px-6 py-3 flex items-center justify-between", isGameMode ? "bg-indigo-900/50 backdrop-blur-md border-b border-indigo-500/20" : "bg-background/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800")}>
+            <header className="sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between bg-surface/80 backdrop-blur-md border-b border-border">
                 <div className="flex items-center gap-4">
-                    <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-8 w-auto object-contain rounded-lg" />
-                    <div className="flex items-center gap-2 px-3 py-1 bg-surface rounded-full border border-neutral-200 dark:border-neutral-800">
-                        <div className={cn("w-2 h-2 rounded-full",
-                            realtimeStatus === 'connected' ? "bg-green-500 animate-pulse" :
-                                realtimeStatus === 'connecting' ? "bg-yellow-500" : "bg-red-500"
-                        )} />
-                        <span className="text-xs font-medium text-muted hidden sm:inline">
-                            {realtimeStatus === 'connected' ? 'Live' : 'Connecting...'}
+                    <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-7 w-auto object-contain rounded-md" />
+                    <div className="flex items-center gap-2 px-3 py-1 bg-surface rounded-full border border-border">
+                        <div className={cn("w-2 h-2 rounded-full", realtimeStatus === 'connected' ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
+                        <span className="text-xs font-semibold text-muted hidden sm:inline">
+                            {realtimeStatus === 'connected' ? 'Live Session' : 'Syncing...'}
                         </span>
                     </div>
                 </div>
 
-                {/* Timer Display */}
-                <div className="flex items-center gap-4">
-
-                    <Button variant="ghost" size="sm" onClick={fetchQuizState} className="hidden sm:flex" title="Sync">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></svg>
+                {/* Live Host-Directed Elapsed Stopwatch */}
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary font-mono font-bold text-sm">
+                        <Clock className="w-4 h-4 text-primary" />
+                        <span>{formatSeconds(elapsedTime)}</span>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={fetchQuizState} title="Refresh sync">
+                        <RotateCcw className="w-4 h-4 text-muted" />
                     </Button>
-
-                    {viewMode === 'voting' && timeLeft !== null && (
-                        <div className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-full font-mono font-bold text-lg transition-colors",
-                            timeLeft <= 10 ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"
-                        )}>
-                            <Clock className={cn("w-5 h-5", timeLeft <= 10 && "animate-pulse")} />
-                            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-                        </div>
-                    )}
                 </div>
             </header>
 
-            {/* Main Content */}
+            {/* Main Question Workspace */}
             <main className="flex-1 container mx-auto max-w-4xl p-6 flex flex-col justify-center relative z-10">
-                <div className={cn("rounded-xl p-6 md:p-8 flex flex-col gap-6", isGameMode ? "bg-black/40 backdrop-blur-md border border-white/20 shadow-2xl" : "bg-surface border border-neutral-200 dark:border-neutral-800 shadow-sm")}>
-
-                    {/* Question Header */}
-                    <div className="flex justify-between items-center">
-                        <span className={cn("font-medium px-3 py-1 rounded-full text-xs", isGameMode ? "bg-indigo-500/30 text-indigo-100" : "bg-neutral-100 dark:bg-neutral-800 text-muted")}>
-                            Question {currentQuestionIndex + 1}
+                <Card className="rounded-2xl p-6 md:p-8 flex flex-col gap-6 shadow-xl border border-border bg-surface">
+                    {/* Meta Bar */}
+                    <div className="flex justify-between items-center pb-2 border-b border-border">
+                        <span className="font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 text-primary">
+                            Question {currentQuestionIndex + 1} of {questions.length}
                         </span>
 
-                        {viewMode === 'results' && (
-                            <span className="text-xs font-bold px-2 py-1 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                                Results Phase
+                        {viewMode === 'results' ? (
+                            <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                Results Mode
                             </span>
-                        )}
-
-                        {isTimeUp && viewMode === 'voting' && (
-                            <span className="text-xs font-bold px-2 py-1 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                Time's Up
+                        ) : (
+                            <span className="text-xs font-medium text-muted flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Host active
                             </span>
                         )}
                     </div>
 
-                    {/* Question Text */}
-                    <MathText text={currentQuestion.stem} className={cn("text-xl md:text-2xl font-semibold leading-relaxed", isGameMode ? "text-white" : "text-text")} as="h2" />
+                    {/* Question Stem */}
+                    <MathText text={currentQuestion.stem} className="text-xl md:text-2xl font-bold leading-relaxed text-text" as="h2" />
 
                     {/* Code Question UI or MCQ Options */}
                     {currentQuestion.type === 'code' ? (
                         <div className="space-y-4">
                             {/* Python ML Challenge Banner */}
-                            <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">
-                                <div className="flex items-center gap-2">
-                                    <Code2 className="w-5 h-5 text-indigo-400" />
-                                    <span className="font-bold text-sm">Python 3 (ML / Scripting) Challenge</span>
+                            <div className="flex items-center justify-between p-3.5 rounded-xl bg-primary/5 border border-primary/20 text-primary">
+                                <div className="flex items-center gap-2 font-bold text-sm">
+                                    <Code2 className="w-5 h-5 text-primary" />
+                                    <span>Python 3 (ML / Scripting) Challenge</span>
                                 </div>
                                 <button
                                     type="button"
@@ -1052,11 +1006,11 @@ export default function StudentLiveQuiz() {
                                         setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: starter }));
                                     }}
                                     disabled={isLocked}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors disabled:opacity-50"
-                                    title="Reset to Starter Code"
+                                    className="flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg bg-surface hover:bg-surface/80 border border-border text-muted hover:text-text font-medium transition-colors disabled:opacity-50"
+                                    title="Reset to starter code"
                                 >
                                     <RotateCcw className="w-3.5 h-3.5" />
-                                    Reset Code
+                                    Reset
                                 </button>
                             </div>
 
@@ -1086,21 +1040,21 @@ export default function StudentLiveQuiz() {
                                     }}
                                     spellCheck={false}
                                     rows={10}
-                                    placeholder="# Write your Python ML solution here..."
+                                    placeholder="# Write your Python 3 ML code here..."
                                     className="w-full bg-transparent text-emerald-300 font-mono text-sm p-4 outline-none resize-y leading-relaxed"
                                 />
                             </div>
 
-                            {/* Action Bar: Run Code Button & Execution Status */}
+                            {/* Run Code & Verification Actions */}
                             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                                 <div className="flex items-center gap-2">
                                     {codePassedStatus[currentQuestion.id] ? (
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold animate-in fade-in">
-                                            <CheckCircle2 className="w-4 h-4" /> All Test Cases Passed! Ready to Submit.
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-in fade-in">
+                                            <CheckCircle2 className="w-4 h-4" /> All Test Cases Passed!
                                         </div>
                                     ) : codeExecutionResult[currentQuestion.id] && !codePassedStatus[currentQuestion.id] ? (
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-400 text-xs font-bold animate-in fade-in">
-                                            <X className="w-4 h-4" /> Test Cases Failed. Check output below.
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-in fade-in">
+                                            <X className="w-4 h-4" /> Some Test Cases Failed. Check console below.
                                         </div>
                                     ) : (
                                         <span className="text-xs text-muted">
@@ -1113,11 +1067,11 @@ export default function StudentLiveQuiz() {
                                     type="button"
                                     onClick={handleRunLiveCode}
                                     disabled={isExecutingCode || isLocked}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-10 px-5 shadow-lg flex items-center gap-2"
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-10 px-5 shadow-md flex items-center gap-2"
                                 >
                                     {isExecutingCode ? (
                                         <>
-                                            <Loader2 className="w-4 h-4 animate-spin" /> Running Python Code...
+                                            <Loader2 className="w-4 h-4 animate-spin" /> Running Python...
                                         </>
                                     ) : (
                                         <>
@@ -1129,14 +1083,14 @@ export default function StudentLiveQuiz() {
 
                             {/* Execution Output Console */}
                             {codeExecutionResult[currentQuestion.id] && (
-                                <div className="rounded-xl p-4 bg-neutral-900/90 border border-neutral-800 text-xs font-mono space-y-3 shadow-xl animate-in slide-in-from-top-2 duration-200">
+                                <div className="rounded-xl p-4 bg-neutral-900 border border-neutral-800 text-xs font-mono space-y-3 shadow-xl animate-in slide-in-from-top-2 duration-200">
                                     <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
                                         <span className="text-neutral-400 flex items-center gap-1.5">
                                             <Code2 className="w-3.5 h-3.5" /> Output Console
                                         </span>
                                         {codePassedStatus[currentQuestion.id] ? (
                                             <span className="text-emerald-400 font-bold flex items-center gap-1">
-                                                <CheckCircle2 className="w-3.5 h-3.5" /> PASSED
+                                                <CheckCircle2 className="w-3.5 h-3.5" /> PASSED ALL
                                             </span>
                                         ) : (
                                             <span className="text-rose-400 font-bold flex items-center gap-1">
@@ -1157,7 +1111,7 @@ export default function StudentLiveQuiz() {
                                                 <div
                                                     key={tc.index}
                                                     className={cn(
-                                                        "p-2.5 rounded-lg border flex flex-col gap-1",
+                                                        "p-3 rounded-lg border flex flex-col gap-1",
                                                         tc.passed
                                                             ? "bg-emerald-950/20 border-emerald-900/40 text-emerald-300"
                                                             : "bg-rose-950/20 border-rose-900/40 text-rose-300"
@@ -1180,31 +1134,27 @@ export default function StudentLiveQuiz() {
                             )}
                         </div>
                     ) : (
-                        /* Options */
+                        /* Standard MCQ Options */
                         <div className="flex flex-col gap-3">
                             {currentQuestion.options?.map((option: string, idx: number) => {
                                 const isSelected = selectedOption === idx;
-                                // Check similarity if options are strings or indices. Assuming strings based on earlier context.
-                                const isCorrectCheck = viewMode === 'results' && (currentQuestion.correct === option || String(currentQuestion.correct) === String(idx) || currentQuestion.correct === idx);
+                                const isCorrectCheck = viewMode === 'results' && (
+                                    currentQuestion.correct === option ||
+                                    String(currentQuestion.correct) === String(idx) ||
+                                    currentQuestion.correct === idx
+                                );
 
-                                let stateStyles = isGameMode 
-                                    ? GAME_COLORS[idx % GAME_COLORS.length] 
-                                    : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900";
-
+                                let stateStyles = "border-border hover:bg-surface/80 bg-surface text-text";
                                 if (viewMode === 'results') {
                                     if (isCorrectCheck) {
-                                        stateStyles = "border-green-500 bg-green-500 text-white shadow-[0_4px_0_rgb(21,128,61)]";
+                                        stateStyles = "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
                                     } else if (isSelected && !isCorrectCheck) {
-                                        stateStyles = "border-red-500 bg-red-500 text-white shadow-[0_4px_0_rgb(185,28,28)] opacity-70";
+                                        stateStyles = "border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300";
                                     } else {
-                                        stateStyles = isGameMode ? stateStyles + " opacity-30 grayscale" : "opacity-50 grayscale";
+                                        stateStyles = "opacity-40 grayscale";
                                     }
-                                } else if (isSelected && !isGameMode) {
-                                    stateStyles = "border-primary bg-primary/5 shadow-md shadow-primary/10";
-                                } else if (isSelected && isGameMode) {
-                                    stateStyles = stateStyles + " ring-4 ring-white ring-offset-4 ring-offset-indigo-950 scale-[1.02] transform transition-transform";
-                                } else if (isLocked && !isSelected) {
-                                    stateStyles = isGameMode ? stateStyles + " opacity-50 grayscale cursor-not-allowed" : "opacity-60 cursor-not-allowed";
+                                } else if (isSelected) {
+                                    stateStyles = "border-primary bg-primary/10 shadow-md ring-2 ring-primary/20";
                                 }
 
                                 return (
@@ -1213,28 +1163,17 @@ export default function StudentLiveQuiz() {
                                         disabled={isLocked}
                                         onClick={() => setSelectedOption(idx)}
                                         className={cn(
-                                            "w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 group relative min-h-[5rem]",
+                                            "w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4",
                                             stateStyles
                                         )}
                                     >
                                         <div className={cn(
-                                            "w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg transition-colors shrink-0 shadow-sm",
-                                            viewMode === 'results' && isCorrectCheck
-                                                ? "bg-white text-green-600"
-                                                : viewMode === 'results' && isSelected && !isCorrectCheck
-                                                    ? "bg-white text-red-600"
-                                                    : isSelected
-                                                        ? "bg-white text-primary"
-                                                        : isGameMode 
-                                                            ? "bg-white/20 text-white border border-white/40 group-hover:bg-white/30"
-                                                            : "bg-neutral-100 dark:bg-neutral-800 text-muted group-hover:bg-neutral-200"
+                                            "w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm transition-colors shrink-0",
+                                            isSelected ? "bg-primary text-white" : "bg-neutral-100 dark:bg-neutral-800 text-muted"
                                         )}>
                                             {String.fromCharCode(65 + idx)}
                                         </div>
-                                        <MathText text={option} className={cn(
-                                            "font-bold text-lg leading-tight",
-                                            isGameMode ? "text-white drop-shadow-sm" : viewMode === 'results' && isCorrectCheck ? "text-green-700 dark:text-green-400" : "text-text"
-                                        )} />
+                                        <MathText text={option} className="font-semibold text-base leading-tight" />
                                     </button>
                                 );
                             })}
@@ -1242,31 +1181,22 @@ export default function StudentLiveQuiz() {
                     )}
 
                     {/* Footer Actions */}
-                    <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex justify-end">
+                    <div className="mt-4 pt-4 border-t border-border flex justify-end">
                         {viewMode === 'voting' ? (
-                            isTimeUp ? (
-                                <div className="text-center w-full p-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg">
-                                    <p className="font-bold">Time's Up!</p>
-                                    <p className="text-xs">Waiting for leaderboard...</p>
-                                </div>
-                            ) : isSubmitted ? (
-                                <div className="w-full flex flex-col items-center gap-3 animate-in fade-in">
-                                    <div className={cn(
-                                        "w-full p-3 rounded-xl flex items-center justify-center gap-3 font-bold text-base",
-                                        isGameMode
-                                            ? "bg-green-500/20 border border-green-500/40 text-green-300"
-                                            : "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400"
-                                    )}>
+                            isSubmitted ? (
+                                <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in">
+                                    <div className="flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
                                         <CheckCircle className="w-5 h-5 shrink-0" />
-                                        Answer Submitted!
+                                        <span>Answer Submitted! Waiting for instructor...</span>
                                     </div>
-                                    <div className={cn(
-                                        "w-full p-2 rounded-lg flex items-center justify-center gap-2 text-sm animate-pulse",
-                                        isGameMode ? "text-indigo-300" : "text-muted"
-                                    )}>
-                                        <span className="w-2 h-2 rounded-full bg-current inline-block" />
-                                        Waiting for leaderboard...
-                                    </div>
+                                    <Button
+                                        onClick={() => setIsSubmitted(false)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs"
+                                    >
+                                        Edit / Re-submit
+                                    </Button>
                                 </div>
                             ) : (
                                 <Button
@@ -1276,27 +1206,20 @@ export default function StudentLiveQuiz() {
                                             ? isExecutingCode
                                             : selectedOption === null
                                     }
-                                    className={cn(
-                                        "w-full sm:w-auto h-12 text-lg px-8 transition-all font-bold",
-                                        currentQuestion.type === 'code' && codePassedStatus[currentQuestion.id]
-                                            ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30"
-                                            : ""
-                                    )}
+                                    className="w-full sm:w-auto h-12 text-base px-8 font-bold shadow-lg"
                                 >
-                                    {currentQuestion.type === 'code' && codePassedStatus[currentQuestion.id]
-                                        ? "Submit Correct Code →"
+                                    {currentQuestion.type === 'code'
+                                        ? (codePassedStatus[currentQuestion.id] ? "Submit Solution →" : "Run & Submit Code")
                                         : "Submit Answer"}
                                 </Button>
                             )
                         ) : (
-                            <div className="text-center w-full p-4 bg-neutral-100 dark:bg-neutral-900 rounded-lg animate-in fade-in">
-                                <p className="font-bold text-muted">Reviewing Results...</p>
-                                <p className="text-xs text-muted">Wait for the next question</p>
+                            <div className="text-center w-full p-4 bg-surface rounded-xl text-muted text-sm font-medium">
+                                Question review in progress. Next challenge starts shortly.
                             </div>
                         )}
                     </div>
-
-                </div>
+                </Card>
             </main>
         </div>
     );

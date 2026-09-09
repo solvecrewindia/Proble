@@ -3,10 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
-import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause, Download, Code2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause, Download, Code2, Clock, Trophy, BarChart3, Users, Play } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MathText } from '../../shared/components/MathText';
 import type { Quiz } from '../types';
+
+const formatSeconds = (totalSec: number) => {
+    if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
+    const mins = Math.floor(totalSec / 60);
+    const secs = Math.floor(totalSec % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
 
 export default function LiveController() {
     const { id } = useParams();
@@ -15,12 +22,27 @@ export default function LiveController() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [viewMode, setViewMode] = useState<'voting' | 'results' | 'leaderboard'>('voting');
     const [loading, setLoading] = useState(true);
-    const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [quizStatus, setQuizStatus] = useState<'active' | 'completed'>('active');
     const [finalResults, setFinalResults] = useState<any[]>([]);
+    const [liveLeaderboard, setLiveLeaderboard] = useState<any[]>([]);
 
-    // Dummy voting stats for now
+    // Host timing: elapsed stopwatch controlled by host
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    // Voting stats
     const [stats, setStats] = useState<Record<string, number>>({});
+    const [participation, setParticipation] = useState(0);
+    const [onlineCount, setOnlineCount] = useState(0);
+    const [codeSubmissionStats, setCodeSubmissionStats] = useState<{ passed: number; failed: number; total: number }>({ passed: 0, failed: 0, total: 0 });
+
+    // Elapsed timer increments while in voting mode
+    useEffect(() => {
+        if (viewMode !== 'voting' || quizStatus === 'completed') return;
+        const timer = setInterval(() => {
+            setElapsedTime(prev => prev + 1);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [viewMode, currentQuestionIndex, quizStatus]);
 
     const fetchFinalResults = async (quizId: string) => {
         const { data, error } = await supabase
@@ -28,6 +50,7 @@ export default function LiveController() {
             .select(`
                 score,
                 student_id,
+                percentage,
                 profiles:student_id (
                     full_name,
                     registration_number
@@ -38,6 +61,84 @@ export default function LiveController() {
 
         if (data && !error) {
             setFinalResults(data);
+        }
+    };
+
+    const fetchLiveLeaderboard = async () => {
+        if (!id) return;
+        try {
+            const [{ data: qrData }, { data: attemptsData }] = await Promise.all([
+                supabase
+                    .from('quiz_results')
+                    .select('score, student_id')
+                    .eq('quiz_id', id)
+                    .order('score', { ascending: false }),
+                supabase
+                    .from('attempts')
+                    .select('student_id, score, answers')
+                    .eq('quiz_id', id)
+            ]);
+
+            const scoreMap: Record<string, number> = {};
+            const answersMap: Record<string, any> = {};
+
+            (attemptsData || []).forEach((a: any) => {
+                scoreMap[a.student_id] = a.score ?? 0;
+                answersMap[a.student_id] = a.answers || {};
+            });
+
+            (qrData || []).forEach((r: any) => {
+                scoreMap[r.student_id] = r.score ?? 0;
+            });
+
+            const allStudentIds = Object.keys(scoreMap);
+            if (allStudentIds.length === 0) {
+                setLiveLeaderboard([]);
+                return;
+            }
+
+            const { data: profilesData } = await supabase
+                .from('profiles')
+                .select('id, full_name, registration_number')
+                .in('id', allStudentIds);
+
+            const profileMap: Record<string, any> = {};
+            (profilesData || []).forEach((p: any) => { profileMap[p.id] = p; });
+
+            const currentQ = quiz?.questions?.[currentQuestionIndex];
+
+            const enriched = allStudentIds
+                .map(sid => {
+                    const profile = profileMap[sid];
+                    const ans = answersMap[sid] || {};
+                    const curAns = currentQ?.id ? ans[currentQ.id] : null;
+
+                    let testCasesInfo: string | null = null;
+                    let timeTakenInfo: string | null = null;
+
+                    if (curAns && typeof curAns === 'object') {
+                        if (curAns.totalCount !== undefined) {
+                            testCasesInfo = `${curAns.passedCount ?? 0}/${curAns.totalCount} Cases`;
+                        }
+                        if (curAns.timeTaken) {
+                            timeTakenInfo = `${curAns.timeTaken}s`;
+                        }
+                    }
+
+                    return {
+                        student_id: sid,
+                        score: scoreMap[sid] || 0,
+                        name: profile?.full_name || 'Student',
+                        regNo: profile?.registration_number || null,
+                        testCasesInfo,
+                        timeTakenInfo,
+                    };
+                })
+                .sort((a, b) => b.score - a.score);
+
+            setLiveLeaderboard(enriched);
+        } catch (err) {
+            console.error("Failed to fetch live leaderboard in host controller:", err);
         }
     };
 
@@ -60,14 +161,13 @@ export default function LiveController() {
 
             if (quizData) {
                 // 2. Fetch Questions linked to this quiz
-                const { data: questionsData, error: _ } = await supabase
+                const { data: questionsData } = await supabase
                     .from('questions')
                     .select('*')
                     .eq('quiz_id', id)
                     .order('created_at', { ascending: true });
 
                 if (questionsData) {
-                    // Map DB format to Client format
                     const mappedQuestions = questionsData.map((q: any) => {
                         let parsedCorrect = q.correct_answer;
                         if (q.type === 'code') {
@@ -99,32 +199,13 @@ export default function LiveController() {
                     if (quizData.settings?.currentQuestionIndex !== undefined) {
                         setCurrentQuestionIndex(quizData.settings.currentQuestionIndex);
                         setViewMode(quizData.settings.viewMode || 'voting');
-                        // If quiz was already running, ensure questionExpiresAt is set if in voting mode
-                        if (quizData.settings.viewMode === 'voting' && !quizData.settings.questionExpiresAt) {
-                            const timePerQuestion = Number(quizData.settings?.timePerQuestion) || 60;
-                            const questionExpiresAt = new Date(Date.now() + (timePerQuestion + 2) * 1000).toISOString();
-                            const newSettings = {
-                                ...quizData.settings,
-                                questionExpiresAt
-                            };
-                            await supabase
-                                .from('quizzes')
-                                .update({ settings: newSettings })
-                                .eq('id', id);
-                        }
                     } else if (mappedQuestions.length > 0) {
-                        // First time load - Sync Q1 to DB immediately so students see it
-
-                        // We need to call updateQuizState but we can't because quiz is not set in state yet.
-                        // So we do a direct update here.
-                        const timePerQuestion = Number(quizData.settings?.timePerQuestion) || 60;
-                        const questionExpiresAt = new Date(Date.now() + (timePerQuestion + 5) * 1000).toISOString();
-
+                        // First load: initialize Q1 in voting mode
                         const newSettings = {
                             ...quizData.settings,
                             currentQuestionIndex: 0,
                             viewMode: 'voting',
-                            questionExpiresAt
+                            questionExpiresAt: null
                         };
 
                         await supabase
@@ -139,14 +220,9 @@ export default function LiveController() {
         fetchQuiz();
     }, [id]);
 
-    const [participation, setParticipation] = useState(0);
-    const [onlineCount, setOnlineCount] = useState(0);
-    const [codeSubmissionStats, setCodeSubmissionStats] = useState<{ passed: number; failed: number; total: number }>({ passed: 0, failed: 0, total: 0 });
-
     const fetchRealStats = async (questionId: string) => {
         if (!id) return;
 
-        // Fetch all attempts for this quiz
         const { data: attempts } = await supabase
             .from('attempts')
             .select('answers, student_id')
@@ -185,8 +261,6 @@ export default function LiveController() {
             setStats(newStats);
             setCodeSubmissionStats({ passed: codePassed, failed: codeFailed, total: answeredCount });
 
-            // Calculate Participation
-            // If total attempts (participants) is 0, participation is 0.
             const totalParticipants = attempts.length;
             const pct = totalParticipants > 0 ? Math.round((answeredCount / totalParticipants) * 100) : 0;
             setParticipation(pct);
@@ -202,67 +276,34 @@ export default function LiveController() {
             fetchRealStats(currentQ.id);
         }
 
-        // Polling Fallback (every 5 seconds)
         const pollInterval = setInterval(() => {
             if (currentQ?.id) fetchRealStats(currentQ.id);
-        }, 5000);
+            if (viewMode === 'leaderboard') fetchLiveLeaderboard();
+        }, 3000);
 
-        // Real-time subscription for new joiners
-        let channel: any = null;
-        try {
-            if (typeof WebSocket !== 'undefined') {
-                channel = supabase
-                    .channel(`live-stats-${id}`)
-                    .on(
-                        'postgres_changes',
-                        {
-                            event: '*',
-                            schema: 'public',
-                            table: 'attempts',
-                            filter: `quiz_id=eq.${id}`
-                        },
-                        () => {
-                            if (currentQ?.id) fetchRealStats(currentQ.id);
-                        }
-                    )
-                    .subscribe();
-            } else {
-                console.warn("WebSockets not supported. Using polling fallback for stats.");
-            }
-        } catch (err) {
-            console.error("Failed to establish Realtime connection for stats:", err);
-        }
+        return () => clearInterval(pollInterval);
+    }, [id, quiz, currentQuestionIndex, viewMode]);
 
-        return () => {
-            if (channel) supabase.removeChannel(channel);
-            clearInterval(pollInterval);
+    const updateQuizState = async (index: number, mode: 'voting' | 'results' | 'leaderboard' = 'voting') => {
+        if (!quiz) return;
+
+        const newSettings = {
+            ...quiz.settings,
+            currentQuestionIndex: index,
+            viewMode: mode,
+            questionExpiresAt: null // Host is in full control of pacing
         };
-    }, [id, quiz, currentQuestionIndex]);
 
-    // Timer Sync & Auto-transition
-    useEffect(() => {
-        const settings = quiz?.settings as any;
-        if (!settings || !settings.questionExpiresAt || viewMode !== 'voting') {
-            setTimeLeft(null);
-            return;
-        }
+        const { error } = await supabase
+            .from('quizzes')
+            .update({
+                settings: newSettings as any,
+                status: 'active'
+            })
+            .eq('id', id);
 
-        const expiresAt = new Date(settings.questionExpiresAt).getTime();
-
-        const timer = setInterval(async () => {
-            const now = Date.now();
-            const diff = Math.max(0, Math.ceil((expiresAt - now) / 1000));
-            setTimeLeft(diff);
-
-            if (diff <= 0) {
-                clearInterval(timer);
-                setViewMode('leaderboard');
-                await updateQuizState(currentQuestionIndex, 'leaderboard');
-            }
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [(quiz?.settings as any)?.questionExpiresAt, viewMode, currentQuestionIndex]);
+        if (error) console.error("Failed to sync state:", error);
+    };
 
     const handleNext = async () => {
         if (!quiz?.questions) return;
@@ -270,11 +311,11 @@ export default function LiveController() {
             const nextIndex = currentQuestionIndex + 1;
             setCurrentQuestionIndex(nextIndex);
             setViewMode('voting');
+            setElapsedTime(0);
 
-            // Sync with DB
             await updateQuizState(nextIndex, 'voting');
         } else {
-            // End quiz
+            // End quiz session
             await supabase.from('quizzes').update({ status: 'completed' }).eq('id', id);
             setQuizStatus('completed');
             fetchFinalResults(id || '');
@@ -286,64 +327,31 @@ export default function LiveController() {
             const prevIndex = currentQuestionIndex - 1;
             setCurrentQuestionIndex(prevIndex);
             setViewMode('voting');
+            setElapsedTime(0);
 
-            // Sync with DB
             await updateQuizState(prevIndex, 'voting');
         }
     };
 
-    const updateQuizState = async (index: number, mode: 'voting' | 'results' | 'leaderboard' = 'voting') => {
-        if (!quiz) return;
-
-        let questionExpiresAt = null;
-
-        // Only set expiration if we are entering voting mode
-        if (mode === 'voting') {
-            const timePerQuestion = Number(quiz.settings?.timePerQuestion) || 60; // Default 60s
-            // Add slight buffer (e.g. 5s) to account for 3s game mode countdown so students get full time
-            questionExpiresAt = new Date(Date.now() + (timePerQuestion + 5) * 1000).toISOString();
-        }
-
-        // We update the settings json to include currentQuestionIndex and viewMode
-        const newSettings = {
-            ...quiz.settings,
-            currentQuestionIndex: index,
-            viewMode: mode,
-            questionExpiresAt
-        };
-
-        const { error } = await supabase
-            .from('quizzes')
-            .update({
-                settings: newSettings as any
-            })
-            .eq('id', id);
-
-        if (error) console.error("Failed to sync state:", error);
-    };
-
-
-
-    if (loading) return <div className="p-8 text-center">Loading controller...</div>;
-    if (!quiz || !quiz.questions || quiz.questions.length === 0) return <div className="p-8 text-center">No questions found.</div>;
+    if (loading) return <div className="p-8 text-center text-muted">Loading controller...</div>;
+    if (!quiz || !quiz.questions || quiz.questions.length === 0) return <div className="p-8 text-center text-muted">No questions found for this quiz.</div>;
 
     const currentQuestion = quiz.questions[currentQuestionIndex];
     const totalQuestions = quiz.questions.length;
     const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
-
-    // Calculate total votes for percentages
     const totalVotes = Object.values(stats).reduce((a, b) => a + b, 0) || 1;
 
+    // --- COMPLETED QUIZ FINAL VIEW ---
     if (quizStatus === 'completed') {
         const downloadCSV = () => {
-            const headers = ['Rank', 'Name', 'Score'];
+            const headers = ['Rank', 'Student Name', 'Registration Number', 'Score'];
             const rows = finalResults.map((r, i) => [
                 i + 1,
-                // Handle case where profile might be an array or object
                 Array.isArray(r.profiles) ? r.profiles[0]?.full_name || 'Unknown' : r.profiles?.full_name || 'Unknown',
+                Array.isArray(r.profiles) ? r.profiles[0]?.registration_number || '' : r.profiles?.registration_number || '',
                 r.score
             ]);
-            const csvContent = "data:text/csv;charset=utf-8," 
+            const csvContent = "data:text/csv;charset=utf-8,"
                 + [headers.join(','), ...rows.map(e => e.map(item => `"${item}"`).join(','))].join('\n');
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
@@ -355,17 +363,17 @@ export default function LiveController() {
         };
 
         return (
-            <div className="max-w-4xl mx-auto p-6 space-y-6 animate-in fade-in zoom-in duration-300">
-                <div className="flex justify-between items-center bg-surface p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+            <div className="max-w-4xl mx-auto p-6 space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                <div className="flex justify-between items-center bg-surface p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
                     <div>
-                        <h1 className="text-2xl font-bold text-text mb-2">Quiz Completed: {quiz.title}</h1>
-                        <p className="text-muted">Final Results for all players</p>
+                        <h1 className="text-2xl font-bold text-text mb-1">Assessment Completed: {quiz.title}</h1>
+                        <p className="text-muted text-sm">Final rankings for all participating students</p>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-3">
                         <Button variant="outline" onClick={downloadCSV}>
-                            <Download className="w-4 h-4 mr-2" /> Download CSV
+                            <Download className="w-4 h-4 mr-2" /> Export CSV
                         </Button>
-                        <Button onClick={() => navigate('/faculty/live')}>Return to Dashboard</Button>
+                        <Button onClick={() => navigate('/faculty/live')}>Return to Live Tests</Button>
                     </div>
                 </div>
 
@@ -374,34 +382,36 @@ export default function LiveController() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900">
-                                    <th className="p-4 font-bold text-muted">Rank</th>
-                                    <th className="p-4 font-bold text-muted">Student Name</th>
-                                    <th className="p-4 font-bold text-muted text-right">Score</th>
+                                    <th className="p-4 font-bold text-muted text-xs uppercase">Rank</th>
+                                    <th className="p-4 font-bold text-muted text-xs uppercase">Student Name</th>
+                                    <th className="p-4 font-bold text-muted text-xs uppercase text-right">Score</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {finalResults.map((r, i) => {
                                     const rawProfileName = Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name;
                                     const studentName = rawProfileName || 'Unknown Student';
+                                    const regNo = Array.isArray(r.profiles) ? r.profiles[0]?.registration_number : r.profiles?.registration_number;
+
                                     return (
                                         <tr key={r.student_id} className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors">
-                                            <td className="p-4 font-medium text-text">#{i + 1}</td>
+                                            <td className="p-4 font-bold text-text">#{i + 1}</td>
                                             <td className="p-4 text-text flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-xs">
+                                                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
                                                     {studentName.substring(0, 2).toUpperCase()}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span>{studentName}</span>
-                                                    {(() => { const rawReg = Array.isArray(r.profiles) ? r.profiles[0]?.registration_number : r.profiles?.registration_number; return rawReg ? <span className="text-xs text-muted font-mono">{rawReg}</span> : null; })()}
+                                                    <span className="font-semibold">{studentName}</span>
+                                                    {regNo && <span className="text-xs text-muted font-mono">{regNo}</span>}
                                                 </div>
                                             </td>
-                                            <td className="p-4 font-bold text-primary text-right">{r.score}</td>
+                                            <td className="p-4 font-bold text-primary text-right">{r.score} pts</td>
                                         </tr>
                                     );
                                 })}
                                 {finalResults.length === 0 && (
                                     <tr>
-                                        <td colSpan={3} className="p-8 text-center text-muted">No results found for this quiz.</td>
+                                        <td colSpan={3} className="p-8 text-center text-muted">No student submissions recorded for this assessment.</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -422,75 +432,132 @@ export default function LiveController() {
                     </Button>
                     <div>
                         <h1 className="text-lg font-bold text-text">{quiz.title}</h1>
-                        <p className="text-xs text-muted">Live Session • Access Code: {(quiz as any).code || quiz.accessCode || quiz.id.slice(0, 4)}</p>
+                        <p className="text-xs text-muted">
+                            Live Assessment • Access Code: <span className="font-mono font-bold text-primary">{(quiz as any).code || quiz.accessCode || quiz.id.slice(0, 4)}</span>
+                        </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium flex items-center gap-2">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                        </span>
-                        Adjusting Phase
+
+                {/* Host Control Header Badge with live elapsed timer */}
+                <div className="flex items-center gap-3">
+                    <div className="px-3.5 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-mono font-bold flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Elapsed: {formatSeconds(elapsedTime)}</span>
+                    </div>
+
+                    <div className="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-semibold flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        {viewMode === 'voting' ? 'Voting Active' : 'Leaderboard Active'}
                     </div>
                 </div>
             </div>
 
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
-                {/* Question Preview */}
+                {/* Main Control Panel: Question or Leaderboard */}
                 <div className="lg:col-span-2 flex flex-col gap-4">
                     <Card className="flex-1 flex flex-col overflow-hidden border-neutral-200 dark:border-neutral-800">
                         <CardContent className="p-6 flex flex-col h-full">
-                            <div className="flex justify-between items-start mb-4">
-                                <span className="text-sm font-medium text-muted">Question {currentQuestionIndex + 1} of {totalQuestions}</span>
-                                <span className="bg-neutral-100 dark:bg-neutral-800 text-xs px-2 py-1 rounded text-muted">
-                                    {currentQuestion.type?.toUpperCase() || 'MCQ'}
+                            <div className="flex justify-between items-start mb-3">
+                                <span className="text-sm font-medium text-muted">
+                                    Question {currentQuestionIndex + 1} of {totalQuestions}
+                                </span>
+                                <span className="bg-neutral-100 dark:bg-neutral-800 text-xs px-2.5 py-1 rounded-md font-bold text-muted">
+                                    {currentQuestion.type === 'code' ? 'PYTHON ML CHALLENGE' : 'MULTIPLE CHOICE'}
                                 </span>
                             </div>
 
-                            <MathText text={currentQuestion.stem} className="text-2xl font-bold text-text mb-6" as="h2" />
+                            <MathText text={currentQuestion.stem} className="text-xl font-bold text-text mb-4" as="h2" />
 
-                            {/* Options or Code Visualization */}
-                            {currentQuestion.type === 'code' ? (
-                                <div className="space-y-4 flex-1 overflow-y-auto">
-                                    <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-indigo-400 font-bold">
-                                            <Code2 className="w-5 h-5" />
-                                            <span>Python 3 (ML / Scripting) Coding Challenge</span>
+                            {/* View Mode: Leaderboard vs Question Workspace */}
+                            {viewMode === 'leaderboard' ? (
+                                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                                    <div className="flex items-center justify-between pb-2 border-b border-border">
+                                        <div className="flex items-center gap-2 text-amber-500 font-bold text-sm">
+                                            <Trophy className="w-4 h-4" />
+                                            <span>Current Standings (Test Cases & Timing)</span>
                                         </div>
-                                        <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-mono">
-                                            {((currentQuestion.correct as any)?.testCases || []).length} Test Cases Defined
+                                        <span className="text-xs text-muted">{liveLeaderboard.length} student(s) ranked</span>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {liveLeaderboard.map((student, idx) => (
+                                            <div
+                                                key={student.student_id}
+                                                className="p-3 rounded-xl border border-border bg-surface flex items-center justify-between text-sm hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className={cn(
+                                                        "font-black w-6 text-center text-sm",
+                                                        idx === 0 ? "text-amber-500" : idx === 1 ? "text-slate-400" : idx === 2 ? "text-amber-700" : "text-muted"
+                                                    )}>
+                                                        #{idx + 1}
+                                                    </span>
+                                                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                                                        {student.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-text text-sm">{student.name}</p>
+                                                        <div className="flex items-center gap-2 text-xs text-muted">
+                                                            {student.regNo && <span className="font-mono">{student.regNo}</span>}
+                                                            {student.testCasesInfo && (
+                                                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-[11px]">
+                                                                    ✓ {student.testCasesInfo}
+                                                                </span>
+                                                            )}
+                                                            {student.timeTakenInfo && (
+                                                                <span className="font-mono text-muted text-[11px]">⏱ {student.timeTakenInfo}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="font-black text-primary text-base">{student.score}</span>
+                                                    <span className="text-[10px] text-muted block">pts</span>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {liveLeaderboard.length === 0 && (
+                                            <div className="p-8 text-center text-muted text-sm">
+                                                No submissions recorded yet for this question.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : currentQuestion.type === 'code' ? (
+                                <div className="space-y-4 flex-1 overflow-y-auto">
+                                    <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                                            <Code2 className="w-4 h-4" />
+                                            <span>Python 3 Code Challenge</span>
+                                        </div>
+                                        <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-mono font-semibold">
+                                            {((currentQuestion.correct as any)?.testCases || []).length} Test Cases
                                         </span>
                                     </div>
 
-                                    {/* Live Submission Progress Bar & Metrics */}
+                                    {/* Live Submission Stats */}
                                     <div className="grid grid-cols-3 gap-3">
                                         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                                            <div className="text-2xl font-bold text-emerald-400">{codeSubmissionStats.passed}</div>
-                                            <div className="text-xs text-emerald-300 font-medium">Passed All Cases</div>
+                                            <div className="text-2xl font-black text-emerald-500">{codeSubmissionStats.passed}</div>
+                                            <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Passed All Cases</div>
                                         </div>
                                         <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-center">
-                                            <div className="text-2xl font-bold text-rose-400">{codeSubmissionStats.failed}</div>
-                                            <div className="text-xs text-rose-300 font-medium">Failed Cases</div>
+                                            <div className="text-2xl font-black text-rose-500">{codeSubmissionStats.failed}</div>
+                                            <div className="text-xs text-rose-600 dark:text-rose-400 font-medium">Failed / Partial</div>
                                         </div>
-                                        <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-center">
-                                            <div className="text-2xl font-bold text-indigo-400">{codeSubmissionStats.total} / {onlineCount}</div>
-                                            <div className="text-xs text-indigo-300 font-medium">Submitted</div>
+                                        <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-center">
+                                            <div className="text-2xl font-black text-primary">{codeSubmissionStats.total} / {onlineCount}</div>
+                                            <div className="text-xs text-primary font-medium">Submitted</div>
                                         </div>
                                     </div>
 
-                                    {(currentQuestion.correct as any)?.starterCode && (
-                                        <div className="rounded-xl overflow-hidden border border-neutral-700 bg-[#1e1e1e] p-4 text-xs font-mono text-emerald-300">
-                                            <div className="text-neutral-500 mb-1 font-semibold uppercase text-[10px]">Starter Code:</div>
-                                            <pre className="whitespace-pre-wrap max-h-40 overflow-y-auto">{(currentQuestion.correct as any).starterCode}</pre>
-                                        </div>
-                                    )}
-
+                                    {/* Test Cases Overview */}
                                     <div className="space-y-2">
                                         <span className="text-xs font-semibold text-muted">Test Cases:</span>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                             {((currentQuestion.correct as any)?.testCases || []).map((tc: any, i: number) => (
-                                                <div key={i} className="p-3 rounded-lg bg-surface border border-neutral-200 dark:border-neutral-800 text-xs font-mono">
+                                                <div key={i} className="p-2.5 rounded-lg bg-surface border border-border text-xs font-mono">
                                                     <div className="text-primary font-bold mb-1">Case {i + 1}</div>
                                                     <div><span className="text-muted">Input:</span> {tc.input || '(none)'}</div>
                                                     <div><span className="text-muted">Expected:</span> {tc.output}</div>
@@ -507,73 +574,57 @@ export default function LiveController() {
 
                                         return (
                                             <div key={idx} className="relative group">
-                                                {/* Background Bar */}
-                                                {viewMode === 'leaderboard' && (
-                                                    <div
-                                                        className="absolute inset-0 bg-primary/10 rounded-lg transition-all duration-1000 ease-out"
-                                                        style={{ width: `${percentage}%` }}
-                                                    />
-                                                )}
-
-                                                <div className={cn(
-                                                    "relative p-4 rounded-lg border-2 flex justify-between items-center transition-all",
-                                                    viewMode === 'leaderboard'
-                                                        ? "border-transparent"
-                                                        : "border-neutral-200 dark:border-neutral-800"
-                                                )}>
+                                                <div className="relative p-4 rounded-xl border border-border bg-surface flex justify-between items-center">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center font-bold text-sm text-muted">
+                                                        <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center font-bold text-xs text-muted">
                                                             {String.fromCharCode(65 + idx)}
                                                         </div>
-                                                        <MathText text={option} className="font-medium text-text" />
+                                                        <MathText text={option} className="font-semibold text-sm text-text" />
                                                     </div>
-
-                                                    {viewMode === 'leaderboard' && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-primary">{percentage}%</span>
-                                                            <span className="text-xs text-muted">({voteCount})</span>
-                                                        </div>
-                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-primary text-sm">{percentage}%</span>
+                                                        <span className="text-xs text-muted">({voteCount})</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
                                     })}
                                 </div>
                             )}
-
                         </CardContent>
                     </Card>
 
-                    {/* Controls */}
+                    {/* Controls: Host-Controlled Transitions */}
                     <div className="grid grid-cols-2 gap-4">
                         <Button
                             variant="outline"
                             onClick={handlePrev}
                             disabled={currentQuestionIndex === 0}
-                            className="h-14 text-lg"
+                            className="h-14 text-base"
                         >
                             <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                         </Button>
+
                         <Button
                             onClick={async () => {
                                 if (viewMode === 'voting') {
                                     setViewMode('leaderboard');
+                                    fetchLiveLeaderboard();
                                     await updateQuizState(currentQuestionIndex, 'leaderboard');
                                 } else {
                                     handleNext();
                                 }
                             }}
                             className={cn(
-                                "h-14 text-lg text-white transition-all",
+                                "h-14 text-base font-bold text-white transition-all shadow-lg",
                                 viewMode === 'voting'
-                                    ? "bg-red-500 hover:bg-red-600"
+                                    ? "bg-amber-600 hover:bg-amber-700"
                                     : "bg-primary hover:bg-primary/90"
                             )}
                         >
                             {viewMode === 'voting' ? (
                                 <>
-                                    <Pause className="mr-2 h-5 w-5" /> 
-                                    {timeLeft !== null ? `Time Left: ${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')} - Skip to Leaderboard` : "Skip to Leaderboard"}
+                                    <Trophy className="mr-2 h-5 w-5" /> Show Live Leaderboard
                                 </>
                             ) : (
                                 <>
@@ -587,35 +638,29 @@ export default function LiveController() {
                 {/* Sidebar Controls */}
                 <div className="space-y-4">
                     <Card className="border-neutral-200 dark:border-neutral-800">
-                        <CardContent className="p-6 space-y-6">
+                        <CardContent className="p-6 space-y-5">
                             <div className="text-center">
-                                <h3 className="text-lg font-bold text-text mb-2">Live Status</h3>
-                                <div className="text-sm text-muted mb-4">
-                                    {viewMode === 'voting' ? (
-                                        <span className="flex items-center justify-center gap-2 text-primary animate-pulse">
-                                            <span className="w-2 h-2 rounded-full bg-primary"></span> Voting Active
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center justify-center gap-2 text-indigo-500">
-                                            Leaderboard Active
-                                        </span>
-                                    )}
-                                </div>
+                                <h3 className="text-base font-bold text-text mb-1">Session Controller</h3>
+                                <p className="text-xs text-muted">
+                                    {viewMode === 'voting' ? 'Students are actively solving' : 'Displaying standings'}
+                                </p>
                             </div>
 
-                            <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800">
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="font-medium text-text">Live Stats</span>
-                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">{onlineCount} Online</span>
+                            <div className="pt-4 border-t border-border">
+                                <div className="flex justify-between items-center mb-3">
+                                    <span className="font-medium text-xs uppercase tracking-wider text-muted">Participants</span>
+                                    <span className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-0.5 rounded-full">
+                                        {onlineCount} Online
+                                    </span>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-neutral-50 dark:bg-neutral-900 p-3 rounded-lg text-center">
-                                        <div className="text-2xl font-bold text-text">{participation}%</div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-surface p-3 rounded-xl border border-border text-center">
+                                        <div className="text-2xl font-black text-text">{participation}%</div>
                                         <div className="text-xs text-muted">Participation</div>
                                     </div>
-                                    <div className="bg-neutral-50 dark:bg-neutral-900 p-3 rounded-lg text-center">
-                                        <div className="text-2xl font-bold text-text">-</div>
-                                        <div className="text-xs text-muted">Avg Time</div>
+                                    <div className="bg-surface p-3 rounded-xl border border-border text-center">
+                                        <div className="text-2xl font-black text-primary">{codeSubmissionStats.total}</div>
+                                        <div className="text-xs text-muted">Submitted</div>
                                     </div>
                                 </div>
                             </div>
@@ -624,30 +669,32 @@ export default function LiveController() {
 
                     <Card className="border-neutral-200 dark:border-neutral-800 flex-1">
                         <CardContent className="p-6">
-                            <h3 className="font-bold text-text mb-4">Question Queue</h3>
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                            <h3 className="font-bold text-text text-sm mb-3">Question Queue</h3>
+                            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
                                 {quiz.questions.map((q, idx) => (
                                     <div
                                         key={q.id || idx}
                                         onClick={() => {
                                             setCurrentQuestionIndex(idx);
                                             setViewMode('voting');
+                                            setElapsedTime(0);
+                                            updateQuizState(idx, 'voting');
                                         }}
                                         className={cn(
-                                            "p-3 rounded-lg cursor-pointer transition-colors text-sm flex items-center gap-3",
+                                            "p-3 rounded-xl cursor-pointer transition-colors text-xs flex items-center gap-3 border",
                                             currentQuestionIndex === idx
-                                                ? "bg-primary/10 text-primary font-medium"
-                                                : "hover:bg-neutral-50 dark:hover:bg-neutral-900 text-muted hover:text-text"
+                                                ? "bg-primary/10 border-primary text-primary font-bold"
+                                                : "border-border hover:bg-surface text-muted hover:text-text"
                                         )}
                                     >
                                         <span className={cn(
-                                            "w-6 h-6 rounded-full flex items-center justify-center text-xs",
-                                            currentQuestionIndex === idx ? "bg-primary text-white" : "bg-neutral-200 text-muted-foreground"
+                                            "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0",
+                                            currentQuestionIndex === idx ? "bg-primary text-white" : "bg-neutral-100 dark:bg-neutral-800 text-muted"
                                         )}>
                                             {idx + 1}
                                         </span>
                                         <MathText text={q.stem} className="truncate flex-1" />
-                                        {currentQuestionIndex > idx && <CheckCircle className="w-4 h-4 text-green-500" />}
+                                        {currentQuestionIndex > idx && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                                     </div>
                                 ))}
                             </div>

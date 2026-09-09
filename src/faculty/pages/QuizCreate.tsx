@@ -171,6 +171,7 @@ export default function QuizCreate() {
                 status: newStatus,
                 settings: {
                     ...data.settings,
+                    isLive: isLive || Boolean(data.settings?.isLive),
                     duration: data.durationMinutes, // Sync duration to settings
                     scheduledAt: data.scheduledAt || null, // Save scheduled time inside settings
                 },

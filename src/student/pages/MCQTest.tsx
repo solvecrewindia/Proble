@@ -497,6 +497,12 @@ const MCQTest = () => {
                     .single();
 
                 if (quizData) {
+                    // Safety Guard: If this is a live quiz, redirect to the live testing interface
+                    if (quizData.type === 'live' || Boolean(quizData.settings?.isLive)) {
+                        navigate(`/student/live/${quizData.id}`, { replace: true });
+                        return;
+                    }
+
                     if (quizData.type) setQuizType(quizData.type);
                     if (quizData.settings) setQuizSettings(quizData.settings);
                     if (quizData.module_id) setQuizModuleId(quizData.module_id);

@@ -5,7 +5,6 @@ import { Button } from '../components/ui/Button';
 import { User, Copy, Play, ArrowLeft } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { QRCodeModal } from '../components/quiz/QRCodeModal';
-import { getCharacterSrc } from '../../shared/utils/characters';
 
 export default function LiveLobby() {
     const { id } = useParams();
@@ -179,10 +178,10 @@ export default function LiveLobby() {
                         <div key={p.id} className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${index * 50}ms` }}>
                             <div className="flex items-center gap-4">
                                 <span className="text-muted text-sm w-6">#{index + 1}</span>
-                                {getCharacterSrc(p.avatarUrl) ? (
-                                    <img src={getCharacterSrc(p.avatarUrl)!} alt={p.name} className="w-10 h-10 object-contain rounded-full shadow-sm bg-neutral-200 dark:bg-neutral-800" />
+                                {p.avatarUrl ? (
+                                    <img src={p.avatarUrl} alt={p.name} className="w-10 h-10 object-cover rounded-full shadow-sm bg-neutral-200 dark:bg-neutral-800" />
                                 ) : (
-                                    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
                                         {p.avatarText}
                                     </div>
                                 )}

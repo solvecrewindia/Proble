@@ -145,11 +145,18 @@ const JoinTest = () => {
 
             quizData.question_count = count || 0;
 
+            // --- IMMEDIATE LIVE QUIZ REDIRECT ---
+            // If this is a live test, immediately navigate to the live waiting lobby
+            const isLiveQuiz = quizData.type === 'live' || Boolean(quizData.settings?.isLive);
+            if (isLiveQuiz) {
+                navigate(`/student/live/${quizData.id}`);
+                return;
+            }
+
             // --- SERVER-SIDE ATTEMPT CHECK (Enforced by Supabase, not localStorage) ---
             // This check queries the DB directly, so incognito mode / cleared
             // browser data cannot bypass it. The unique constraint on
             // quiz_results(student_id, quiz_id) is the ultimate safety net.
-            // --- SERVER-SIDE ATTEMPT CHECK (Enforced by Supabase, not localStorage) ---
             // Broaden check: Any quiz with a scheduled start time or of type 'master' 
             // is typically meant to be taken once. 
             const shouldCheckAttempts = quizData.type === 'master' || quizData.settings?.scheduledAt;
