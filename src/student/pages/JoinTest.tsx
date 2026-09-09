@@ -246,7 +246,8 @@ const JoinTest = () => {
 
     const handleStartTest = () => {
         if (quiz) {
-            if (quiz.type === 'live') {
+            const isLiveQuiz = quiz.type === 'live' || Boolean(quiz.settings?.isLive);
+            if (isLiveQuiz) {
                 navigate(`/student/live/${quiz.id}`);
             } else {
                 navigate(`/student/test/${quiz.id}`);
@@ -397,7 +398,7 @@ const JoinTest = () => {
                                 <span className="text-xs text-muted">Duration</span>
                             </div>
                         )}
-                        <div className={`p-4 rounded-xl bg-background border border-neutral-300 dark:border-neutral-600 flex items-center justify-center flex-col gap-2 ${quiz.type === 'live' ? 'col-span-2' : ''}`}>
+                        <div className={`p-4 rounded-xl bg-background border border-neutral-300 dark:border-neutral-600 flex items-center justify-center flex-col gap-2 ${(quiz.type === 'live' || quiz.settings?.isLive) ? 'col-span-2' : ''}`}>
                             <AlertCircle className="w-6 h-6 text-primary" />
                             <span className="font-medium text-text">{quiz.question_count !== undefined ? quiz.question_count : 'N/A'}</span>
                             <span className="text-xs text-muted">Questions</span>

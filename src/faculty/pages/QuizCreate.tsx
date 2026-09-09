@@ -187,6 +187,24 @@ export default function QuizCreate() {
                 result = await supabase.from('quizzes').insert(quizPayload).select().single();
             }
 
+            // If failed due to quizzes_type_check constraint on 'live', retry with fallback
+            if (result.error && (result.error.message?.includes('quizzes_type_check') || result.error.code === '23514')) {
+                console.warn("quizzes_type_check constraint tripped for 'live'. Using fallback type='master' with isLive: true");
+                const fallbackPayload = {
+                    ...quizPayload,
+                    type: 'master',
+                    settings: {
+                        ...quizPayload.settings,
+                        isLive: true
+                    }
+                };
+                if (quizId) {
+                    result = await supabase.from('quizzes').update(fallbackPayload).eq('id', quizId).select().single();
+                } else {
+                    result = await supabase.from('quizzes').insert(fallbackPayload).select().single();
+                }
+            }
+
             if (result.error) throw result.error;
             const savedQuiz = result.data;
 
@@ -337,12 +355,11 @@ export default function QuizCreate() {
                                 onClick={async () => {
                                     try {
                                         setIsSaving(true);
-                                        // Force status to 'draft' or 'scheduled' if we had that logic, 
-                                        // but for now just save and redirect
                                         await saveMutation.mutateAsync({ ...quizData, questions });
                                         navigate('/faculty/live');
-                                    } catch (error) {
+                                    } catch (error: any) {
                                         console.error("Failed to save:", error);
+                                        alert("Failed to save quiz: " + (error?.message || "Please check required fields."));
                                         setIsSaving(false);
                                     }
                                 }}
@@ -354,11 +371,11 @@ export default function QuizCreate() {
                                 onClick={async () => {
                                     try {
                                         setIsSaving(true);
-                                        // In a real app, this might trigger a specific 'live' status
                                         await saveMutation.mutateAsync({ ...quizData, questions });
                                         navigate('/faculty/live');
-                                    } catch (error) {
+                                    } catch (error: any) {
                                         console.error("Failed to publish:", error);
+                                        alert("Failed to publish quiz: " + (error?.message || "Please check required fields."));
                                         setIsSaving(false);
                                     }
                                 }}

@@ -200,7 +200,7 @@ export default function LiveTests() {
                     .from('quizzes')
                     .select('*')
                     .eq('created_by', user.id)
-                    .eq('type', 'live')
+                    .or('type.eq.live,settings->>isLive.eq.true')
                     .order('created_at', { ascending: false });
 
                 if (error) {
