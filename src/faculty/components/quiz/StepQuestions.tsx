@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download, PlusCircle, MinusCircle, Key, Sparkles } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download, PlusCircle, MinusCircle, Key, Sparkles, Play, CheckCircle2, Code2 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression';
@@ -12,6 +12,7 @@ import { cn } from '../../lib/utils';
 import type { Question } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import { ExistingQuizBrowser } from './ExistingQuizBrowser';
+import { runTestCases, ExecutionResponse } from '../../../shared/utils/codeExecution';
 
 export function StepQuestions({ questions, setQuestions, quizId, quizData, data }: any) {
     const qMeta = quizData || data || {};
@@ -22,6 +23,202 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
     const [view, setView] = useState<'list' | 'import' | 'existing'>('list');
     const [error, setError] = useState<string | null>(null);
     const [uploading, setUploading] = useState<{ [key: string]: boolean }>({});
+    const [testingCode, setTestingCode] = useState<{ [qIndex: number]: boolean }>({});
+    const [codeTestResults, setCodeTestResults] = useState<{ [qIndex: number]: ExecutionResponse | null }>({});
+
+    const ML_PRESETS = [
+        {
+            name: 'Mean Squared Error (MSE)',
+            description: 'Calculate MSE between actual and predicted float vectors',
+            stem: '### Machine Learning: Mean Squared Error (MSE)\nCalculate the Mean Squared Error (MSE) between actual values and predicted values.\n\n**Input Format:**\n- Line 1: Space-separated float values representing actual values $y$\n- Line 2: Space-separated float values representing predicted values $\\hat{y}$\n\n**Output Format:**\n- Print the MSE rounded to 4 decimal places.',
+            starterCode: `# Python 3 - Mean Squared Error (MSE)
+import sys
+
+def calculate_mse():
+    lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+    if len(lines) < 2:
+        return
+    
+    y = [float(x) for x in lines[0].split()]
+    y_pred = [float(x) for x in lines[1].split()]
+    
+    mse = sum((actual - pred) ** 2 for actual, pred in zip(y, y_pred)) / len(y)
+    print(f"{mse:.4f}")
+
+if __name__ == '__main__':
+    calculate_mse()`,
+            driverCode: '',
+            testCases: [
+                { input: '3.0 5.0 2.5 7.0\n2.5 5.0 4.0 8.0', output: '0.8750' },
+                { input: '1.0 2.0 3.0\n1.0 2.0 3.0', output: '0.0000' },
+                { input: '10.5 20.0 30.5\n12.0 18.5 32.0', output: '2.2500' }
+            ]
+        },
+        {
+            name: 'Sigmoid Activation',
+            description: 'Compute Sigmoid 1 / (1 + exp(-z)) for logistic regression',
+            stem: '### Machine Learning: Sigmoid Activation Function\nImplement the Sigmoid activation function $\\sigma(z) = \\frac{1}{1 + e^{-z}}$ for input values $z$.\n\n**Input Format:**\n- Single line of space-separated float numbers representing $z$.\n\n**Output Format:**\n- Space-separated sigmoid values rounded to 4 decimal places.',
+            starterCode: `# Python 3 - Sigmoid Activation
+import sys
+import math
+
+def sigmoid():
+    data = sys.stdin.read().strip()
+    if not data:
+        return
+    
+    values = [float(x) for x in data.split()]
+    results = [1.0 / (1.0 + math.exp(-z)) for z in values]
+    print(" ".join(f"{r:.4f}" for r in results))
+
+if __name__ == '__main__':
+    sigmoid()`,
+            driverCode: '',
+            testCases: [
+                { input: '0', output: '0.5000' },
+                { input: '-2 0 2', output: '0.1192 0.5000 0.8808' },
+                { input: '5 -5', output: '0.9933 0.0067' }
+            ]
+        },
+        {
+            name: 'Euclidean Distance (KNN)',
+            description: 'Calculate Euclidean distance between two n-dimensional vectors',
+            stem: '### Machine Learning: Euclidean Distance\nCompute Euclidean distance between two vectors $p$ and $q$ in $n$-dimensional feature space.\n\n**Input Format:**\n- Line 1: Space-separated float values representing vector $p$\n- Line 2: Space-separated float values representing vector $q$\n\n**Output Format:**\n- Print the Euclidean distance rounded to 4 decimal places.',
+            starterCode: `# Python 3 - Euclidean Distance
+import sys
+import math
+
+def euclidean_distance():
+    lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+    if len(lines) < 2:
+        return
+    
+    p = [float(x) for x in lines[0].split()]
+    q = [float(x) for x in lines[1].split()]
+    
+    dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(p, q)))
+    print(f"{dist:.4f}")
+
+if __name__ == '__main__':
+    euclidean_distance()`,
+            driverCode: '',
+            testCases: [
+                { input: '1 2 3\n4 6 8', output: '7.0711' },
+                { input: '0 0\n3 4', output: '5.0000' },
+                { input: '2.5 1.0\n2.5 1.0', output: '0.0000' }
+            ]
+        },
+        {
+            name: 'Linear Regression Inference',
+            description: 'Predict y = w * x + b for given weights and features',
+            stem: '### Machine Learning: Linear Regression Inference\nGiven weight $w$ and bias $b$, compute predictions $\\hat{y} = w \\cdot x + b$ for feature inputs $x$.\n\n**Input Format:**\n- Line 1: Weight $w$ and bias $b$ (two float numbers)\n- Line 2: Space-separated feature inputs $x$\n\n**Output Format:**\n- Space-separated predictions rounded to 2 decimal places.',
+            starterCode: `# Python 3 - Linear Regression
+import sys
+
+def predict():
+    lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+    if len(lines) < 2:
+        return
+    
+    w, b = [float(v) for v in lines[0].split()]
+    x_vals = [float(v) for v in lines[1].split()]
+    
+    preds = [w * x + b for x in x_vals]
+    print(" ".join(f"{p:.2f}" for p in preds))
+
+if __name__ == '__main__':
+    predict()`,
+            driverCode: '',
+            testCases: [
+                { input: '2.5 1.0\n1 2 3 4', output: '3.50 6.00 8.50 11.00' },
+                { input: '-1.5 0.0\n2 4 -2', output: '-3.00 -6.00 3.00' },
+                { input: '0.0 5.0\n10 20 30', output: '5.00 5.00 5.00' }
+            ]
+        },
+        {
+            name: 'Classification Accuracy',
+            description: 'Compute classification accuracy percentage given true and predicted labels',
+            stem: '### Machine Learning: Classification Accuracy\nCalculate the classification accuracy score given ground truth binary labels and predicted binary labels.\n\n**Input Format:**\n- Line 1: Space-separated true binary labels (0 or 1)\n- Line 2: Space-separated predicted binary labels (0 or 1)\n\n**Output Format:**\n- Print accuracy percentage rounded to 2 decimal places (e.g. 83.33%).',
+            starterCode: `# Python 3 - Classification Accuracy
+import sys
+
+def accuracy():
+    lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+    if len(lines) < 2:
+        return
+    
+    y_true = [int(x) for x in lines[0].split()]
+    y_pred = [int(x) for x in lines[1].split()]
+    
+    correct = sum(1 for yt, yp in zip(y_true, y_pred) if yt == yp)
+    acc = (correct / len(y_true)) * 100
+    print(f"{acc:.2f}%")
+
+if __name__ == '__main__':
+    accuracy()`,
+            driverCode: '',
+            testCases: [
+                { input: '1 0 1 1 0 1\n1 0 1 0 0 1', output: '83.33%' },
+                { input: '1 1 0 0\n1 1 0 0', output: '100.00%' },
+                { input: '1 0 1 0\n0 1 0 1', output: '0.00%' }
+            ]
+        }
+    ];
+
+    const DEFAULT_CODE_SNIPPET = {
+        language: 'python',
+        allowedLanguages: ['python'],
+        starterCode: `# Python 3 - Machine Learning Template
+import sys
+import math
+
+def solve():
+    # Read input from stdin
+    lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+    if not lines:
+        return
+    
+    # Process inputs
+    print("Output result")
+
+if __name__ == "__main__":
+    solve()`,
+        driverCode: '',
+        testCases: [
+            { input: '1 2 3', output: 'Output result' }
+        ]
+    };
+
+    const handleTestQuestionCode = async (index: number, q: Question) => {
+        const correct = (q.correct as any) || {};
+        const lang = correct.language || 'python';
+        const starterCode = correct.starterCode || '';
+        const driverCode = correct.driverCode || '';
+        const testCases = correct.testCases || [];
+
+        setTestingCode(prev => ({ ...prev, [index]: true }));
+        try {
+            const res = await runTestCases({
+                language: lang,
+                studentCode: starterCode,
+                driverCode,
+                testCases,
+            });
+            setCodeTestResults(prev => ({ ...prev, [index]: res }));
+        } catch (err: any) {
+            setCodeTestResults(prev => ({
+                ...prev,
+                [index]: {
+                    allPassed: false,
+                    combinedStdout: '',
+                    combinedStderr: err.message || 'Error running test',
+                    results: [],
+                },
+            }));
+        } finally {
+            setTestingCode(prev => ({ ...prev, [index]: false }));
+        }
+    };
 
     // Bulk Import State
     const [zipFile, setZipFile] = useState<File | null>(null);
@@ -497,7 +694,7 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
             stem: '',
             weight: 1,
             options: activeType === 'mcq' ? ['', '', '', ''] : activeType === 'true_false' ? ['True', 'False'] : undefined,
-            correct: activeType === 'mcq' || activeType === 'true_false' ? 0 : activeType === 'msq' ? [] : activeType === 'code' ? { language: 'python', starterCode: '', testCases: [{ input: '', output: '' }] } : '',
+            correct: activeType === 'mcq' || activeType === 'true_false' ? 0 : activeType === 'msq' ? [] : activeType === 'code' ? { ...DEFAULT_CODE_SNIPPET } : '',
         };
         setQuestions([...questions, newQuestion]);
     };
@@ -771,7 +968,7 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
                                                                 : newType === 'true_false'
                                                                     ? ['True', 'False']
                                                                     : undefined,
-                                                            correct: newType === 'code' ? { language: 'python', starterCode: '', testCases: [{ input: '', output: '' }] } : newType === 'msq' ? [] : 0
+                                                            correct: newType === 'code' ? { ...DEFAULT_CODE_SNIPPET } : newType === 'msq' ? [] : 0
                                                         });
                                                     }}
                                                 >
@@ -779,7 +976,7 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
                                                     <option value="msq">Multi Correct (MSQ)</option>
                                                     <option value="true_false">True / False</option>
                                                     <option value="range">Range Answer</option>
-                                                    <option value="code">Code Snippet</option>
+                                                    <option value="code">Python ML Code Challenge</option>
                                                 </select>
                                             </div>
                                             <div className="w-24">
@@ -878,28 +1075,70 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
                                         )}
 
                                         {q.type === 'code' && (
-                                            <div className="space-y-4 p-4 border rounded-lg bg-surface/50 border-neutral-300 dark:border-neutral-600">
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <label className="text-xs font-medium text-text-secondary">Default Language</label>
+                                            <div className="space-y-4 p-4 border rounded-xl bg-surface/60 border-neutral-300 dark:border-neutral-700 shadow-sm">
+                                                {/* ML Presets Quick Bar */}
+                                                <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-surface border border-indigo-500/30 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs">
+                                                            <Sparkles className="h-4 w-4" />
+                                                            <span>ML Presets (Python 3)</span>
+                                                        </div>
+                                                        <span className="text-[10px] text-muted">Click any preset to auto-fill question & test cases</span>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {ML_PRESETS.map((preset, pIdx) => (
+                                                            <button
+                                                                key={pIdx}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    updateQuestion(index, {
+                                                                        stem: preset.stem,
+                                                                        correct: {
+                                                                            language: 'python',
+                                                                            allowedLanguages: ['python'],
+                                                                            starterCode: preset.starterCode,
+                                                                            driverCode: preset.driverCode,
+                                                                            testCases: preset.testCases,
+                                                                        }
+                                                                    });
+                                                                }}
+                                                                className="px-2.5 py-1 text-xs rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 transition-all font-medium flex items-center gap-1.5 active:scale-95 shadow-sm"
+                                                                title={preset.description}
+                                                            >
+                                                                <Code2 className="h-3 w-3" />
+                                                                {preset.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-xs font-semibold text-text flex items-center justify-between">
+                                                            <span>Language</span>
+                                                            <span className="text-[10px] text-emerald-500 font-mono font-medium">Judge0 CE Powered</span>
+                                                        </label>
                                                         <select
-                                                            className="h-10 w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-2"
+                                                            className="h-10 w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-3 font-medium"
                                                             value={(q.correct as any)?.language || 'python'}
                                                             onChange={(e) => {
                                                                 const current = (q.correct as any) || { starterCode: '', testCases: [] };
                                                                 updateQuestion(index, { correct: { ...current, language: e.target.value } });
                                                             }}
                                                         >
-                                                            <option value="python">Python</option>
-                                                            <option value="javascript">JavaScript</option>
-                                                            <option value="cpp">C++</option>
-                                                            <option value="c">C</option>
-                                                            <option value="java">Java</option>
+                                                            <option value="python">Python 3 (ML Standard: math, sys, statistics, json)</option>
+                                                            <option value="javascript">JavaScript (Node.js)</option>
+                                                            <option value="cpp">C++ (GCC)</option>
+                                                            <option value="c">C (GCC)</option>
+                                                            <option value="java">Java (OpenJDK)</option>
                                                         </select>
+                                                        <p className="text-[10px] text-muted">
+                                                            For ML tests, Python 3 is the standard environment. Includes full standard library.
+                                                        </p>
                                                     </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-xs font-medium text-text-secondary">Allowed Languages (Optional)</label>
-                                                        <div className="flex flex-wrap gap-2">
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-xs font-semibold text-text">Allowed Languages (Optional)</label>
+                                                        <div className="flex flex-wrap gap-2 pt-1">
                                                             {['python', 'javascript', 'cpp', 'c', 'java'].map(lang => {
                                                                 const currentCorrect = (q.correct as any) || {};
                                                                 const allowed = currentCorrect.allowedLanguages || [];
@@ -908,6 +1147,7 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
                                                                 return (
                                                                     <button
                                                                         key={lang}
+                                                                        type="button"
                                                                         onClick={() => {
                                                                             let newAllowed;
                                                                             if (isAllowed) {
@@ -917,8 +1157,6 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
                                                                             }
 
                                                                             const updates: any = { allowedLanguages: newAllowed };
-
-                                                                            // If we have allowed languages, and the current default is NOT in them, switch default
                                                                             if (newAllowed.length > 0 && !newAllowed.includes(currentCorrect.language || 'python')) {
                                                                                 updates.language = newAllowed[0];
                                                                             }
@@ -926,9 +1164,9 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
                                                                             updateQuestion(index, { correct: { ...currentCorrect, ...updates } });
                                                                         }}
                                                                         className={cn(
-                                                                            "px-2 py-1 text-xs rounded border transition-colors capitalize",
+                                                                            "px-2.5 py-1 text-xs rounded-lg border transition-colors capitalize font-medium",
                                                                             isAllowed
-                                                                                ? "bg-primary text-white border-primary"
+                                                                                ? "bg-primary text-white border-primary shadow-sm"
                                                                                 : "bg-surface text-muted border-neutral-200 dark:border-neutral-700 hover:border-primary/50"
                                                                         )}
                                                                     >
@@ -937,15 +1175,18 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
                                                                 );
                                                             })}
                                                         </div>
-                                                        <p className="text-[10px] text-muted">If empty, only Default Language is allowed.</p>
+                                                        <p className="text-[10px] text-muted">Leave empty to restrict to Python only.</p>
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-2">
-                                                    <label className="text-xs font-medium text-text-secondary">Starter Code</label>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-xs font-semibold text-text flex items-center justify-between">
+                                                        <span>Starter Code / Template</span>
+                                                        <span className="text-[10px] text-muted">Students start with this code</span>
+                                                    </label>
                                                     <textarea
-                                                        className="w-full h-32 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-3 font-mono text-sm"
-                                                        placeholder="# Write your code here"
+                                                        className="w-full h-36 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-3 font-mono text-xs leading-relaxed resize-y focus:border-primary focus:outline-none"
+                                                        placeholder="# Write starter code or function template here"
                                                         value={(q.correct as any)?.starterCode || ''}
                                                         onChange={(e) => {
                                                             const current = (q.correct as any) || { language: 'python', testCases: [] };
@@ -954,95 +1195,182 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data 
                                                     />
                                                 </div>
 
-                                                <div className="space-y-2">
-                                                    <label className="text-xs font-medium text-text-secondary">Hidden Driver Code (Appended to Student Code)</label>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-xs font-semibold text-text flex items-center justify-between">
+                                                        <span>Hidden Driver Code (Optional)</span>
+                                                        <span className="text-[10px] text-muted">Appended to student's code to run tests</span>
+                                                    </label>
                                                     <textarea
-                                                        className="w-full h-32 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-3 font-mono text-sm"
-                                                        placeholder={`# Example Driver Code (Python):
-import sys
-import json
-
-# Read all input and split by lines, removing empty ones
-lines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
-
-if len(lines) < 2:
-    print("Error: Invalid Input Format")
-    sys.exit(1)
-
-# Parse inputs
-nums = json.loads(lines[0])
-target = int(lines[1])
-
-# Call student's function
-s = Solution()
-result = s.twoSum(nums, target)
-print(result)`}
+                                                        className="w-full h-24 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-3 font-mono text-xs leading-relaxed resize-y focus:border-primary focus:outline-none"
+                                                        placeholder="# Hidden driver code (optional, runs after student's code)"
                                                         value={(q.correct as any)?.driverCode || ''}
                                                         onChange={(e) => {
                                                             const current = (q.correct as any) || { language: 'python', testCases: [] };
                                                             updateQuestion(index, { correct: { ...current, driverCode: e.target.value } });
                                                         }}
                                                     />
-                                                    <p className="text-[10px] text-muted">This code runs after the student's code. Use it to call their function and print the result to stdout.</p>
+                                                    <p className="text-[10px] text-muted">Optional: If your question requires students to write a class/function without handling stdin/stdout, the driver code can invoke it and print the result.</p>
                                                 </div>
 
-                                                <div className="space-y-2">
-                                                    <label className="text-xs font-medium text-text-secondary flex justify-between items-center">
-                                                        Test Cases
+                                                {/* Test Cases Header & List */}
+                                                <div className="space-y-3">
+                                                    <div className="flex justify-between items-center pb-1 border-b border-neutral-200 dark:border-neutral-700">
+                                                        <div>
+                                                            <label className="text-xs font-semibold text-text flex items-center gap-1.5">
+                                                                <span>Test Cases ({((q.correct as any)?.testCases || []).length})</span>
+                                                            </label>
+                                                            <p className="text-[10px] text-muted">Each test case tests the code with stdin input and validates stdout output.</p>
+                                                        </div>
                                                         <Button
-                                                            variant="ghost"
+                                                            variant="outline"
                                                             size="sm"
+                                                            type="button"
+                                                            className="h-8 text-xs font-medium border-dashed border-primary text-primary hover:bg-primary/10 gap-1.5"
                                                             onClick={() => {
                                                                 const current = (q.correct as any) || { language: 'python', starterCode: '', testCases: [] };
                                                                 const cases = current?.testCases || [];
                                                                 updateQuestion(index, { correct: { ...current, testCases: [...cases, { input: '', output: '' }] } });
                                                             }}
                                                         >
-                                                            <PlusCircle className="h-4 w-4 mr-1" /> Add Case
+                                                            <PlusCircle className="h-4 w-4" /> Add Test Case
                                                         </Button>
-                                                    </label>
-                                                    <div className="space-y-2">
-                                                        {((q.correct as any)?.testCases || []).map((tc: any, tcIndex: number) => (
-                                                            <div key={tcIndex} className="flex gap-2 items-start">
-                                                                <div className="grid grid-cols-2 gap-2 flex-1">
-                                                                    <textarea
-                                                                        placeholder="Input (stdin)"
-                                                                        value={tc.input}
-                                                                        onChange={(e) => {
-                                                                            const current = (q.correct as any);
-                                                                            const newCases = [...current.testCases];
-                                                                            newCases[tcIndex] = { ...tc, input: e.target.value };
-                                                                            updateQuestion(index, { correct: { ...current, testCases: newCases } });
-                                                                        }}
-                                                                        className="w-full h-20 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-2 font-mono text-xs resize-y"
-                                                                    />
-                                                                    <textarea
-                                                                        placeholder="Expected Output (stdout)"
-                                                                        value={tc.output}
-                                                                        onChange={(e) => {
-                                                                            const current = (q.correct as any);
-                                                                            const newCases = [...current.testCases];
-                                                                            newCases[tcIndex] = { ...tc, output: e.target.value };
-                                                                            updateQuestion(index, { correct: { ...current, testCases: newCases } });
-                                                                        }}
-                                                                        className="w-full h-20 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-2 font-mono text-xs resize-y"
-                                                                    />
-                                                                </div>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="text-red-500 hover:text-red-600"
-                                                                    onClick={() => {
-                                                                        const current = (q.correct as any);
-                                                                        const newCases = current.testCases.filter((_: any, i: number) => i !== tcIndex);
-                                                                        updateQuestion(index, { correct: { ...current, testCases: newCases } });
-                                                                    }}
-                                                                >
-                                                                    <MinusCircle className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        ))}
                                                     </div>
+
+                                                    {((q.correct as any)?.testCases || []).length === 0 ? (
+                                                        <div className="p-4 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 text-center text-xs text-muted">
+                                                            No test cases defined yet. Click <span className="font-semibold text-primary">"+ Add Test Case"</span> or pick an ML Preset above.
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-2.5">
+                                                            {((q.correct as any)?.testCases || []).map((tc: any, tcIndex: number) => (
+                                                                <div key={tcIndex} className="p-3 rounded-lg bg-surface border border-neutral-200 dark:border-neutral-800 flex flex-col gap-2">
+                                                                    <div className="flex items-center justify-between text-xs">
+                                                                        <span className="font-bold text-primary font-mono text-[11px]">
+                                                                            Test Case #{tcIndex + 1}
+                                                                        </span>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            type="button"
+                                                                            className="text-red-500 hover:text-red-600 h-6 px-2 text-xs"
+                                                                            onClick={() => {
+                                                                                const current = (q.correct as any);
+                                                                                const newCases = current.testCases.filter((_: any, i: number) => i !== tcIndex);
+                                                                                updateQuestion(index, { correct: { ...current, testCases: newCases } });
+                                                                            }}
+                                                                        >
+                                                                            <MinusCircle className="h-3.5 w-3.5 mr-1" /> Remove
+                                                                        </Button>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[10px] font-semibold text-text-secondary uppercase">Input (stdin)</span>
+                                                                            <textarea
+                                                                                placeholder="Example: 3.0 5.0 2.5\n2.5 5.0 4.0"
+                                                                                value={tc.input}
+                                                                                onChange={(e) => {
+                                                                                    const current = (q.correct as any);
+                                                                                    const newCases = [...current.testCases];
+                                                                                    newCases[tcIndex] = { ...tc, input: e.target.value };
+                                                                                    updateQuestion(index, { correct: { ...current, testCases: newCases } });
+                                                                                }}
+                                                                                className="w-full h-20 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-2 font-mono text-xs resize-y"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-[10px] font-semibold text-text-secondary uppercase">Expected Output (stdout)</span>
+                                                                            <textarea
+                                                                                placeholder="Example: 0.8750"
+                                                                                value={tc.output}
+                                                                                onChange={(e) => {
+                                                                                    const current = (q.correct as any);
+                                                                                    const newCases = [...current.testCases];
+                                                                                    newCases[tcIndex] = { ...tc, output: e.target.value };
+                                                                                    updateQuestion(index, { correct: { ...current, testCases: newCases } });
+                                                                                }}
+                                                                                className="w-full h-20 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text p-2 font-mono text-xs resize-y"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Interactive Code Testing Panel */}
+                                                <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700 flex flex-col gap-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs font-semibold text-text flex items-center gap-1.5">
+                                                            <Code2 className="h-4 w-4 text-primary" /> Test Python Code & Test Cases
+                                                        </span>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            disabled={testingCode[index]}
+                                                            onClick={() => handleTestQuestionCode(index, q)}
+                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs h-8 px-3"
+                                                        >
+                                                            {testingCode[index] ? (
+                                                                <>
+                                                                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Running...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Play className="h-3.5 w-3.5 mr-1.5 fill-current" /> Run Code Against Test Cases
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    </div>
+
+                                                    {codeTestResults[index] && (
+                                                        <div className="rounded-lg p-3 bg-neutral-900 border border-neutral-800 text-xs font-mono space-y-2">
+                                                            <div className="flex items-center justify-between pb-1.5 border-b border-neutral-800">
+                                                                <span className="text-neutral-400">Execution Result:</span>
+                                                                {codeTestResults[index]?.allPassed ? (
+                                                                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                                                                        <CheckCircle2 className="h-3.5 w-3.5" /> All Test Cases Passed
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-rose-400 font-bold flex items-center gap-1">
+                                                                        <X className="h-3.5 w-3.5" /> Some Test Cases Failed
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {codeTestResults[index]?.combinedStderr && (
+                                                                <div className="text-rose-400 whitespace-pre-wrap bg-rose-950/40 p-2 rounded border border-rose-900/50">
+                                                                    {codeTestResults[index]?.combinedStderr}
+                                                                </div>
+                                                            )}
+
+                                                            {codeTestResults[index]?.results && codeTestResults[index]?.results.length > 0 && (
+                                                                <div className="space-y-1.5 pt-1">
+                                                                    {codeTestResults[index]!.results.map(res => (
+                                                                        <div
+                                                                            key={res.index}
+                                                                            className={cn(
+                                                                                "p-2 rounded flex flex-col gap-1 border",
+                                                                                res.passed
+                                                                                    ? "bg-emerald-950/20 border-emerald-900/40 text-emerald-300"
+                                                                                    : "bg-rose-950/20 border-rose-900/40 text-rose-300"
+                                                                            )}
+                                                                        >
+                                                                            <div className="flex justify-between font-semibold">
+                                                                                <span>Case {res.index}:</span>
+                                                                                <span>{res.passed ? 'PASSED' : 'FAILED'}</span>
+                                                                            </div>
+                                                                            <div className="grid grid-cols-2 gap-2 text-[11px] text-neutral-300">
+                                                                                <div><span className="text-neutral-500">Input:</span> {res.input || '(empty)'}</div>
+                                                                                <div><span className="text-neutral-500">Expected:</span> {res.expected || '(empty)'}</div>
+                                                                            </div>
+                                                                            <div><span className="text-neutral-500">Got:</span> {res.actual || '(empty)'}</div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -1160,7 +1488,7 @@ print(result)`}
                                     <option value="text">Descriptive Text</option>
                                     <option value="numeric">Numeric Answer</option>
                                     <option value="range">Range Answer</option>
-                                    <option value="code">Code Snippet</option>
+                                    <option value="code">Python ML Code Challenge</option>
                                 </select>
                                 <Button size="sm" onClick={addQuestion}>
                                     <Plus className="mr-2 h-4 w-4" /> Add Question

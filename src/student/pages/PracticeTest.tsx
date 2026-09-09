@@ -10,6 +10,7 @@ import { searchVideos, VideoResult } from '../services/videoSearchService';
 import { Youtube, PlayCircle } from 'lucide-react';
 import { Calculator } from '../../shared/components/Calculator';
 import { MathText } from '../../shared/components/MathText';
+import { runTestCases } from '../../shared/utils/codeExecution';
 
 const PracticeTest = () => {
     const navigate = useNavigate();
@@ -326,10 +327,7 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
         // correct field contains the parsed JSON for code questions
         const starterCode = (q.correct as any)?.starterCode || '';
         const driverCode = (q.correct as any)?.driverCode || '';
-
         const studentCode = (userAnswers[currentQIndex] as string) || starterCode;
-        const codeToRun = driverCode ? `${studentCode}\n\n${driverCode}` : studentCode;
-
         const defaultLang = (q.correct as any)?.language || 'python';
         const language = selectedLanguages[currentQIndex] || defaultLang;
         const testCases = (q.correct as any)?.testCases || [];
@@ -338,72 +336,27 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
         setExecutionOutput(prev => ({ ...prev, [currentQIndex]: { stdout: '', stderr: '' } }));
 
         try {
-            let allPassed = true;
-            let combinedStdout = '';
-            let combinedStderr = '';
+            const result = await runTestCases({
+                language,
+                studentCode,
+                driverCode,
+                testCases,
+            });
 
-            for (const testCase of testCases) {
-                const response = await fetch('https://emkc.org/api/v2/piston/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        language: language,
-                        version: '*',
-                        files: [{ content: codeToRun }],
-                        stdin: testCase.input,
-                    }),
-                });
-
-                const result = await response.json();
-                const run = result.run;
-
-                // Normalizing Output
-                const normalize = (str: string) => str ? str.replace(/\r\n/g, '\n').trim() : '';
-
-                const output = normalize(run.stdout);
-                const expected = normalize(testCase.output);
-
-                combinedStdout += `Input: ${testCase.input} \nOutput: ${output} \nExpected: ${expected} \n\n`;
-                if (run.stderr) combinedStderr += `Error: ${run.stderr} \n`;
-
-                if (output !== expected) {
-                    allPassed = false;
-                    combinedStdout += `\n[Test Failed] Expected: "${expected}", Got: "${output}"\n`;
-                } else {
-                    combinedStdout += `\n[Test Passed]\n`;
-                }
-            }
-
-            if (testCases.length === 0) {
-                const response = await fetch('https://emkc.org/api/v2/piston/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        language: language,
-                        version: '*',
-                        files: [{ content: codeToRun }],
-                    }),
-                });
-                const result = await response.json();
-                combinedStdout = result.run.stdout;
-                combinedStderr = result.run.stderr;
-                allPassed = true;
-            }
-
-            setExecutionOutput(prev => ({ ...prev, [currentQIndex]: { stdout: combinedStdout, stderr: combinedStderr } }));
-            setCodeExecutionStatus(prev => ({ ...prev, [currentQIndex]: allPassed }));
-
-            // If all passed, mark as answered (correctly)
-            // But userAnswers just stores the code.
-            // Unlike MCQ, we don't automatically advance?
-            // Maybe we should?
-            if (allPassed) {
-                // Optional: Auto advance
-            }
-
-        } catch (err) {
-            console.error(err);
-            setExecutionOutput(prev => ({ ...prev, [currentQIndex]: { stdout: '', stderr: 'Failed to execute code.' } }));
+            setExecutionOutput(prev => ({
+                ...prev,
+                [currentQIndex]: {
+                    stdout: result.combinedStdout,
+                    stderr: result.combinedStderr,
+                },
+            }));
+            setCodeExecutionStatus(prev => ({ ...prev, [currentQIndex]: result.allPassed }));
+        } catch (err: any) {
+            console.error('Execution error:', err);
+            setExecutionOutput(prev => ({
+                ...prev,
+                [currentQIndex]: { stdout: '', stderr: err.message || 'Failed to execute code.' },
+            }));
         } finally {
             setIsExecuting(false);
         }

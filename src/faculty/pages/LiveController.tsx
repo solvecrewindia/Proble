@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
-import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause, Download } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause, Download, Code2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MathText } from '../../shared/components/MathText';
 import type { Quiz } from '../types';
@@ -68,15 +68,25 @@ export default function LiveController() {
 
                 if (questionsData) {
                     // Map DB format to Client format
-                    const mappedQuestions = questionsData.map((q: any) => ({
-                        id: q.id,
-                        quizId: id || '',
-                        type: 'mcq' as const, // Fix literal type
-                        stem: q.text,
-                        options: q.choices,
-                        correct: q.correct_answer,
-                        weight: 1
-                    }));
+                    const mappedQuestions = questionsData.map((q: any) => {
+                        let parsedCorrect = q.correct_answer;
+                        if (q.type === 'code') {
+                            try {
+                                parsedCorrect = typeof q.correct_answer === 'string' ? JSON.parse(q.correct_answer) : q.correct_answer;
+                            } catch {
+                                parsedCorrect = q.correct_answer;
+                            }
+                        }
+                        return {
+                            id: q.id,
+                            quizId: id || '',
+                            type: (q.type || 'mcq') as any,
+                            stem: q.text,
+                            options: q.choices,
+                            correct: parsedCorrect,
+                            weight: 1
+                        };
+                    });
 
                     setQuiz({ ...quizData, questions: mappedQuestions });
 
@@ -131,6 +141,7 @@ export default function LiveController() {
 
     const [participation, setParticipation] = useState(0);
     const [onlineCount, setOnlineCount] = useState(0);
+    const [codeSubmissionStats, setCodeSubmissionStats] = useState<{ passed: number; failed: number; total: number }>({ passed: 0, failed: 0, total: 0 });
 
     const fetchRealStats = async (questionId: string) => {
         if (!id) return;
@@ -146,16 +157,33 @@ export default function LiveController() {
 
             const newStats: Record<string, number> = {};
             let answeredCount = 0;
+            let codePassed = 0;
+            let codeFailed = 0;
 
             attempts.forEach(attempt => {
                 const answers = attempt.answers || {};
-                const selectedOption = answers[questionId];
-                if (typeof selectedOption === 'number') {
-                    newStats[selectedOption] = (newStats[selectedOption] || 0) + 1;
-                    answeredCount++;
+                const ans = answers[questionId];
+                if (ans !== undefined && ans !== null) {
+                    if (typeof ans === 'number') {
+                        newStats[ans] = (newStats[ans] || 0) + 1;
+                        answeredCount++;
+                    } else if (typeof ans === 'object') {
+                        if (ans.type === 'code' || ans.code !== undefined) {
+                            answeredCount++;
+                            if (ans.passed) {
+                                codePassed++;
+                            } else {
+                                codeFailed++;
+                            }
+                        } else if (typeof ans.option === 'number') {
+                            newStats[ans.option] = (newStats[ans.option] || 0) + 1;
+                            answeredCount++;
+                        }
+                    }
                 }
             });
             setStats(newStats);
+            setCodeSubmissionStats({ passed: codePassed, failed: codeFailed, total: answeredCount });
 
             // Calculate Participation
             // If total attempts (participants) is 0, participation is 0.
@@ -422,46 +450,96 @@ export default function LiveController() {
 
                             <MathText text={currentQuestion.stem} className="text-2xl font-bold text-text mb-6" as="h2" />
 
-                            {/* Options Visualization */}
-                            <div className="space-y-3 flex-1 overflow-y-auto">
-                                {currentQuestion.options?.map((option, idx) => {
-                                    const voteCount = stats[idx] || 0;
-                                    const percentage = Math.round((voteCount / totalVotes) * 100);
-
-                                    return (
-                                        <div key={idx} className="relative group">
-                                            {/* Background Bar */}
-                                            {viewMode === 'leaderboard' && (
-                                                <div
-                                                    className="absolute inset-0 bg-primary/10 rounded-lg transition-all duration-1000 ease-out"
-                                                    style={{ width: `${percentage}%` }}
-                                                />
-                                            )}
-
-                                            <div className={cn(
-                                                "relative p-4 rounded-lg border-2 flex justify-between items-center transition-all",
-                                                viewMode === 'leaderboard'
-                                                    ? "border-transparent"
-                                                    : "border-neutral-200 dark:border-neutral-800"
-                                            )}>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center font-bold text-sm text-muted">
-                                                        {String.fromCharCode(65 + idx)}
-                                                    </div>
-                                                    <MathText text={option} className="font-medium text-text" />
-                                                </div>
-
-                                                {viewMode === 'leaderboard' && (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-primary">{percentage}%</span>
-                                                        <span className="text-xs text-muted">({voteCount})</span>
-                                                    </div>
-                                                )}
-                                            </div>
+                            {/* Options or Code Visualization */}
+                            {currentQuestion.type === 'code' ? (
+                                <div className="space-y-4 flex-1 overflow-y-auto">
+                                    <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-indigo-400 font-bold">
+                                            <Code2 className="w-5 h-5" />
+                                            <span>Python 3 (ML / Scripting) Coding Challenge</span>
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                        <span className="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-mono">
+                                            {((currentQuestion.correct as any)?.testCases || []).length} Test Cases Defined
+                                        </span>
+                                    </div>
+
+                                    {/* Live Submission Progress Bar & Metrics */}
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                                            <div className="text-2xl font-bold text-emerald-400">{codeSubmissionStats.passed}</div>
+                                            <div className="text-xs text-emerald-300 font-medium">Passed All Cases</div>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-center">
+                                            <div className="text-2xl font-bold text-rose-400">{codeSubmissionStats.failed}</div>
+                                            <div className="text-xs text-rose-300 font-medium">Failed Cases</div>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-center">
+                                            <div className="text-2xl font-bold text-indigo-400">{codeSubmissionStats.total} / {onlineCount}</div>
+                                            <div className="text-xs text-indigo-300 font-medium">Submitted</div>
+                                        </div>
+                                    </div>
+
+                                    {(currentQuestion.correct as any)?.starterCode && (
+                                        <div className="rounded-xl overflow-hidden border border-neutral-700 bg-[#1e1e1e] p-4 text-xs font-mono text-emerald-300">
+                                            <div className="text-neutral-500 mb-1 font-semibold uppercase text-[10px]">Starter Code:</div>
+                                            <pre className="whitespace-pre-wrap max-h-40 overflow-y-auto">{(currentQuestion.correct as any).starterCode}</pre>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        <span className="text-xs font-semibold text-muted">Test Cases:</span>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            {((currentQuestion.correct as any)?.testCases || []).map((tc: any, i: number) => (
+                                                <div key={i} className="p-3 rounded-lg bg-surface border border-neutral-200 dark:border-neutral-800 text-xs font-mono">
+                                                    <div className="text-primary font-bold mb-1">Case {i + 1}</div>
+                                                    <div><span className="text-muted">Input:</span> {tc.input || '(none)'}</div>
+                                                    <div><span className="text-muted">Expected:</span> {tc.output}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 flex-1 overflow-y-auto">
+                                    {currentQuestion.options?.map((option, idx) => {
+                                        const voteCount = stats[idx] || 0;
+                                        const percentage = Math.round((voteCount / totalVotes) * 100);
+
+                                        return (
+                                            <div key={idx} className="relative group">
+                                                {/* Background Bar */}
+                                                {viewMode === 'leaderboard' && (
+                                                    <div
+                                                        className="absolute inset-0 bg-primary/10 rounded-lg transition-all duration-1000 ease-out"
+                                                        style={{ width: `${percentage}%` }}
+                                                    />
+                                                )}
+
+                                                <div className={cn(
+                                                    "relative p-4 rounded-lg border-2 flex justify-between items-center transition-all",
+                                                    viewMode === 'leaderboard'
+                                                        ? "border-transparent"
+                                                        : "border-neutral-200 dark:border-neutral-800"
+                                                )}>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center font-bold text-sm text-muted">
+                                                            {String.fromCharCode(65 + idx)}
+                                                        </div>
+                                                        <MathText text={option} className="font-medium text-text" />
+                                                    </div>
+
+                                                    {viewMode === 'leaderboard' && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-primary">{percentage}%</span>
+                                                            <span className="text-xs text-muted">({voteCount})</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
 
                         </CardContent>
                     </Card>

@@ -9,8 +9,9 @@ import { cn } from '../../lib/utils';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { MathText } from '../../shared/components/MathText';
 import { CHARACTERS, getCharacterSrc } from '../../shared/utils/characters';
-import { User, Clock, CheckCircle, Loader2, WifiOff } from 'lucide-react';
+import { User, Clock, CheckCircle, Loader2, WifiOff, Play, RotateCcw, Code2, CheckCircle2, X } from 'lucide-react';
 import gameBgVideo from '../../characters/videoplayback (1).mp4';
+import { runTestCases, ExecutionResponse } from '../../shared/utils/codeExecution';
 
 const GAME_COLORS = [
     "bg-red-500 hover:bg-red-600 border-red-700 shadow-[0_6px_0_rgb(185,28,28)] active:translate-y-1.5 active:shadow-none text-white",
@@ -41,6 +42,12 @@ export default function StudentLiveQuiz() {
     const [participants, setParticipants] = useState<any[]>([]);
     const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
     const [quizTitle, setQuizTitle] = useState('');
+
+    // Code Question State (Live ML / Python Code challenges)
+    const [codeAnswers, setCodeAnswers] = useState<Record<string, string>>({});
+    const [codeExecutionResult, setCodeExecutionResult] = useState<Record<string, ExecutionResponse | null>>({});
+    const [codePassedStatus, setCodePassedStatus] = useState<Record<string, boolean>>({});
+    const [isExecutingCode, setIsExecutingCode] = useState(false);
 
     // Name prompt state
     const [nameInput, setNameInput] = useState('');
@@ -157,13 +164,24 @@ export default function StudentLiveQuiz() {
                     .eq('quiz_id', id)
                     .order('created_at', { ascending: true });
 
-                const mappedQuestions = questionsData?.map((q: any) => ({
-                    id: q.id,
-                    type: 'mcq',
-                    stem: q.text,
-                    options: q.choices,
-                    correct: q.correct_answer,
-                })) || [];
+                const mappedQuestions = questionsData?.map((q: any) => {
+                    const isCode = q.type === 'code';
+                    let parsedCorrect = q.correct_answer;
+                    if (isCode) {
+                        try {
+                            parsedCorrect = typeof q.correct_answer === 'string' ? JSON.parse(q.correct_answer) : q.correct_answer;
+                        } catch {
+                            parsedCorrect = q.correct_answer;
+                        }
+                    }
+                    return {
+                        id: q.id,
+                        type: q.type || 'mcq',
+                        stem: q.text,
+                        options: Array.isArray(q.choices) ? q.choices.map((c: any) => typeof c === 'object' ? c.text : c) : (q.choices || []),
+                        correct: parsedCorrect,
+                    };
+                }) || [];
                 setQuestions(mappedQuestions);
             }
 
@@ -209,11 +227,21 @@ export default function StudentLiveQuiz() {
                     const savedRecord = savedAnswers[currentQId];
 
                     if (savedRecord !== undefined && savedRecord !== null) {
-                        const savedOption = typeof savedRecord === 'object' ? savedRecord.option : savedRecord;
-                        if (typeof savedOption === 'number') {
-                            // Only set if we haven't already selected something (prevents overwriting user's unsaved selection on pollen)
-                            setSelectedOption(prev => prev === null ? savedOption : prev);
+                        if (typeof savedRecord === 'object' && savedRecord?.type === 'code') {
+                            if (savedRecord.code) {
+                                setCodeAnswers(prev => ({ ...prev, [currentQId]: savedRecord.code }));
+                            }
+                            if (savedRecord.passed !== undefined) {
+                                setCodePassedStatus(prev => ({ ...prev, [currentQId]: Boolean(savedRecord.passed) }));
+                            }
                             setIsSubmitted(true);
+                        } else {
+                            const savedOption = typeof savedRecord === 'object' ? savedRecord.option : savedRecord;
+                            if (typeof savedOption === 'number') {
+                                // Only set if we haven't already selected something (prevents overwriting user's unsaved selection on pollen)
+                                setSelectedOption(prev => prev === null ? savedOption : prev);
+                                setIsSubmitted(true);
+                            }
                         }
                     }
                 }
@@ -440,8 +468,48 @@ export default function StudentLiveQuiz() {
         }
     };
 
+    const handleRunLiveCode = async () => {
+        const q = questions[currentQuestionIndex];
+        if (!q || q.type !== 'code' || isExecutingCode) return;
+
+        const qId = q.id;
+        const currentCode = codeAnswers[qId] ?? q.correct?.starterCode ?? '';
+        const driverCode = q.correct?.driverCode || '';
+        const testCases = q.correct?.testCases || [];
+
+        setIsExecutingCode(true);
+        try {
+            const res = await runTestCases({
+                language: 'python', // Strictly Python for ML
+                studentCode: currentCode,
+                driverCode,
+                testCases,
+            });
+            setCodeExecutionResult(prev => ({ ...prev, [qId]: res }));
+            setCodePassedStatus(prev => ({ ...prev, [qId]: res.allPassed }));
+        } catch (err: any) {
+            console.error("Execution error in live quiz:", err);
+            setCodeExecutionResult(prev => ({
+                ...prev,
+                [qId]: {
+                    allPassed: false,
+                    combinedStdout: '',
+                    combinedStderr: err.message || 'Failed to execute code.',
+                    results: [],
+                }
+            }));
+            setCodePassedStatus(prev => ({ ...prev, [qId]: false }));
+        } finally {
+            setIsExecutingCode(false);
+        }
+    };
+
     const handleSubmitAnswer = async () => {
-        if (selectedOption === null || !user || !id) return;
+        const currentQ = questions[currentQuestionIndex];
+        if (!currentQ || !user || !id) return;
+
+        const isCodeQ = currentQ.type === 'code';
+        if (!isCodeQ && selectedOption === null) return;
 
         setIsSubmitted(true);
 
@@ -455,20 +523,30 @@ export default function StudentLiveQuiz() {
                 .single();
 
             const currentAnswers = attempt?.answers || {};
-            const questionId = questions[currentQuestionIndex].id;
+            const questionId = currentQ.id;
 
             let pointsForThisQ = 0;
-            if (isGameMode) {
+            if (isCodeQ) {
+                const isPassed = Boolean(codePassedStatus[questionId]);
+                if (isPassed) {
+                    pointsForThisQ = 500 + Math.round((timeLeft || 0) * 8.5);
+                }
+            } else if (isGameMode) {
                 // Check if correct exactly now to decide points
-                const q = questions[currentQuestionIndex];
-                const isCorrect = (q.correct === q.options[selectedOption] || String(q.correct) === String(selectedOption) || q.correct === selectedOption);
+                const isCorrect = (
+                    currentQ.correct === currentQ.options?.[selectedOption!] ||
+                    String(currentQ.correct) === String(selectedOption) ||
+                    currentQ.correct === selectedOption
+                );
                 if (isCorrect) {
-                     // e.g. 500 base + remaining time bonus (assuming roughly 60s max = +500 points)
-                     pointsForThisQ = 500 + Math.round((timeLeft || 0) * 8.5); 
+                    pointsForThisQ = 500 + Math.round((timeLeft || 0) * 8.5);
                 }
             }
 
-            const answerPayload = isGameMode ? { option: selectedOption, points: pointsForThisQ } : selectedOption;
+            const currentCode = codeAnswers[questionId] ?? currentQ.correct?.starterCode ?? '';
+            const answerPayload = isCodeQ
+                ? { type: 'code', code: currentCode, passed: Boolean(codePassedStatus[questionId]), points: pointsForThisQ }
+                : (isGameMode ? { option: selectedOption, points: pointsForThisQ } : selectedOption);
 
             const newAnswers = {
                 ...currentAnswers,
@@ -482,20 +560,28 @@ export default function StudentLiveQuiz() {
             questions.forEach((q) => {
                 const answerRecord = newAnswers[q.id];
                 if (answerRecord !== undefined && answerRecord !== null) {
-                    const isObject = typeof answerRecord === 'object';
-                    const answer = isObject ? answerRecord.option : answerRecord;
+                    if (q.type === 'code') {
+                        const isCodePassed = typeof answerRecord === 'object' && answerRecord !== null && Boolean(answerRecord.passed);
+                        if (isCodePassed) {
+                            totalCorrect++;
+                            cumulativeGamePoints += (answerRecord.points || 0);
+                        }
+                    } else {
+                        const isObject = typeof answerRecord === 'object';
+                        const answer = isObject ? answerRecord.option : answerRecord;
 
-                    // Check if answer matches correct_answer
-                    const isCorrect = (
-                        q.correct === q.options[answer] ||
-                        String(q.correct) === String(answer) ||
-                        q.correct === answer
-                    );
-                    if (isCorrect) {
-                        totalCorrect++;
-                    }
-                    if (isObject) {
-                        cumulativeGamePoints += (answerRecord.points || 0);
+                        // Check if answer matches correct_answer
+                        const isCorrect = (
+                            q.correct === q.options?.[answer] ||
+                            String(q.correct) === String(answer) ||
+                            q.correct === answer
+                        );
+                        if (isCorrect) {
+                            totalCorrect++;
+                        }
+                        if (isObject) {
+                            cumulativeGamePoints += (answerRecord.points || 0);
+                        }
                     }
                 }
             });
@@ -950,65 +1036,210 @@ export default function StudentLiveQuiz() {
                     {/* Question Text */}
                     <MathText text={currentQuestion.stem} className={cn("text-xl md:text-2xl font-semibold leading-relaxed", isGameMode ? "text-white" : "text-text")} as="h2" />
 
-                    {/* Options */}
-                    <div className="flex flex-col gap-3">
-                        {currentQuestion.options?.map((option: string, idx: number) => {
-                            const isSelected = selectedOption === idx;
-                            // Check similarity if options are strings or indices. Assuming strings based on earlier context.
-                            const isCorrectCheck = viewMode === 'results' && (currentQuestion.correct === option || String(currentQuestion.correct) === String(idx) || currentQuestion.correct === idx);
-
-                            let stateStyles = isGameMode 
-                                ? GAME_COLORS[idx % GAME_COLORS.length] 
-                                : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900";
-
-                            if (viewMode === 'results') {
-                                if (isCorrectCheck) {
-                                    stateStyles = "border-green-500 bg-green-500 text-white shadow-[0_4px_0_rgb(21,128,61)]";
-                                } else if (isSelected && !isCorrectCheck) {
-                                    stateStyles = "border-red-500 bg-red-500 text-white shadow-[0_4px_0_rgb(185,28,28)] opacity-70";
-                                } else {
-                                    stateStyles = isGameMode ? stateStyles + " opacity-30 grayscale" : "opacity-50 grayscale";
-                                }
-                            } else if (isSelected && !isGameMode) {
-                                stateStyles = "border-primary bg-primary/5 shadow-md shadow-primary/10";
-                            } else if (isSelected && isGameMode) {
-                                stateStyles = stateStyles + " ring-4 ring-white ring-offset-4 ring-offset-indigo-950 scale-[1.02] transform transition-transform";
-                            } else if (isLocked && !isSelected) {
-                                stateStyles = isGameMode ? stateStyles + " opacity-50 grayscale cursor-not-allowed" : "opacity-60 cursor-not-allowed";
-                            }
-
-                            return (
+                    {/* Code Question UI or MCQ Options */}
+                    {currentQuestion.type === 'code' ? (
+                        <div className="space-y-4">
+                            {/* Python ML Challenge Banner */}
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">
+                                <div className="flex items-center gap-2">
+                                    <Code2 className="w-5 h-5 text-indigo-400" />
+                                    <span className="font-bold text-sm">Python 3 (ML / Scripting) Challenge</span>
+                                </div>
                                 <button
-                                    key={idx}
+                                    type="button"
+                                    onClick={() => {
+                                        const starter = (currentQuestion.correct as any)?.starterCode || '';
+                                        setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: starter }));
+                                    }}
                                     disabled={isLocked}
-                                    onClick={() => setSelectedOption(idx)}
-                                    className={cn(
-                                        "w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 group relative min-h-[5rem]",
-                                        stateStyles
-                                    )}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors disabled:opacity-50"
+                                    title="Reset to Starter Code"
                                 >
-                                    <div className={cn(
-                                        "w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg transition-colors shrink-0 shadow-sm",
-                                        viewMode === 'results' && isCorrectCheck
-                                            ? "bg-white text-green-600"
-                                            : viewMode === 'results' && isSelected && !isCorrectCheck
-                                                ? "bg-white text-red-600"
-                                                : isSelected
-                                                    ? "bg-white text-primary"
-                                                    : isGameMode 
-                                                        ? "bg-white/20 text-white border border-white/40 group-hover:bg-white/30"
-                                                        : "bg-neutral-100 dark:bg-neutral-800 text-muted group-hover:bg-neutral-200"
-                                    )}>
-                                        {String.fromCharCode(65 + idx)}
-                                    </div>
-                                    <MathText text={option} className={cn(
-                                        "font-bold text-lg leading-tight",
-                                        isGameMode ? "text-white drop-shadow-sm" : viewMode === 'results' && isCorrectCheck ? "text-green-700 dark:text-green-400" : "text-text"
-                                    )} />
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                    Reset Code
                                 </button>
-                            );
-                        })}
-                    </div>
+                            </div>
+
+                            {/* Code Editor */}
+                            <div className="relative rounded-xl overflow-hidden border-2 border-neutral-700 focus-within:border-primary shadow-inner bg-[#1e1e1e]">
+                                <textarea
+                                    value={codeAnswers[currentQuestion.id] ?? (currentQuestion.correct as any)?.starterCode ?? ''}
+                                    disabled={isLocked}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: val }));
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Tab') {
+                                            e.preventDefault();
+                                            const start = e.currentTarget.selectionStart;
+                                            const end = e.currentTarget.selectionEnd;
+                                            const current = e.currentTarget.value;
+                                            const updated = current.substring(0, start) + '    ' + current.substring(end);
+                                            setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: updated }));
+                                            setTimeout(() => {
+                                                if (e.currentTarget) {
+                                                    e.currentTarget.selectionStart = e.currentTarget.selectionEnd = start + 4;
+                                                }
+                                            }, 0);
+                                        }
+                                    }}
+                                    spellCheck={false}
+                                    rows={10}
+                                    placeholder="# Write your Python ML solution here..."
+                                    className="w-full bg-transparent text-emerald-300 font-mono text-sm p-4 outline-none resize-y leading-relaxed"
+                                />
+                            </div>
+
+                            {/* Action Bar: Run Code Button & Execution Status */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                <div className="flex items-center gap-2">
+                                    {codePassedStatus[currentQuestion.id] ? (
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold animate-in fade-in">
+                                            <CheckCircle2 className="w-4 h-4" /> All Test Cases Passed! Ready to Submit.
+                                        </div>
+                                    ) : codeExecutionResult[currentQuestion.id] && !codePassedStatus[currentQuestion.id] ? (
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-400 text-xs font-bold animate-in fade-in">
+                                            <X className="w-4 h-4" /> Test Cases Failed. Check output below.
+                                        </div>
+                                    ) : (
+                                        <span className="text-xs text-muted">
+                                            Test cases: {((currentQuestion.correct as any)?.testCases || []).length} case(s) defined
+                                        </span>
+                                    )}
+                                </div>
+
+                                <Button
+                                    type="button"
+                                    onClick={handleRunLiveCode}
+                                    disabled={isExecutingCode || isLocked}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-10 px-5 shadow-lg flex items-center gap-2"
+                                >
+                                    {isExecutingCode ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" /> Running Python Code...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Play className="w-4 h-4 fill-current" /> Run & Test Code
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+
+                            {/* Execution Output Console */}
+                            {codeExecutionResult[currentQuestion.id] && (
+                                <div className="rounded-xl p-4 bg-neutral-900/90 border border-neutral-800 text-xs font-mono space-y-3 shadow-xl animate-in slide-in-from-top-2 duration-200">
+                                    <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+                                        <span className="text-neutral-400 flex items-center gap-1.5">
+                                            <Code2 className="w-3.5 h-3.5" /> Output Console
+                                        </span>
+                                        {codePassedStatus[currentQuestion.id] ? (
+                                            <span className="text-emerald-400 font-bold flex items-center gap-1">
+                                                <CheckCircle2 className="w-3.5 h-3.5" /> PASSED
+                                            </span>
+                                        ) : (
+                                            <span className="text-rose-400 font-bold flex items-center gap-1">
+                                                <X className="w-3.5 h-3.5" /> FAILED
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {codeExecutionResult[currentQuestion.id]?.combinedStderr && (
+                                        <div className="text-rose-300 bg-rose-950/40 p-3 rounded-lg border border-rose-900/50 whitespace-pre-wrap">
+                                            {codeExecutionResult[currentQuestion.id]?.combinedStderr}
+                                        </div>
+                                    )}
+
+                                    {codeExecutionResult[currentQuestion.id]?.results && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            {codeExecutionResult[currentQuestion.id]!.results.map(tc => (
+                                                <div
+                                                    key={tc.index}
+                                                    className={cn(
+                                                        "p-2.5 rounded-lg border flex flex-col gap-1",
+                                                        tc.passed
+                                                            ? "bg-emerald-950/20 border-emerald-900/40 text-emerald-300"
+                                                            : "bg-rose-950/20 border-rose-900/40 text-rose-300"
+                                                    )}
+                                                >
+                                                    <div className="flex justify-between font-bold text-[11px]">
+                                                        <span>Test Case {tc.index}</span>
+                                                        <span>{tc.passed ? '✓ PASSED' : '✗ FAILED'}</span>
+                                                    </div>
+                                                    <div className="text-[11px] text-neutral-300 font-mono space-y-0.5">
+                                                        <div><span className="text-neutral-500">Input:</span> {tc.input || '(empty)'}</div>
+                                                        <div><span className="text-neutral-500">Expected:</span> {tc.expected}</div>
+                                                        <div><span className="text-neutral-500">Output:</span> {tc.actual}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        /* Options */
+                        <div className="flex flex-col gap-3">
+                            {currentQuestion.options?.map((option: string, idx: number) => {
+                                const isSelected = selectedOption === idx;
+                                // Check similarity if options are strings or indices. Assuming strings based on earlier context.
+                                const isCorrectCheck = viewMode === 'results' && (currentQuestion.correct === option || String(currentQuestion.correct) === String(idx) || currentQuestion.correct === idx);
+
+                                let stateStyles = isGameMode 
+                                    ? GAME_COLORS[idx % GAME_COLORS.length] 
+                                    : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900";
+
+                                if (viewMode === 'results') {
+                                    if (isCorrectCheck) {
+                                        stateStyles = "border-green-500 bg-green-500 text-white shadow-[0_4px_0_rgb(21,128,61)]";
+                                    } else if (isSelected && !isCorrectCheck) {
+                                        stateStyles = "border-red-500 bg-red-500 text-white shadow-[0_4px_0_rgb(185,28,28)] opacity-70";
+                                    } else {
+                                        stateStyles = isGameMode ? stateStyles + " opacity-30 grayscale" : "opacity-50 grayscale";
+                                    }
+                                } else if (isSelected && !isGameMode) {
+                                    stateStyles = "border-primary bg-primary/5 shadow-md shadow-primary/10";
+                                } else if (isSelected && isGameMode) {
+                                    stateStyles = stateStyles + " ring-4 ring-white ring-offset-4 ring-offset-indigo-950 scale-[1.02] transform transition-transform";
+                                } else if (isLocked && !isSelected) {
+                                    stateStyles = isGameMode ? stateStyles + " opacity-50 grayscale cursor-not-allowed" : "opacity-60 cursor-not-allowed";
+                                }
+
+                                return (
+                                    <button
+                                        key={idx}
+                                        disabled={isLocked}
+                                        onClick={() => setSelectedOption(idx)}
+                                        className={cn(
+                                            "w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 group relative min-h-[5rem]",
+                                            stateStyles
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg transition-colors shrink-0 shadow-sm",
+                                            viewMode === 'results' && isCorrectCheck
+                                                ? "bg-white text-green-600"
+                                                : viewMode === 'results' && isSelected && !isCorrectCheck
+                                                    ? "bg-white text-red-600"
+                                                    : isSelected
+                                                        ? "bg-white text-primary"
+                                                        : isGameMode 
+                                                            ? "bg-white/20 text-white border border-white/40 group-hover:bg-white/30"
+                                                            : "bg-neutral-100 dark:bg-neutral-800 text-muted group-hover:bg-neutral-200"
+                                        )}>
+                                            {String.fromCharCode(65 + idx)}
+                                        </div>
+                                        <MathText text={option} className={cn(
+                                            "font-bold text-lg leading-tight",
+                                            isGameMode ? "text-white drop-shadow-sm" : viewMode === 'results' && isCorrectCheck ? "text-green-700 dark:text-green-400" : "text-text"
+                                        )} />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {/* Footer Actions */}
                     <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex justify-end">
@@ -1040,10 +1271,21 @@ export default function StudentLiveQuiz() {
                             ) : (
                                 <Button
                                     onClick={handleSubmitAnswer}
-                                    disabled={selectedOption === null}
-                                    className="w-full sm:w-auto h-12 text-lg px-8 transition-all font-bold"
+                                    disabled={
+                                        currentQuestion.type === 'code'
+                                            ? isExecutingCode
+                                            : selectedOption === null
+                                    }
+                                    className={cn(
+                                        "w-full sm:w-auto h-12 text-lg px-8 transition-all font-bold",
+                                        currentQuestion.type === 'code' && codePassedStatus[currentQuestion.id]
+                                            ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30"
+                                            : ""
+                                    )}
                                 >
-                                    Submit Answer
+                                    {currentQuestion.type === 'code' && codePassedStatus[currentQuestion.id]
+                                        ? "Submit Correct Code →"
+                                        : "Submit Answer"}
                                 </Button>
                             )
                         ) : (

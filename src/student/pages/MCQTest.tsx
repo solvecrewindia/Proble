@@ -8,9 +8,9 @@ import { supabase } from '../../lib/supabase';
 import FullScreenLoader from '../../shared/components/FullScreenLoader';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 import { QuizTimer } from '../components/QuizTimer';
-import { Calculator } from '../../shared/components/Calculator';
 import { MathText } from '../../shared/components/MathText';
 import { evaluateTestWithAI, QuestionEvaluationResult, QuestionEvaluationInput } from '../services/aiEvaluationService';
+import { runTestCases } from '../../shared/utils/codeExecution';
 
 const formatSeconds = (totalSec: number) => {
     if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
@@ -796,12 +796,9 @@ const MCQTest = () => {
         const q = questions[currentQuestion - 1];
         if (!q || q.type !== 'code') return;
 
-        const studentCode = answers[q.id] as string || q.correct?.starterCode || '';
+        const studentCode = (answers[currentQuestion] as string) || (answers[q.id] as string) || q.correct?.starterCode || '';
         const driverCode = q.correct?.driverCode || '';
-        const codeToRun = driverCode ? `${studentCode}\n\n${driverCode}` : studentCode;
-
         const defaultLang = q.correct?.language || 'python';
-        // Use user selected language OR default
         const language = selectedLanguages[q.id] || defaultLang;
         const testCases = q.correct?.testCases || [];
 
@@ -809,72 +806,27 @@ const MCQTest = () => {
         setExecutionOutput(prev => ({ ...prev, [q.id]: { stdout: '', stderr: '' } }));
 
         try {
-            // We only run the first test case or a sample for display, OR we run all and check correctness
-            // For feedback, let's run the code against the first test case or just run it raw if no input?
-            // A better UX is to have a "Run" button that just runs it, and internal "Grading" runs against test cases.
-            // But here we want immediate feedback on "Correctness" potentially.
+            const result = await runTestCases({
+                language,
+                studentCode,
+                driverCode,
+                testCases,
+            });
 
-            // Let's run against ALL test cases to determine success.
-            let allPassed = true;
-            let combinedStdout = '';
-            let combinedStderr = '';
-
-            for (const testCase of testCases) {
-                const response = await fetch('https://emkc.org/api/v2/piston/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        language: language,
-                        version: '*', // Piston will pick the latest
-                        files: [{ content: codeToRun }],
-                        stdin: testCase.input,
-                    }),
-                });
-
-                const result = await response.json();
-                const run = result.run;
-
-                // Normalizing Output: Trim and Normalize Newlines
-                const normalize = (str: string) => str.replace(/\r\n/g, '\n').trim();
-
-                const output = normalize(run.stdout);
-                const expected = normalize(testCase.output);
-
-                combinedStdout += `Input: ${testCase.input} \nOutput: ${output} \nExpected: ${expected} \n\n`;
-                if (run.stderr) combinedStderr += `Error: ${run.stderr} \n`;
-
-                // Strict comparison of trimmed output
-                if (output !== expected) {
-                    allPassed = false;
-                    combinedStdout += `\n[Test Failed]Expected: "${expected}", Got: "${output}"\n`;
-                } else {
-                    combinedStdout += `\n[Test Passed]\n`;
-                }
-            }
-
-            // If no test cases, just run safely
-            if (testCases.length === 0) {
-                const response = await fetch('https://emkc.org/api/v2/piston/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        language: language,
-                        version: '*',
-                        files: [{ content: codeToRun }],
-                    }),
-                });
-                const result = await response.json();
-                combinedStdout = result.run.stdout;
-                combinedStderr = result.run.stderr;
-                allPassed = true; // No tests to fail
-            }
-
-            setExecutionOutput(prev => ({ ...prev, [q.id]: { stdout: combinedStdout, stderr: combinedStderr } }));
-            setCodeExecutionStatus(prev => ({ ...prev, [q.id]: allPassed }));
-
-        } catch (err) {
-            console.error(err);
-            setExecutionOutput(prev => ({ ...prev, [q.id]: { stdout: '', stderr: 'Failed to execute code.' } }));
+            setExecutionOutput(prev => ({
+                ...prev,
+                [q.id]: {
+                    stdout: result.combinedStdout,
+                    stderr: result.combinedStderr,
+                },
+            }));
+            setCodeExecutionStatus(prev => ({ ...prev, [q.id]: result.allPassed }));
+        } catch (err: any) {
+            console.error('Execution error:', err);
+            setExecutionOutput(prev => ({
+                ...prev,
+                [q.id]: { stdout: '', stderr: err.message || 'Failed to execute code.' },
+            }));
         } finally {
             setIsExecuting(false);
         }
