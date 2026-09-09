@@ -63,6 +63,7 @@ export default function StudentLiveQuiz() {
 
     // Live Assessment Security & Anti-Cheat Lockdown
     const handleSubmitAnswerRef = useRef<() => void>(() => {});
+    const [isTerminated, setIsTerminated] = useState(false);
 
     const isLiveTestActive = status === 'active' && questions.length > 0 && currentQuestionIndex >= 0 && viewMode !== 'lobby';
 
@@ -70,11 +71,12 @@ export default function StudentLiveQuiz() {
         if (!id || !user) return;
         try {
             const timeStr = new Date().toLocaleTimeString();
-            const flagEntry = `[${timeStr}] Q${(currentQuestionIndex ?? 0) + 1}: ${type} (Strike ${count})`;
+            const isNowTerminated = count >= 3;
+            const flagEntry = `[${timeStr}] Q${(currentQuestionIndex ?? 0) + 1}: ${type} (Strike ${count}${isNowTerminated ? ' - Terminated' : ''})`;
 
             const { data: curAttempt } = await supabase
                 .from('attempts')
-                .select('flags')
+                .select('flags, status')
                 .eq('quiz_id', id)
                 .eq('student_id', user.id)
                 .maybeSingle();
@@ -84,9 +86,17 @@ export default function StudentLiveQuiz() {
 
             await supabase
                 .from('attempts')
-                .update({ flags: updatedFlags })
+                .update({ 
+                    flags: updatedFlags,
+                    status: isNowTerminated ? 'terminated' : (curAttempt?.status || 'in-progress')
+                })
                 .eq('quiz_id', id)
                 .eq('student_id', user.id);
+
+            if (isNowTerminated) {
+                setIsTerminated(true);
+                handleSubmitAnswerRef.current();
+            }
         } catch (err) {
             console.warn("Live test security flag sync warning:", err);
         }
@@ -97,9 +107,10 @@ export default function StudentLiveQuiz() {
         isFullScreen,
         warning,
         enterFullScreen,
+        resetViolations,
         remainingStrikes
     } = useAntiCheat({
-        enabled: isLiveTestActive,
+        enabled: isLiveTestActive && !isTerminated,
         level: 'standard',
         maxViolations: 3,
         onViolation: handleViolation,
@@ -325,6 +336,14 @@ export default function StudentLiveQuiz() {
                     flags: []
                 });
             } else if (existingAttempt) {
+                // Check if terminated or unlocked by faculty
+                if (existingAttempt.status === 'terminated') {
+                    setIsTerminated(true);
+                } else if (existingAttempt.status === 'in-progress' && isTerminated) {
+                    setIsTerminated(false);
+                    resetViolations();
+                }
+
                 // Restore saved answer for current question
                 const currentQIndex = quizData.settings?.currentQuestionIndex ?? 0;
                 let qIds: any[] = questions;
@@ -424,6 +443,25 @@ export default function StudentLiveQuiz() {
                                 }
                                 if (newSettings.viewMode) {
                                     setViewMode(newSettings.viewMode);
+                                }
+                            }
+                        }
+                    )
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'UPDATE',
+                            schema: 'public',
+                            table: 'attempts',
+                            filter: `quiz_id=eq.${id}`
+                        },
+                        (payload: any) => {
+                            if (payload.new && user && payload.new.student_id === user.id) {
+                                if (payload.new.status === 'terminated') {
+                                    setIsTerminated(true);
+                                } else if (payload.new.status === 'in-progress') {
+                                    setIsTerminated(false);
+                                    resetViolations();
                                 }
                             }
                         }
@@ -1198,7 +1236,7 @@ export default function StudentLiveQuiz() {
             )}
 
             {/* Mandatory Full Screen Lockdown Overlay */}
-            {!isFullScreen && isLiveTestActive && (
+            {!isFullScreen && isLiveTestActive && !isTerminated && (
                 <div className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in">
                     <div className="bg-surface border-t-4 border-t-red-600 shadow-2xl rounded-2xl p-8 max-w-lg w-full text-center border border-border">
                         <div className="mx-auto w-16 h-16 bg-red-500/10 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mb-6">
@@ -1215,6 +1253,29 @@ export default function StudentLiveQuiz() {
                         >
                             Resume Full Screen
                         </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Exam Terminated Overlay */}
+            {isTerminated && (
+                <div className="fixed inset-0 z-[140] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in">
+                    <div className="bg-surface border-t-4 border-t-red-600 shadow-2xl rounded-2xl p-8 max-w-lg w-full text-center border border-border space-y-5">
+                        <div className="mx-auto w-16 h-16 bg-red-500/10 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center">
+                            <ShieldAlert className="w-8 h-8 animate-pulse" />
+                        </div>
+                        <div className="space-y-2">
+                            <span className="text-xs uppercase font-extrabold tracking-widest px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                3/3 Strikes Reached
+                            </span>
+                            <h2 className="text-2xl md:text-3xl font-black text-text">Live Exam Terminated</h2>
+                            <p className="text-muted text-sm leading-relaxed">
+                                You have been disqualified for repeated tab switching or security violations. Your test session is locked.
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-surface-highlight border border-border text-xs text-muted leading-relaxed">
+                            Please contact your instructor to request a retake. Once your instructor approves your retake from the host controller, this screen will automatically unlock.
+                        </div>
                     </div>
                 </div>
             )}

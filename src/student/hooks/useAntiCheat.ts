@@ -240,11 +240,17 @@ export const useAntiCheat = ({
         };
     }, [enabled, triggerViolation]);
 
+    const resetViolations = useCallback(() => {
+        setViolations(0);
+        setWarning(null);
+    }, []);
+
     return {
         violations,
         isFullScreen,
         warning,
         enterFullScreen,
+        resetViolations,
         remainingStrikes: Math.max(0, effectiveLimit - violations)
     };
 };
