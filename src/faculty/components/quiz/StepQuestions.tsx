@@ -395,6 +395,92 @@ if __name__ == "__main__":
         }
     };
 
+    const downloadCodeTemplate = (e?: React.MouseEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        try {
+            const headers = [
+                'Question',
+                'Starter Code',
+                'Test Case 1 Input',
+                'Test Case 1 Output',
+                'Test Case 2 Input',
+                'Test Case 2 Output',
+                'Test Case 3 Input',
+                'Test Case 3 Output',
+                'Test Case 4 Input',
+                'Test Case 4 Output'
+            ];
+
+            const sampleRow1 = [
+                "Write a Python function to calculate the sum of two integers.\n\nInput Format:\nTwo space-separated integers on line 1.\n\nOutput Format:\nPrint the sum of the integers.",
+                `import sys
+
+def solve():
+    line = sys.stdin.read().strip()
+    if not line:
+        return
+    a, b = map(int, line.split())
+    print(a + b)
+
+if __name__ == '__main__':
+    solve()`,
+                "3 5",
+                "8",
+                "10 -2",
+                "8",
+                "0 0",
+                "0",
+                "-5 -15",
+                "-20"
+            ];
+
+            const sampleRow2 = [
+                "Find the maximum integer in a list of numbers.\n\nInput Format:\nSpace-separated integers on line 1.\n\nOutput Format:\nPrint the maximum integer value.",
+                `import sys
+
+def find_max():
+    nums = list(map(int, sys.stdin.read().split()))
+    if nums:
+        print(max(nums))
+
+if __name__ == '__main__':
+    find_max()`,
+                "4 9 2 7 1",
+                "9",
+                "-5 -10 -1",
+                "-1",
+                "100",
+                "100",
+                "7 7 7",
+                "7"
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow1, sampleRow2]);
+            ws['!cols'] = [
+                { wch: 45 },
+                { wch: 40 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 20 }
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Code_Questions");
+            XLSX.writeFile(wb, "code_questions_template.xlsx");
+        } catch (error: any) {
+            console.error("Error downloading code template", error);
+            alert(`Failed to download template: ${error.message || error}`);
+        }
+    };
+
     // Handle Excel Drop and Processing
     const onExcelDrop = useCallback(async (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
@@ -716,9 +802,186 @@ if __name__ == "__main__":
         reader.readAsBinaryString(file);
     }, [zipFile, questions, setQuestions, quizId]);
 
-    const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps, isDragActive: isExcelDragActive } = useDropzone({
+    // Handle Code Excel Drop and Processing
+    const onCodeExcelDrop = useCallback(async (acceptedFiles: File[]) => {
+        const file = acceptedFiles[0];
+        if (!file) return;
+
+        setIsProcessing(true);
+        setImportStatus('Reading Code Questions Excel file...');
+        setError(null);
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
+
+                if (!rawRows || rawRows.length < 2) {
+                    throw new Error("Excel file must contain a header row and at least one code question.");
+                }
+
+                const validRows = rawRows.filter(r => Array.isArray(r) && r.some(cell => String(cell || '').trim() !== ''));
+                if (validRows.length < 2) {
+                    throw new Error("No data rows found in Excel sheet.");
+                }
+
+                const headerRow = (validRows[0] || []).map(cell => String(cell || '').trim());
+
+                // Detect Question / Stem column
+                let questionCol = -1;
+                let starterCodeCol = -1;
+
+                headerRow.forEach((h, idx) => {
+                    const clean = h.toLowerCase().trim();
+                    if (/^(question|stem|problem|prompt|description|problem\s*description|q_text)$/i.test(clean)) {
+                        questionCol = idx;
+                    } else if (questionCol === -1 && clean.includes('question') && !clean.includes('no')) {
+                        questionCol = idx;
+                    } else if (/^(starter\s*code|starter|code|initial\s*code|template\s*code|code\s*template)$/i.test(clean)) {
+                        starterCodeCol = idx;
+                    }
+                });
+
+                if (questionCol === -1) {
+                    questionCol = 0; // Default to column 0 if no header matches
+                }
+
+                // Detect test case pairs (1..30)
+                const testCasePairs: Array<{ inputCol: number; outputCol: number; num: number }> = [];
+
+                for (let i = 1; i <= 30; i++) {
+                    let inCol = -1;
+                    let outCol = -1;
+
+                    headerRow.forEach((h, colIdx) => {
+                        const clean = h.toLowerCase().replace(/[\s_\-#.]/g, '');
+                        // Match testcase1input, 1input, input1, case1input, tc1input
+                        if (
+                            clean === `testcase${i}input` ||
+                            clean === `case${i}input` ||
+                            clean === `tc${i}input` ||
+                            clean === `input${i}` ||
+                            clean === `${i}input` ||
+                            (clean.includes(`case${i}`) && clean.includes('input')) ||
+                            (clean.includes(`${i}`) && clean.includes('input'))
+                        ) {
+                            inCol = colIdx;
+                        } else if (
+                            clean === `testcase${i}output` ||
+                            clean === `case${i}output` ||
+                            clean === `tc${i}output` ||
+                            clean === `output${i}` ||
+                            clean === `${i}output` ||
+                            (clean.includes(`case${i}`) && clean.includes('output')) ||
+                            (clean.includes(`${i}`) && clean.includes('output'))
+                        ) {
+                            outCol = colIdx;
+                        }
+                    });
+
+                    if (inCol !== -1 && outCol !== -1) {
+                        testCasePairs.push({ inputCol: inCol, outputCol: outCol, num: i });
+                    }
+                }
+
+                // Fallback: If no numbered columns matched, match columns that contain "input" and "output"
+                if (testCasePairs.length === 0) {
+                    const inCols: number[] = [];
+                    const outCols: number[] = [];
+                    headerRow.forEach((h, colIdx) => {
+                        if (colIdx === questionCol || colIdx === starterCodeCol) return;
+                        const clean = h.toLowerCase();
+                        if (clean.includes('input')) inCols.push(colIdx);
+                        else if (clean.includes('output')) outCols.push(colIdx);
+                    });
+
+                    const count = Math.min(inCols.length, outCols.length);
+                    for (let i = 0; i < count; i++) {
+                        testCasePairs.push({ inputCol: inCols[i], outputCol: outCols[i], num: i + 1 });
+                    }
+                }
+
+                const importedQuestions: Question[] = [];
+
+                for (let r = 1; r < validRows.length; r++) {
+                    const row = validRows[r];
+                    const stem = String(row[questionCol] ?? '').trim();
+                    if (!stem) continue;
+
+                    const starterCode = (starterCodeCol !== -1 && row[starterCodeCol] !== undefined && String(row[starterCodeCol]).trim() !== '')
+                        ? String(row[starterCodeCol]).trim()
+                        : DEFAULT_CODE_SNIPPET.starterCode;
+
+                    const testCases: Array<{ input: string; output: string }> = [];
+
+                    testCasePairs.forEach(pair => {
+                        const inVal = row[pair.inputCol] !== undefined ? String(row[pair.inputCol]).trim() : '';
+                        const outVal = row[pair.outputCol] !== undefined ? String(row[pair.outputCol]).trim() : '';
+                        if (inVal !== '' || outVal !== '') {
+                            testCases.push({ input: inVal, output: outVal });
+                        }
+                    });
+
+                    if (testCases.length === 0) {
+                        testCases.push({ input: '1', output: '1' });
+                    }
+
+                    importedQuestions.push({
+                        id: uuidv4(),
+                        quizId: quizId || '',
+                        type: 'code',
+                        stem: stem,
+                        weight: 1,
+                        correct: {
+                            language: 'python',
+                            allowedLanguages: ['python'],
+                            starterCode: starterCode,
+                            driverCode: '',
+                            testCases: testCases
+                        }
+                    });
+                }
+
+                if (importedQuestions.length === 0) {
+                    throw new Error("No valid code questions could be parsed from the Excel sheet.");
+                }
+
+                setQuestions((prev: any[]) => [...prev, ...importedQuestions]);
+                setIsProcessing(false);
+                setView('list');
+                alert(`Successfully imported ${importedQuestions.length} Code Challenge(s) with test cases!`);
+            } catch (err: any) {
+                console.error("Code excel import error:", err);
+                setError(err.message || "Failed to process Excel file.");
+                setIsProcessing(false);
+            }
+        };
+
+        reader.onerror = () => {
+            setError("Failed to read file.");
+            setIsProcessing(false);
+        };
+
+        reader.readAsBinaryString(file);
+    }, [questions, setQuestions, quizId, DEFAULT_CODE_SNIPPET.starterCode]);
+
+    const { getExcelRootProps, getInputProps: getExcelInputProps, isDragActive: isExcelDragActive } = useDropzone({
         onDrop: onExcelDrop,
         accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+        maxFiles: 1,
+        disabled: isProcessing
+    });
+
+    const { getRootProps: getCodeExcelRootProps, getInputProps: getCodeExcelInputProps, isDragActive: isCodeExcelDragActive } = useDropzone({
+        onDrop: onCodeExcelDrop,
+        accept: { 
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+            'application/vnd.ms-excel': ['.xls']
+        },
         maxFiles: 1,
         disabled: isProcessing
     });
@@ -834,7 +1097,20 @@ if __name__ == "__main__":
                     Question List
                     <span className="ml-2 text-xs bg-surface px-2 py-0.5 rounded-full text-muted">{questions.length}</span>
                 </button>
-                {activeType !== 'code' && (
+                {activeType === 'code' ? (
+                    <button
+                        className={cn(
+                            "px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
+                            view === 'import'
+                                ? "border-primary text-primary"
+                                : "border-transparent text-muted hover:text-text hover:border-neutral-300 dark:border-neutral-600"
+                        )}
+                        onClick={() => setView('import')}
+                    >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                        Bulk Import (Code)
+                    </button>
+                ) : (
                     <>
                         <button
                             className={cn(
@@ -867,7 +1143,138 @@ if __name__ == "__main__":
 
             {
                 view === 'import' ? (
-                    <div className="space-y-8 animate-in fade-in duration-300">
+                    activeType === 'code' ? (
+                        /* CODE QUESTIONS BULK IMPORT VIEW */
+                        <div className="space-y-8 animate-in fade-in duration-300">
+                            {/* Code Header and Template Download */}
+                            <div className="p-6 rounded-2xl border-2 border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2.5 rounded-xl bg-emerald-500 text-white shadow-md">
+                                        <Code2 className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-bold text-text flex items-center gap-2">
+                                            Bulk Import Code Questions (.xlsx)
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                                                Excel Format
+                                            </span>
+                                        </h3>
+                                        <p className="text-xs text-muted mt-0.5">
+                                            Upload an Excel file with Question, Starter Code, and test case inputs & outputs.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <Button
+                                    type="button"
+                                    onClick={downloadCodeTemplate}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 px-3.5 gap-2 shadow-sm shrink-0"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Download Code Template (.xlsx)
+                                </Button>
+                            </div>
+
+                            {/* Code Excel Dropzone */}
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-text flex items-center gap-2">
+                                    <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                                    Upload Code Question Sheet (.xlsx)
+                                </h3>
+                                <div {...getCodeExcelRootProps()} className={cn(
+                                    "border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all",
+                                    isCodeExcelDragActive ? "border-emerald-500 bg-emerald-500/10" : "border-neutral-300 dark:border-neutral-600 hover:border-emerald-500",
+                                    error ? "border-red-300 bg-red-50 dark:bg-red-950/20" : "",
+                                    isProcessing ? "pointer-events-none opacity-50" : ""
+                                )}>
+                                    <input {...getCodeExcelInputProps()} />
+
+                                    {isProcessing ? (
+                                        <div className="flex flex-col items-center">
+                                            <Loader2 className="h-12 w-12 text-emerald-500 animate-spin mb-4" />
+                                            <p className="text-lg font-medium text-text">Processing Code Questions...</p>
+                                            <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-2">{importStatus}</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <FileSpreadsheet className={cn("mx-auto h-12 w-12 mb-4", error ? "text-red-400" : "text-emerald-500")} />
+                                            <p className="text-lg font-bold text-text">
+                                                {isCodeExcelDragActive ? "Drop Excel file here" : "Drag & drop Code Questions Excel here"}
+                                            </p>
+                                            <p className="text-xs text-muted mt-2">
+                                                Click to browse file • Supports multiple test cases per challenge
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="flex items-center gap-2 text-red-600 bg-red-500/10 border border-red-500/20 p-4 rounded-lg text-sm">
+                                    <AlertTriangle className="h-5 w-5 shrink-0" />
+                                    <span>{error}</span>
+                                </div>
+                            )}
+
+                            {/* Required Columns Guide Table */}
+                            <div className="bg-surface p-5 rounded-2xl border border-neutral-200 dark:border-neutral-700 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h4 className="text-sm font-bold text-text">Expected Excel Columns</h4>
+                                        <p className="text-xs text-muted">Each row becomes a Python code challenge with its test cases.</p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={downloadCodeTemplate}
+                                        className="text-xs h-7 px-2.5 gap-1.5 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10"
+                                    >
+                                        <Download className="h-3.5 w-3.5" />
+                                        Sample Template
+                                    </Button>
+                                </div>
+
+                                <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-700">
+                                    <table className="w-full text-xs text-left text-text border-collapse">
+                                        <thead className="bg-neutral-100 dark:bg-neutral-800 text-muted font-bold">
+                                            <tr>
+                                                <th className="px-3 py-2.5 border-b border-neutral-200 dark:border-neutral-700">Question</th>
+                                                <th className="px-3 py-2.5 border-b border-neutral-200 dark:border-neutral-700">Starter Code</th>
+                                                <th className="px-3 py-2.5 border-b border-neutral-200 dark:border-neutral-700">Test Case 1 Input</th>
+                                                <th className="px-3 py-2.5 border-b border-neutral-200 dark:border-neutral-700">Test Case 1 Output</th>
+                                                <th className="px-3 py-2.5 border-b border-neutral-200 dark:border-neutral-700">Test Case 2 Input</th>
+                                                <th className="px-3 py-2.5 border-b border-neutral-200 dark:border-neutral-700">Test Case 2 Output</th>
+                                                <th className="px-3 py-2.5 border-b border-neutral-200 dark:border-neutral-700 text-muted/60">... (N Input / Output)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700/60 font-mono text-[11px]">
+                                            <tr className="hover:bg-neutral-50 dark:hover:bg-neutral-850/50">
+                                                <td className="px-3 py-2 text-text font-sans font-medium">Sum of two numbers</td>
+                                                <td className="px-3 py-2 text-emerald-600 dark:text-emerald-400">import sys...</td>
+                                                <td className="px-3 py-2">3 5</td>
+                                                <td className="px-3 py-2 font-bold text-primary">8</td>
+                                                <td className="px-3 py-2">10 -2</td>
+                                                <td className="px-3 py-2 font-bold text-primary">8</td>
+                                                <td className="px-3 py-2 text-muted">...</td>
+                                            </tr>
+                                            <tr className="hover:bg-neutral-50 dark:hover:bg-neutral-850/50">
+                                                <td className="px-3 py-2 text-text font-sans font-medium">Maximum in array</td>
+                                                <td className="px-3 py-2 text-emerald-600 dark:text-emerald-400">import sys...</td>
+                                                <td className="px-3 py-2">4 9 2 7 1</td>
+                                                <td className="px-3 py-2 font-bold text-primary">9</td>
+                                                <td className="px-3 py-2">-5 -10 -1</td>
+                                                <td className="px-3 py-2 font-bold text-primary">-1</td>
+                                                <td className="px-3 py-2 text-muted">...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        /* STANDARD MCQ BULK IMPORT VIEW */
+                        <div className="space-y-8 animate-in fade-in duration-300">
 
                         {/* 1. ZIP Upload Step */}
                         <div className="space-y-2">
@@ -990,6 +1397,7 @@ if __name__ == "__main__":
                             </div>
                         </div>
                     </div>
+                )
                 ) : view === 'existing' ? (
                     <ExistingQuizBrowser
                         onAddQuestions={(newQuestions: Question[]) => {
@@ -1561,13 +1969,7 @@ if __name__ == "__main__":
                                 <select
                                     className="h-9 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-2"
                                     value={activeType}
-                                    onChange={(e) => {
-                                        const newType = e.target.value as any;
-                                        setActiveType(newType);
-                                        if (newType === 'code') {
-                                            setView('list');
-                                        }
-                                    }}
+                                    onChange={(e) => setActiveType(e.target.value as any)}
                                 >
                                     <option value="mcq">Multiple Choice</option>
                                     <option value="true_false">True / False</option>
@@ -1576,6 +1978,18 @@ if __name__ == "__main__":
                                     <option value="range">Range Answer</option>
                                     <option value="code">Code</option>
                                 </select>
+                                {activeType === 'code' && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setView('import')}
+                                        className="text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 font-bold"
+                                    >
+                                        <FileSpreadsheet className="mr-1.5 h-4 w-4" />
+                                        Bulk Import Code (.xlsx)
+                                    </Button>
+                                )}
                                 <Button size="sm" onClick={addQuestion}>
                                     <Plus className="mr-2 h-4 w-4" /> Add Question
                                 </Button>
