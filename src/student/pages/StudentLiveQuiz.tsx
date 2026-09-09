@@ -10,7 +10,8 @@ import { useTheme } from '../../shared/context/ThemeContext';
 import { MathText } from '../../shared/components/MathText';
 import {
     User, Clock, CheckCircle, Loader2, WifiOff, Play, RotateCcw,
-    Code2, CheckCircle2, X, Award, Flame, Users, Trophy, ChevronRight, Zap
+    Code2, CheckCircle2, X, Award, Flame, Users, Trophy, ChevronRight, Zap,
+    GripHorizontal, Maximize2, Minus, PanelBottom, Move
 } from 'lucide-react';
 import { runTestCases, ExecutionResponse } from '../../shared/utils/codeExecution';
 import { CodeEditor } from '../../shared/components/CodeEditor';
@@ -50,6 +51,85 @@ export default function StudentLiveQuiz() {
     // Host-directed timing: elapsed stopwatch
     const [elapsedTime, setElapsedTime] = useState<number>(0);
     const questionStartTimeRef = useRef<number>(Date.now());
+
+    // Moveable & Resizable Output Terminal State
+    const [terminalMode, setTerminalMode] = useState<'docked' | 'floating' | 'minimized'>('docked');
+    const [terminalHeight, setTerminalHeight] = useState<number>(240);
+    const [terminalPos, setTerminalPos] = useState<{ x: number; y: number }>(() => {
+        const defaultX = typeof window !== 'undefined' ? Math.max(20, window.innerWidth - 660) : 100;
+        const defaultY = typeof window !== 'undefined' ? Math.max(70, window.innerHeight - 380) : 200;
+        return { x: defaultX, y: defaultY };
+    });
+
+    const isDraggingRef = useRef(false);
+    const isResizingHeightRef = useRef(false);
+    const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const resizeStartYRef = useRef<number>(0);
+    const resizeStartHeightRef = useRef<number>(240);
+
+    // Global mouse event listeners for dragging and resizing the output terminal
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (isDraggingRef.current) {
+                const newX = Math.max(10, Math.min(window.innerWidth - 250, e.clientX - dragOffsetRef.current.x));
+                const newY = Math.max(60, Math.min(window.innerHeight - 100, e.clientY - dragOffsetRef.current.y));
+                setTerminalPos({ x: newX, y: newY });
+            } else if (isResizingHeightRef.current) {
+                const deltaY = resizeStartYRef.current - e.clientY;
+                const newHeight = Math.max(120, Math.min(window.innerHeight * 0.75, resizeStartHeightRef.current + deltaY));
+                setTerminalHeight(newHeight);
+            }
+        };
+
+        const handleMouseUp = () => {
+            isDraggingRef.current = false;
+            isResizingHeightRef.current = false;
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, []);
+
+    const startDragFloating = (e: React.MouseEvent) => {
+        if (e.button !== 0) return;
+        const target = e.target as HTMLElement;
+        if (target.closest('button')) return;
+
+        e.preventDefault();
+        isDraggingRef.current = true;
+        dragOffsetRef.current = {
+            x: e.clientX - terminalPos.x,
+            y: e.clientY - terminalPos.y,
+        };
+    };
+
+    const startDragFromDocked = (e: React.MouseEvent) => {
+        if (e.button !== 0) return;
+        const target = e.target as HTMLElement;
+        if (target.closest('button')) return;
+
+        e.preventDefault();
+        setTerminalMode('floating');
+        const defaultX = Math.max(20, Math.min(window.innerWidth - 660, e.clientX - 250));
+        const defaultY = Math.max(70, Math.min(window.innerHeight - 380, e.clientY - 20));
+        setTerminalPos({ x: defaultX, y: defaultY });
+        isDraggingRef.current = true;
+        dragOffsetRef.current = {
+            x: e.clientX - defaultX,
+            y: e.clientY - defaultY,
+        };
+    };
+
+    const startResizeHeight = (e: React.MouseEvent) => {
+        e.preventDefault();
+        isResizingHeightRef.current = true;
+        resizeStartYRef.current = e.clientY;
+        resizeStartHeightRef.current = terminalHeight;
+    };
 
     // Name prompt state (for guest quick join)
     const [nameInput, setNameInput] = useState('');
@@ -433,6 +513,9 @@ export default function StudentLiveQuiz() {
             });
             setCodeExecutionResult(prev => ({ ...prev, [qId]: res }));
             setCodePassedStatus(prev => ({ ...prev, [qId]: res.allPassed }));
+            if (terminalMode === 'minimized') {
+                setTerminalMode('docked');
+            }
 
             // Real-time sync of test progress to attempts so Host Live Analysis sees live updates
             if (user && id) {
@@ -1170,11 +1253,29 @@ export default function StudentLiveQuiz() {
                             />
                         </div>
 
-                        {/* Output Console (Docked at bottom of right panel when run) */}
-                        {codeExecutionResult[currentQuestion.id] && (
-                            <div className="h-56 shrink-0 border-t border-border bg-surface flex flex-col overflow-hidden shadow-2xl z-20 animate-in slide-in-from-bottom duration-200">
-                                <div className="px-4 py-2 border-b border-border bg-surface-highlight flex items-center justify-between shrink-0">
+                        {/* Output Console - Moveable, Resizable & Floatable */}
+                        {codeExecutionResult[currentQuestion.id] && terminalMode === 'docked' && (
+                            <div
+                                style={{ height: `${terminalHeight}px` }}
+                                className="shrink-0 border-t border-border bg-surface flex flex-col overflow-hidden shadow-2xl z-20 animate-in slide-in-from-bottom duration-200 relative"
+                            >
+                                {/* Top Edge Resizer Bar */}
+                                <div
+                                    onMouseDown={startResizeHeight}
+                                    className="w-full h-2 -top-1 absolute inset-x-0 cursor-row-resize flex items-center justify-center group z-30 select-none hover:h-3 transition-all"
+                                    title="Drag up/down to resize terminal height"
+                                >
+                                    <div className="w-16 h-1 rounded-full bg-border group-hover:bg-primary transition-colors" />
+                                </div>
+
+                                {/* Docked Header - Drag to undock/float, or click buttons */}
+                                <div
+                                    onMouseDown={startDragFromDocked}
+                                    className="px-4 py-2 border-b border-border bg-surface-highlight flex items-center justify-between shrink-0 cursor-grab active:cursor-grabbing select-none"
+                                    title="Drag to move anywhere, or click Float"
+                                >
                                     <div className="flex items-center gap-2 text-xs font-mono">
+                                        <GripHorizontal className="w-4 h-4 text-muted shrink-0" />
                                         <Code2 className="w-3.5 h-3.5 text-primary" />
                                         <span className="font-bold text-text">Output Console</span>
                                         {codePassedStatus[currentQuestion.id] ? (
@@ -1187,14 +1288,34 @@ export default function StudentLiveQuiz() {
                                             </span>
                                         )}
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setCodeExecutionResult(prev => ({ ...prev, [currentQuestion.id]: null }))}
-                                        className="p-1 rounded text-muted hover:text-text text-xs"
-                                        title="Close Console"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
+
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setTerminalMode('floating')}
+                                            className="p-1 rounded text-muted hover:text-text hover:bg-surface text-xs flex items-center gap-1"
+                                            title="Float / Move window anywhere"
+                                        >
+                                            <Maximize2 className="w-3.5 h-3.5" />
+                                            <span className="text-[10px] hidden sm:inline">Float</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTerminalMode('minimized')}
+                                            className="p-1 rounded text-muted hover:text-text hover:bg-surface text-xs"
+                                            title="Minimize to pill"
+                                        >
+                                            <Minus className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCodeExecutionResult(prev => ({ ...prev, [currentQuestion.id]: null }))}
+                                            className="p-1 rounded text-muted hover:text-rose-500 hover:bg-surface text-xs"
+                                            title="Close Console"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar text-xs font-mono">
@@ -1325,6 +1446,121 @@ export default function StudentLiveQuiz() {
                             )}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Floating Moveable Output Console Window */}
+            {currentQuestion.type === 'code' && codeExecutionResult[currentQuestion.id] && terminalMode === 'floating' && (
+                <div
+                    style={{ left: `${terminalPos.x}px`, top: `${terminalPos.y}px` }}
+                    className="fixed z-50 w-[92vw] sm:w-[640px] max-w-2xl flex flex-col rounded-2xl border border-border bg-surface shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 select-none"
+                >
+                    {/* Moveable Window Header */}
+                    <div
+                        onMouseDown={startDragFloating}
+                        className="px-4 py-2.5 border-b border-border bg-surface-highlight flex items-center justify-between shrink-0 cursor-move active:cursor-grabbing"
+                        title="Drag to move terminal anywhere"
+                    >
+                        <div className="flex items-center gap-2 text-xs font-mono">
+                            <GripHorizontal className="w-4 h-4 text-primary shrink-0" />
+                            <Code2 className="w-3.5 h-3.5 text-primary" />
+                            <span className="font-bold text-text">Output Console</span>
+                            {codePassedStatus[currentQuestion.id] ? (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> PASSED ALL
+                                </span>
+                            ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold text-[10px] flex items-center gap-1">
+                                    <X className="w-3 h-3" /> FAILED
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={() => setTerminalMode('docked')}
+                                className="p-1 rounded text-muted hover:text-text hover:bg-surface text-xs flex items-center gap-1"
+                                title="Dock back to bottom"
+                            >
+                                <PanelBottom className="w-3.5 h-3.5" />
+                                <span className="text-[10px] hidden sm:inline">Dock</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setTerminalMode('minimized')}
+                                className="p-1 rounded text-muted hover:text-text hover:bg-surface text-xs"
+                                title="Minimize to pill"
+                            >
+                                <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCodeExecutionResult(prev => ({ ...prev, [currentQuestion.id]: null }))}
+                                className="p-1 rounded text-muted hover:text-rose-500 hover:bg-surface text-xs"
+                                title="Close"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Moveable Window Body */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar text-xs font-mono max-h-[60vh]">
+                        {codeExecutionResult[currentQuestion.id]?.combinedStderr && (
+                            <div className="text-rose-700 dark:text-rose-300 bg-rose-500/10 p-3 rounded-xl border border-rose-500/30 whitespace-pre-wrap">
+                                {codeExecutionResult[currentQuestion.id]?.combinedStderr}
+                            </div>
+                        )}
+
+                        {codeExecutionResult[currentQuestion.id]?.results && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                {codeExecutionResult[currentQuestion.id]!.results.map(tc => (
+                                    <div
+                                        key={tc.index}
+                                        className={cn(
+                                            "p-3 rounded-xl border flex flex-col gap-1.5 shadow-xs transition-colors",
+                                            tc.passed
+                                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200"
+                                                : "bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-200"
+                                        )}
+                                    >
+                                        <div className="flex justify-between font-bold text-[11px]">
+                                            <span>Test Case {tc.index}</span>
+                                            <span>{tc.passed ? '✓ PASSED' : '✗ FAILED'}</span>
+                                        </div>
+                                        <div className="text-[11px] font-mono space-y-0.5">
+                                            <div><span className="text-muted">Input:</span> <span className="text-text font-medium">{tc.input || '(empty)'}</span></div>
+                                            <div><span className="text-muted">Expected:</span> <span className="text-emerald-600 dark:text-emerald-400 font-medium">{tc.expected}</span></div>
+                                            <div><span className="text-muted">Output:</span> <span className={tc.passed ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-rose-600 dark:text-rose-400 font-medium"}>{tc.actual}</span></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Minimized Floating Output Console Pill */}
+            {currentQuestion.type === 'code' && codeExecutionResult[currentQuestion.id] && terminalMode === 'minimized' && (
+                <div className="fixed bottom-4 right-6 z-50 animate-in fade-in slide-in-from-bottom-2">
+                    <button
+                        onClick={() => setTerminalMode('docked')}
+                        className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-surface border border-border shadow-xl font-mono text-xs font-bold hover:border-primary/40 transition-all hover:scale-105"
+                    >
+                        <Code2 className="w-3.5 h-3.5 text-primary" />
+                        <span>Output Console</span>
+                        {codePassedStatus[currentQuestion.id] ? (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px]">
+                                PASSED ALL
+                            </span>
+                        ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px]">
+                                FAILED
+                            </span>
+                        )}
+                    </button>
                 </div>
             )}
         </div>
