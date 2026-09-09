@@ -21,6 +21,7 @@ interface CodeEditorProps {
     breadcrumbs?: string[];
     onReset?: () => void;
     showReset?: boolean;
+    showCopy?: boolean;
     onRun?: () => void;
     isRunning?: boolean;
     runButtonText?: string;
@@ -167,6 +168,7 @@ export function CodeEditor({
     breadcrumbs,
     onReset,
     showReset = true,
+    showCopy = true,
     onRun,
     isRunning = false,
     runButtonText = 'Run & Test Code',
@@ -383,29 +385,31 @@ export function CodeEditor({
                         </button>
                     )}
 
-                    <button
-                        type="button"
-                        onClick={handleCopy}
-                        title="Copy code"
-                        className={cn(
-                            "px-2 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5",
-                            isDark
-                                ? "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800"
-                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/70"
-                        )}
-                    >
-                        {copied ? (
-                            <>
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />
-                                <span className="text-[11px] text-emerald-500 font-semibold">Copied</span>
-                            </>
-                        ) : (
-                            <>
-                                <Copy className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline text-[11px]">Copy</span>
-                            </>
-                        )}
-                    </button>
+                    {showCopy && (
+                        <button
+                            type="button"
+                            onClick={handleCopy}
+                            title="Copy code"
+                            className={cn(
+                                "px-2 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5",
+                                isDark
+                                    ? "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800"
+                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/70"
+                            )}
+                        >
+                            {copied ? (
+                                <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                    <span className="text-[11px] text-emerald-500 font-semibold">Copied</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline text-[11px]">Copy</span>
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
 

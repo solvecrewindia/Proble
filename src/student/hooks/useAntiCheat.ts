@@ -136,21 +136,34 @@ export const useAntiCheat = ({
         const preventDefault = (e: Event) => e.preventDefault();
 
         const handleKeyDown = (e: KeyboardEvent) => {
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
             // Screenshot detection (Instant Termination)
             if (
                 e.key === 'PrintScreen' || 
-                (e.metaKey && e.shiftKey && e.key.toLowerCase() === 's') || 
-                (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key))
+                (isCtrlOrCmd && e.shiftKey && e.key.toLowerCase() === 's') || 
+                (isCtrlOrCmd && e.shiftKey && ['3', '4', '5'].includes(e.key))
             ) {
                 e.preventDefault();
-                triggerViolation("Screenshot Detected", true); // true = instant terminate
+                triggerViolation("Screenshot Attempt Detected", true); // true = instant terminate
                 return;
             }
 
-            // Normal restricted shortcuts (Triggers warning/strike)
+            // Developer Tools / Inspect Element / Source inspection (AI Scraping prevention)
             if (
-                (e.ctrlKey && ['c', 'v', 'x', 'p', 'u'].includes(e.key.toLowerCase())) ||
                 e.key === 'F12' ||
+                (isCtrlOrCmd && e.shiftKey && ['i', 'j', 'c'].includes(e.key.toLowerCase())) ||
+                (e.altKey && isCtrlOrCmd && ['i', 'j'].includes(e.key.toLowerCase())) ||
+                (isCtrlOrCmd && e.key.toLowerCase() === 'u')
+            ) {
+                e.preventDefault();
+                triggerViolation("Developer Tools / Source Inspection Blocked");
+                return;
+            }
+
+            // Normal restricted shortcuts (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+P, Alt+Tab)
+            if (
+                (isCtrlOrCmd && ['c', 'v', 'x', 'p'].includes(e.key.toLowerCase())) ||
                 (e.altKey && e.key === 'Tab')
             ) {
                 e.preventDefault();
@@ -164,15 +177,29 @@ export const useAntiCheat = ({
         document.addEventListener('cut', preventDefault);
         window.addEventListener('keydown', handleKeyDown);
 
-        // 5. Block Long-Press (Often used to trigger Google Lens / Circle to Search)
+        // 5. Block Long-Press & Multi-touch (used to trigger Google Lens / Circle to Search)
+        let touchTimer: any = null;
         const handleTouchStart = (e: TouchEvent) => {
             if (e.touches.length > 1) {
                 e.preventDefault();
-                triggerViolation("Multi-touch Gesture");
+                triggerViolation("Multi-touch Gesture (Google Lens / Screenshot blocked)");
+                return;
             }
+            touchTimer = setTimeout(() => {
+                triggerViolation("Long Press Detected (Google Lens / Image Search blocked)");
+            }, 600);
+        };
+
+        const handleTouchEnd = () => {
+            if (touchTimer) clearTimeout(touchTimer);
+        };
+        const handleTouchMove = () => {
+            if (touchTimer) clearTimeout(touchTimer);
         };
 
         document.addEventListener('touchstart', handleTouchStart, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
+        document.addEventListener('touchmove', handleTouchMove);
         
         // 6. Disable Text Selection & Image Dragging via CSS
         const style = document.createElement('style');
@@ -182,11 +209,11 @@ export const useAntiCheat = ({
                 -moz-user-select: none !important;
                 -ms-user-select: none !important;
                 user-select: none !important;
-                -webkit-touch-callout: none !important; /* Disable iOS context menu */
+                -webkit-touch-callout: none !important; /* Disable iOS context menu & Google Lens */
             }
             img {
                 -webkit-user-drag: none !important;
-                pointer-events: none !important; /* Block long-press on images */
+                pointer-events: none !important; /* Block long-press on images & Google Lens scan */
             }
             input, textarea, [contenteditable] {
                 -webkit-user-select: text !important;
@@ -203,6 +230,10 @@ export const useAntiCheat = ({
             document.removeEventListener('paste', preventDefault);
             document.removeEventListener('cut', preventDefault);
             window.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('touchstart', handleTouchStart);
+            document.removeEventListener('touchend', handleTouchEnd);
+            document.removeEventListener('touchmove', handleTouchMove);
+            if (touchTimer) clearTimeout(touchTimer);
             if (document.head.contains(style)) {
                 document.head.removeChild(style);
             }

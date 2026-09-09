@@ -11,17 +11,11 @@ import { MathText } from '../../shared/components/MathText';
 import {
     User, Clock, CheckCircle, Loader2, WifiOff, Play, RotateCcw,
     Code2, CheckCircle2, X, Award, Flame, Users, Trophy, ChevronRight, Zap,
-    GripHorizontal, Maximize2, Minus, PanelBottom, Move
+    GripHorizontal, Maximize2, Minus, PanelBottom, Move, Shield, ShieldAlert, AlertTriangle
 } from 'lucide-react';
 import { runTestCases, ExecutionResponse } from '../../shared/utils/codeExecution';
 import { CodeEditor } from '../../shared/components/CodeEditor';
-
-const formatSeconds = (totalSec: number) => {
-    if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
-    const mins = Math.floor(totalSec / 60);
-    const secs = Math.floor(totalSec % 60);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
+import { useAntiCheat } from '../hooks/useAntiCheat';
 
 export default function StudentLiveQuiz() {
     const { id } = useParams();
@@ -66,6 +60,53 @@ export default function StudentLiveQuiz() {
     const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const resizeStartYRef = useRef<number>(0);
     const resizeStartHeightRef = useRef<number>(240);
+
+    // Live Assessment Security & Anti-Cheat Lockdown
+    const handleSubmitAnswerRef = useRef<() => void>(() => {});
+
+    const isLiveTestActive = status === 'active' && questions.length > 0 && currentQuestionIndex >= 0 && viewMode !== 'lobby';
+
+    const handleViolation = useCallback(async (count: number, type: string) => {
+        if (!id || !user) return;
+        try {
+            const timeStr = new Date().toLocaleTimeString();
+            const flagEntry = `[${timeStr}] Q${(currentQuestionIndex ?? 0) + 1}: ${type} (Strike ${count})`;
+
+            const { data: curAttempt } = await supabase
+                .from('attempts')
+                .select('flags')
+                .eq('quiz_id', id)
+                .eq('student_id', user.id)
+                .maybeSingle();
+
+            const existingFlags = Array.isArray(curAttempt?.flags) ? curAttempt.flags : [];
+            const updatedFlags = [...existingFlags, flagEntry];
+
+            await supabase
+                .from('attempts')
+                .update({ flags: updatedFlags })
+                .eq('quiz_id', id)
+                .eq('student_id', user.id);
+        } catch (err) {
+            console.warn("Live test security flag sync warning:", err);
+        }
+    }, [id, user, currentQuestionIndex]);
+
+    const {
+        violations,
+        isFullScreen,
+        warning,
+        enterFullScreen,
+        remainingStrikes
+    } = useAntiCheat({
+        enabled: isLiveTestActive,
+        level: 'standard',
+        maxViolations: 3,
+        onViolation: handleViolation,
+        onAutoSubmit: () => {
+            handleSubmitAnswerRef.current();
+        }
+    });
 
     // Global mouse event listeners for dragging and resizing the output terminal
     useEffect(() => {
@@ -610,6 +651,10 @@ export default function StudentLiveQuiz() {
         }
     };
 
+    useEffect(() => {
+        handleSubmitAnswerRef.current = handleSubmitAnswer;
+    });
+
     const handleSubmitAnswer = async () => {
         const currentQ = questions[currentQuestionIndex];
         if (!currentQ || !user || !id) return;
@@ -963,6 +1008,33 @@ export default function StudentLiveQuiz() {
                             </div>
                         </div>
 
+                        {/* Live Exam Security Notice Card */}
+                        <div className="p-4 rounded-xl bg-surface border border-border text-left space-y-2.5">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-primary font-bold text-xs">
+                                    <Shield className="w-4 h-4 text-primary" />
+                                    <span>Live Exam Security & Anti-Cheat Enabled</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 uppercase tracking-wider">
+                                    Full Lockdown
+                                </span>
+                            </div>
+                            <p className="text-xs text-muted leading-relaxed">
+                                Full screen mode is mandatory once the assessment begins. Tab switching, exiting full screen, Google Lens, and AI browser extensions are strictly monitored and will incur penalties.
+                            </p>
+                            <div className="pt-1">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={async () => { await enterFullScreen(); }}
+                                    className="text-xs h-8 rounded-lg flex items-center gap-1.5 font-semibold"
+                                >
+                                    <Maximize2 className="w-3.5 h-3.5" />
+                                    {isFullScreen ? "Full Screen Active ✓" : "Pre-Enter Full Screen"}
+                                </Button>
+                            </div>
+                        </div>
+
                         {participants.length > 0 && (
                             <div className="space-y-2 pt-2 text-left">
                                 <div className="flex items-center justify-between">
@@ -1110,6 +1182,43 @@ export default function StudentLiveQuiz() {
 
     return (
         <div className="h-screen w-screen font-sans flex flex-col bg-background text-text overflow-hidden relative select-none">
+            {/* Warning Overlay Banner */}
+            {warning && (
+                <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[130] animate-in slide-in-from-top-4 fade-in duration-300 w-full max-w-lg px-4">
+                    <div className="bg-red-600 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-4 border-2 border-red-400">
+                        <div className="p-2 bg-white/20 rounded-full shrink-0 animate-pulse">
+                            <AlertTriangle className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-sm md:text-base leading-tight">Exam Security Warning</h3>
+                            <p className="text-white/90 text-xs md:text-sm mt-0.5">{warning}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Mandatory Full Screen Lockdown Overlay */}
+            {!isFullScreen && isLiveTestActive && (
+                <div className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in">
+                    <div className="bg-surface border-t-4 border-t-red-600 shadow-2xl rounded-2xl p-8 max-w-lg w-full text-center border border-border">
+                        <div className="mx-auto w-16 h-16 bg-red-500/10 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mb-6">
+                            <ShieldAlert className="w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-black mb-3 text-text">Exam Security Protocol</h2>
+                        <p className="text-muted leading-relaxed mb-6 text-sm md:text-base">
+                            This live assessment is strictly proctored with full lockdown mode.
+                            Full screen is mandatory. Tab switching, exiting full screen, Google Lens, or AI assistance will be recorded as exam violations.
+                        </p>
+                        <Button
+                            onClick={async () => { await enterFullScreen(); }}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all"
+                        >
+                            Resume Full Screen
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {/* Offline Alert */}
             {isOffline && (
                 <div className="fixed inset-0 z-[110] bg-background/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-in fade-in">
@@ -1121,7 +1230,7 @@ export default function StudentLiveQuiz() {
 
             {/* Header */}
             <header className="h-14 shrink-0 px-4 md:px-6 flex items-center justify-between bg-surface border-b border-border z-30">
-                {/* Left: Logo + Live status */}
+                {/* Left: Logo + Live status + Proctor Badge */}
                 <div className="flex items-center gap-3">
                     <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-7 w-auto object-contain rounded-md" />
                     <div className="flex items-center gap-2 px-2.5 py-1 bg-surface-highlight rounded-full border border-border">
@@ -1130,18 +1239,23 @@ export default function StudentLiveQuiz() {
                             {realtimeStatus === 'connected' ? 'Live Session' : 'Syncing...'}
                         </span>
                     </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-surface-highlight rounded-full border border-border text-xs font-semibold text-muted">
+                        <Shield className="w-3.5 h-3.5 text-primary" />
+                        <span className="hidden md:inline">Proctored</span>
+                        {violations > 0 && (
+                            <span className="ml-0.5 px-1.5 py-0.2 bg-red-500 text-white rounded-full text-[10px] font-bold animate-pulse">
+                                {violations} {violations === 1 ? 'Strike' : 'Strikes'}
+                            </span>
+                        )}
+                    </div>
                 </div>
 
-                {/* Center: Question Progress + Live Host Stopwatch */}
+                {/* Center: Question Progress */}
                 <div className="flex items-center gap-2 md:gap-3">
                     <span className="font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
                         Question {currentQuestionIndex + 1} of {questions.length}
                     </span>
 
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-highlight border border-border text-primary font-mono font-bold text-xs">
-                        <Clock className="w-3.5 h-3.5 text-primary" />
-                        <span>{formatSeconds(elapsedTime)}</span>
-                    </div>
                     <Button variant="ghost" size="sm" onClick={fetchQuizState} title="Refresh sync" className="h-7 w-7 p-0">
                         <RotateCcw className="w-3.5 h-3.5 text-muted" />
                     </Button>
@@ -1243,6 +1357,7 @@ export default function StudentLiveQuiz() {
                                     setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: starter }));
                                 }}
                                 showReset={!isLocked}
+                                showCopy={false}
                                 onRun={handleRunLiveCode}
                                 isRunning={isExecutingCode}
                                 runButtonText="Run & Test Code"
