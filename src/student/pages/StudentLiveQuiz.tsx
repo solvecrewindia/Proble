@@ -13,6 +13,7 @@ import {
     Code2, CheckCircle2, X, Award, Flame, Users, Trophy, ChevronRight, Zap
 } from 'lucide-react';
 import { runTestCases, ExecutionResponse } from '../../shared/utils/codeExecution';
+import { CodeEditor } from '../../shared/components/CodeEditor';
 
 const formatSeconds = (totalSec: number) => {
     if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
@@ -1085,60 +1086,28 @@ export default function StudentLiveQuiz() {
                     {/* Code Question UI or MCQ Options */}
                     {currentQuestion.type === 'code' ? (
                         <div className="space-y-4">
-                            {/* Python ML Challenge Banner */}
-                            <div className="flex items-center justify-between p-3.5 rounded-xl bg-primary/5 border border-primary/20 text-primary">
-                                <div className="flex items-center gap-2 font-bold text-sm">
-                                    <Code2 className="w-5 h-5 text-primary" />
-                                    <span>Python 3 (ML / Scripting) Challenge</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const starter = (currentQuestion.correct as any)?.starterCode || '';
-                                        setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: starter }));
-                                    }}
-                                    disabled={isLocked}
-                                    className="flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg bg-surface hover:bg-surface/80 border border-border text-muted hover:text-text font-medium transition-colors disabled:opacity-50"
-                                    title="Reset to starter code"
-                                >
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                    Reset
-                                </button>
-                            </div>
+                            {/* Modern VS Code Coding Space */}
+                            <CodeEditor
+                                value={codeAnswers[currentQuestion.id] ?? (currentQuestion.correct as any)?.starterCode ?? ''}
+                                onChange={(val) => setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: val }))}
+                                fileName="solution.py"
+                                breadcrumbs={['live-assessment', `question-${currentQuestionIndex + 1}`, 'solution.py']}
+                                disabled={isLocked}
+                                readOnly={isLocked}
+                                onReset={() => {
+                                    const starter = (currentQuestion.correct as any)?.starterCode || '';
+                                    setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: starter }));
+                                }}
+                                showReset={!isLocked}
+                                onRun={handleRunLiveCode}
+                                isRunning={isExecutingCode}
+                                runButtonText="Run & Test Code"
+                                allPassed={codePassedStatus[currentQuestion.id]}
+                                minHeight="360px"
+                            />
 
-                            {/* Code Editor */}
-                            <div className="relative rounded-xl overflow-hidden border-2 border-neutral-700 focus-within:border-primary shadow-inner bg-[#1e1e1e]">
-                                <textarea
-                                    value={codeAnswers[currentQuestion.id] ?? (currentQuestion.correct as any)?.starterCode ?? ''}
-                                    disabled={isLocked}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: val }));
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Tab') {
-                                            e.preventDefault();
-                                            const start = e.currentTarget.selectionStart;
-                                            const end = e.currentTarget.selectionEnd;
-                                            const current = e.currentTarget.value;
-                                            const updated = current.substring(0, start) + '    ' + current.substring(end);
-                                            setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: updated }));
-                                            setTimeout(() => {
-                                                if (e.currentTarget) {
-                                                    e.currentTarget.selectionStart = e.currentTarget.selectionEnd = start + 4;
-                                                }
-                                            }, 0);
-                                        }
-                                    }}
-                                    spellCheck={false}
-                                    rows={10}
-                                    placeholder="# Write your Python 3 ML code here..."
-                                    className="w-full bg-transparent text-emerald-300 font-mono text-sm p-4 outline-none resize-y leading-relaxed"
-                                />
-                            </div>
-
-                            {/* Run Code & Verification Actions */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                            {/* Verification Status Pill */}
+                            <div className="flex items-center justify-between px-1">
                                 <div className="flex items-center gap-2">
                                     {codePassedStatus[currentQuestion.id] ? (
                                         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-in fade-in">
@@ -1149,28 +1118,11 @@ export default function StudentLiveQuiz() {
                                             <X className="w-4 h-4" /> Some Test Cases Failed. Check console below.
                                         </div>
                                     ) : (
-                                        <span className="text-xs text-muted">
-                                            Test cases: {((currentQuestion.correct as any)?.testCases || []).length} case(s) defined
+                                        <span className="text-xs text-muted font-mono">
+                                            {((currentQuestion.correct as any)?.testCases || []).length} test cases defined
                                         </span>
                                     )}
                                 </div>
-
-                                <Button
-                                    type="button"
-                                    onClick={handleRunLiveCode}
-                                    disabled={isExecutingCode || isLocked}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-10 px-5 shadow-md flex items-center gap-2"
-                                >
-                                    {isExecutingCode ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 animate-spin" /> Running Python...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Play className="w-4 h-4 fill-current" /> Run & Test Code
-                                        </>
-                                    )}
-                                </Button>
                             </div>
 
                             {/* Execution Output Console */}

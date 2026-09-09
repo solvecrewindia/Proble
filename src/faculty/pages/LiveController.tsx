@@ -6,6 +6,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { ArrowLeft, ChevronRight, ChevronLeft, CheckCircle, Pause, Download, Code2, Clock, Trophy, BarChart3, Users, Play, Eye, X, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MathText } from '../../shared/components/MathText';
+import { CodeEditor } from '../../shared/components/CodeEditor';
 import type { Quiz } from '../types';
 
 interface StudentSubmission {
@@ -937,9 +938,16 @@ export default function LiveController() {
                             </Button>
                         </div>
                         <div className="flex-1 overflow-y-auto">
-                            <pre className="p-4 rounded-xl bg-neutral-900 text-neutral-100 font-mono text-xs overflow-x-auto leading-relaxed border border-neutral-800">
-                                <code>{viewingStudentCode.code}</code>
-                            </pre>
+                            <CodeEditor
+                                value={viewingStudentCode.code || '# No code submitted'}
+                                onChange={() => {}}
+                                readOnly={true}
+                                disabled={true}
+                                fileName="solution.py"
+                                breadcrumbs={['submissions', viewingStudentCode.name.toLowerCase().replace(/\s+/g, '-'), 'solution.py']}
+                                showReset={false}
+                                minHeight="280px"
+                            />
                         </div>
                         <div className="flex justify-end pt-2">
                             <Button onClick={() => setViewingStudentCode(null)} size="sm">

@@ -11,6 +11,7 @@ import { QuizTimer } from '../components/QuizTimer';
 import { MathText } from '../../shared/components/MathText';
 import { evaluateTestWithAI, QuestionEvaluationResult, QuestionEvaluationInput } from '../services/aiEvaluationService';
 import { runTestCases } from '../../shared/utils/codeExecution';
+import { CodeEditor } from '../../shared/components/CodeEditor';
 
 const formatSeconds = (totalSec: number) => {
     if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
@@ -1321,68 +1322,31 @@ const MCQTest = () => {
 
                             {activeQuestion.type === 'code' && (
                                 <div className="space-y-4">
-                                    <div className="relative">
-                                        <div className="absolute top-2 right-2 z-10 flex gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    const val = activeQuestion.correct.starterCode || '';
-                                                    setAnswers(prev => {
-                                                        const next = { ...prev, [currentQuestion]: val };
-                                                        saveProgress(next);
-                                                        return next;
-                                                    });
-                                                }}
-                                                className="p-1.5 bg-neutral-200 dark:bg-neutral-700 rounded hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
-                                                title="Reset Code"
-                                            >
-                                                <RotateCcw className="w-4 h-4 text-text" />
-                                            </button>
-                                        </div>
-                                        <textarea
-                                            value={(answers[currentQuestion] as string) ?? activeQuestion.correct.starterCode ?? ''}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                setAnswers(prev => {
-                                                    const next = { ...prev, [currentQuestion]: val };
-                                                    saveProgress(next);
-                                                    return next;
-                                                });
-                                            }}
-                                            className="w-full h-64 bg-[#1e1e1e] text-neutral-200 font-mono text-sm p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                                            spellCheck="false"
-                                            placeholder="// Write your code here..."
-                                        />
-                                    </div>
-
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted font-mono bg-surface px-2 py-1 rounded border border-neutral-200 dark:border-neutral-700">
-                                                {activeQuestion.correct?.allowedLanguages && activeQuestion.correct.allowedLanguages.length > 0 ? (
-                                                    <select
-                                                        className="bg-transparent border-none outline-none text-xs font-mono cursor-pointer"
-                                                        value={selectedLanguages[activeQuestion.id] || activeQuestion.correct.language || 'python'}
-                                                        onChange={(e) => setSelectedLanguages(prev => ({ ...prev, [activeQuestion.id]: e.target.value }))}
-                                                    >
-                                                        {/* Ensure default is always an option just in case */}
-                                                        <option value={activeQuestion.correct.language || 'python'}>{activeQuestion.correct.language || 'python'}</option>
-                                                        {activeQuestion.correct.allowedLanguages.map((lang: string) => (
-                                                            lang !== (activeQuestion.correct.language || 'python') && <option key={lang} value={lang}>{lang}</option>
-                                                        ))}
-                                                    </select>
-                                                ) : (
-                                                    activeQuestion.correct?.language || 'python'
-                                                )}
-                                            </span>
-                                        </div>
-                                        <button
-                                            onClick={handleRunCode}
-                                            disabled={isExecuting}
-                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
-                                        >
-                                            {isExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                                            Run Code
-                                        </button>
-                                    </div>
+                                    <CodeEditor
+                                        value={(answers[currentQuestion] as string) ?? activeQuestion.correct.starterCode ?? ''}
+                                        onChange={(val) => {
+                                            setAnswers(prev => {
+                                                const next = { ...prev, [currentQuestion]: val };
+                                                saveProgress(next);
+                                                return next;
+                                            });
+                                        }}
+                                        fileName="solution.py"
+                                        breadcrumbs={['test', `question-${currentQuestion}`, 'solution.py']}
+                                        onReset={() => {
+                                            const val = activeQuestion.correct.starterCode || '';
+                                            setAnswers(prev => {
+                                                const next = { ...prev, [currentQuestion]: val };
+                                                saveProgress(next);
+                                                return next;
+                                            });
+                                        }}
+                                        onRun={handleRunCode}
+                                        isRunning={isExecuting}
+                                        runButtonText="Run Code"
+                                        allPassed={codeExecutionStatus[activeQuestion.id] === true}
+                                        minHeight="320px"
+                                    />
 
                                     {(executionOutput[activeQuestion.id] || codeExecutionStatus[activeQuestion.id] !== undefined) && (
                                         <div className="bg-neutral-900 rounded-lg p-4 font-mono text-xs overflow-auto max-h-48 border border-neutral-800">
