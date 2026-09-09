@@ -294,7 +294,7 @@ export default function LiveTests() {
                     <h1 className="text-2xl font-bold text-text">Live Tests</h1>
                     <p className="text-muted">Manage your real-time assessments.</p>
                 </div>
-                <Button onClick={() => navigate('/faculty/create')}>
+                <Button onClick={() => navigate('/faculty/create?type=live')}>
                     <Play className="mr-2 h-4 w-4" /> Create Live Quiz
                 </Button>
             </div>

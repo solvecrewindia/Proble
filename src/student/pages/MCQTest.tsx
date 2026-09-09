@@ -636,7 +636,21 @@ const MCQTest = () => {
                             })()
                         };
                     });
-                    setQuestions(mapped);
+                    let finalQuestions = mapped;
+                    if (quizData?.settings?.setsConfig?.enabled && Array.isArray(quizData.settings.setsConfig.mappings)) {
+                        const currentUserEmail = (currentUser?.email || user?.email || '').trim().toLowerCase();
+                        const mapping = quizData.settings.setsConfig.mappings.find(
+                            (m: any) => m.email?.trim().toLowerCase() === currentUserEmail
+                        );
+                        if (mapping) {
+                            const sliceStart = Math.max(0, mapping.startIndex);
+                            const sliceEnd = Math.min(mapped.length, mapping.endIndex + 1);
+                            if (sliceStart < mapped.length && sliceEnd > sliceStart) {
+                                finalQuestions = mapped.slice(sliceStart, sliceEnd);
+                            }
+                        }
+                    }
+                    setQuestions(finalQuestions);
                 }
             } catch (err: any) {
                 console.error("Error loading test:", err);

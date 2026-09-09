@@ -35,6 +35,7 @@ export default function StudentLiveQuiz() {
     const [participants, setParticipants] = useState<any[]>([]);
     const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
     const [quizTitle, setQuizTitle] = useState('');
+    const [assignedSet, setAssignedSet] = useState<any | null>(null);
 
     // Code Question State (Live ML / Python Code challenges)
     const [codeAnswers, setCodeAnswers] = useState<Record<string, string>>({});
@@ -298,7 +299,7 @@ export default function StudentLiveQuiz() {
                     .eq('quiz_id', id)
                     .order('created_at', { ascending: true });
 
-                const mappedQuestions = questionsData?.map((q: any) => {
+                let mappedQuestions = questionsData?.map((q: any) => {
                     const isCode = q.type === 'code';
                     let parsedCorrect = q.correct_answer;
                     if (isCode) {
@@ -316,6 +317,23 @@ export default function StudentLiveQuiz() {
                         correct: parsedCorrect,
                     };
                 }) || [];
+
+                // Filter by assigned Question Set if enabled
+                if (quizData.settings?.setsConfig?.enabled && Array.isArray(quizData.settings.setsConfig.mappings)) {
+                    const userEmail = (user.email || '').trim().toLowerCase();
+                    const mapping = quizData.settings.setsConfig.mappings.find(
+                        (m: any) => m.email?.trim().toLowerCase() === userEmail
+                    );
+                    if (mapping) {
+                        setAssignedSet(mapping);
+                        const sliceStart = Math.max(0, mapping.startIndex);
+                        const sliceEnd = Math.min(mappedQuestions.length, mapping.endIndex + 1);
+                        if (sliceStart < mappedQuestions.length && sliceEnd > sliceStart) {
+                            mappedQuestions = mappedQuestions.slice(sliceStart, sliceEnd);
+                        }
+                    }
+                }
+
                 setQuestions(mappedQuestions);
             }
 
@@ -992,7 +1010,8 @@ export default function StudentLiveQuiz() {
         );
     }
 
-    const currentQuestion = questions[currentQuestionIndex];
+    const activeQIndex = currentQuestionIndex >= 0 ? Math.min(currentQuestionIndex, Math.max(0, questions.length - 1)) : -1;
+    const currentQuestion = activeQIndex >= 0 ? questions[activeQIndex] : undefined;
 
     // --- LIVE LOBBY / WAITING ROOM ---
     if (!currentQuestion || currentQuestionIndex < 0) {
@@ -1311,11 +1330,45 @@ export default function StudentLiveQuiz() {
                     </div>
                 </div>
 
-                {/* Center: Question Progress */}
+                {/* Center: Question Progress & Sets Info */}
                 <div className="flex items-center gap-2 md:gap-3">
+                    {assignedSet && (
+                        <span className="font-bold text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shadow-sm flex items-center gap-1">
+                            <span>{assignedSet.setName}</span>
+                            <span className="opacity-80 text-[10px]">(Q{assignedSet.startQuestion}–Q{assignedSet.endQuestion})</span>
+                        </span>
+                    )}
+
                     <span className="font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
-                        Question {currentQuestionIndex + 1} of {questions.length}
+                        Question {activeQIndex + 1} of {questions.length}
                     </span>
+
+                    {/* Question Switcher Tabs for Multi-Question Sets */}
+                    {questions.length > 1 && (
+                        <div className="flex items-center gap-1 bg-surface-highlight p-0.5 rounded-lg border border-border">
+                            {questions.map((_, qIdx) => (
+                                <button
+                                    key={qIdx}
+                                    type="button"
+                                    onClick={() => {
+                                        if (currentQuestionIndex !== qIdx) {
+                                            setCurrentQuestionIndex(qIdx);
+                                            setSelectedOption(null);
+                                            setIsSubmitted(false);
+                                        }
+                                    }}
+                                    className={cn(
+                                        "px-2 py-0.5 rounded-md text-xs font-bold transition-all",
+                                        activeQIndex === qIdx
+                                            ? "bg-primary text-white shadow-sm"
+                                            : "text-muted hover:text-text"
+                                    )}
+                                >
+                                    Q{qIdx + 1}
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
                     <Button variant="ghost" size="sm" onClick={fetchQuizState} title="Refresh sync" className="h-7 w-7 p-0">
                         <RotateCcw className="w-3.5 h-3.5 text-muted" />

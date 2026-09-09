@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Save, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -25,17 +25,21 @@ const STEPS = [
 
 export default function QuizCreate() {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const [currentStep, setCurrentStep] = useState(0);
+    const urlType = searchParams.get('type');
+    const initialType = (urlType === 'live' || urlType === 'master') ? urlType : 'global';
+    const [currentStep, setCurrentStep] = useState(urlType === 'live' ? 1 : 0);
     const [quizData, setQuizData] = useState<Partial<QuizMeta>>({
         title: '',
         description: '',
-        type: 'global',
+        type: initialType as any,
         settings: {
             duration: 60,
             passingScore: 40,
             antiCheatLevel: 'standard',
-            allowRetake: false
+            allowRetake: false,
+            isLive: initialType === 'live'
         }
     });
     const [questions, setQuestions] = useState<any[]>([]); // Using any[] temporarily to avoid type import issues if not present, but likely Question[]

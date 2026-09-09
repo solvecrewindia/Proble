@@ -717,8 +717,13 @@ export default function LiveController() {
                     </Button>
                     <div>
                         <h1 className="text-lg font-bold text-text">{quiz.title}</h1>
-                        <p className="text-xs text-muted">
-                            Live Assessment • Access Code: <span className="font-mono font-bold text-primary">{(quiz as any).code || quiz.accessCode || quiz.id.slice(0, 4)}</span>
+                        <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
+                            <span>Live Assessment • Access Code: <span className="font-mono font-bold text-primary">{(quiz as any).code || quiz.accessCode || quiz.id.slice(0, 4)}</span></span>
+                            {quiz.settings?.setsConfig?.enabled && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                                    Question Sets Active ({quiz.settings.setsConfig.questionsPerStudent || 2} Qs/Student)
+                                </span>
+                            )}
                         </p>
                     </div>
                 </div>
