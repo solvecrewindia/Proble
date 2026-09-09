@@ -1021,7 +1021,7 @@ export default function LiveController() {
                                             Question {currentQuestionIndex + 1} of {totalQuestions}
                                         </span>
                                         <span className="bg-neutral-100 dark:bg-neutral-800 text-xs px-2.5 py-1 rounded-md font-bold text-muted">
-                                            {currentQuestion.type === 'code' ? 'PYTHON ML CHALLENGE' : 'MULTIPLE CHOICE'}
+                                            {currentQuestion.type === 'code' ? 'CODE CHALLENGE' : 'MULTIPLE CHOICE'}
                                         </span>
                                     </div>
 
@@ -1088,7 +1088,7 @@ export default function LiveController() {
                                     <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-primary font-bold text-sm">
                                             <Code2 className="w-4 h-4" />
-                                            <span>Python 3 Code Challenge</span>
+                                            <span>Code Challenge</span>
                                         </div>
                                         <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-mono font-semibold">
                                             {((currentQuestion.correct as any)?.testCases || []).length} Test Cases

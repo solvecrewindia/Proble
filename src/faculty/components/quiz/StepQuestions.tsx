@@ -1068,7 +1068,7 @@ if __name__ == "__main__":
                                                     <option value="msq">Multi Correct (MSQ)</option>
                                                     <option value="true_false">True / False</option>
                                                     <option value="range">Range Answer</option>
-                                                    <option value="code">Python ML Code Challenge</option>
+                                                    <option value="code">Code</option>
                                                 </select>
                                             </div>
                                             <div className="w-24">
@@ -1564,7 +1564,7 @@ if __name__ == "__main__":
                                     <option value="text">Descriptive Text</option>
                                     <option value="numeric">Numeric Answer</option>
                                     <option value="range">Range Answer</option>
-                                    <option value="code">Python ML Code Challenge</option>
+                                    <option value="code">Code</option>
                                 </select>
                                 <Button size="sm" onClick={addQuestion}>
                                     <Plus className="mr-2 h-4 w-4" /> Add Question
