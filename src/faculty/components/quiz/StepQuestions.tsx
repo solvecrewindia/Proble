@@ -1243,7 +1243,7 @@ if __name__ == '__main__':
                             )}
                         >
                             <Code2 className="w-3.5 h-3.5" />
-                            Code Mode
+                            ML Coding
                         </button>
                     </div>
                 </div>
@@ -2169,7 +2169,7 @@ if __name__ == '__main__':
                                                 <div className="flex items-center gap-2.5">
                                                     <h3 className="text-lg font-bold text-text">Question Sets (Coding Test)</h3>
                                                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30 flex items-center gap-1">
-                                                        <Code2 className="w-3 h-3" /> Code Mode Enabled
+                                                        <Code2 className="w-3 h-3" /> ML Coding Enabled
                                                     </span>
                                                 </div>
                                                 <p className="text-xs text-muted mt-0.5">
