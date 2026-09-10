@@ -839,7 +839,9 @@ export default function LiveController() {
                             type="button"
                             onClick={() => {
                                 setViewMode('voting');
-                                updateQuizState(currentQuestionIndex, 'voting');
+                                if (!isCodeMode) {
+                                    updateQuizState(currentQuestionIndex, 'voting');
+                                }
                             }}
                             className={cn(
                                 "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
@@ -855,7 +857,9 @@ export default function LiveController() {
                             onClick={() => {
                                 setViewMode('leaderboard');
                                 fetchLiveLeaderboard();
-                                updateQuizState(currentQuestionIndex, 'leaderboard');
+                                if (!isCodeMode) {
+                                    updateQuizState(currentQuestionIndex, 'leaderboard');
+                                }
                             }}
                             className={cn(
                                 "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",

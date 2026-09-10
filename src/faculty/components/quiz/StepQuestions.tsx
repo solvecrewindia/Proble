@@ -1177,14 +1177,15 @@ if __name__ == '__main__':
     };
 
     const addQuestion = () => {
+        const questionType = isCodeMode ? 'code' : 'mcq';
         const newQuestion: Question = {
             id: uuidv4(),
             quizId: '',
-            type: activeType,
+            type: questionType,
             stem: '',
             weight: 1,
-            options: activeType === 'mcq' ? ['', '', '', ''] : activeType === 'true_false' ? ['True', 'False'] : undefined,
-            correct: activeType === 'mcq' || activeType === 'true_false' ? 0 : activeType === 'msq' ? [] : activeType === 'code' ? { ...DEFAULT_CODE_SNIPPET } : '',
+            options: questionType === 'mcq' ? ['', '', '', ''] : undefined,
+            correct: questionType === 'code' ? { ...DEFAULT_CODE_SNIPPET } : 0,
         };
         setQuestions([...questions, newQuestion]);
     };
@@ -2136,22 +2137,6 @@ if __name__ == '__main__':
                         )}
                         <div className="flex justify-end pt-4">
                             <div className="flex gap-2">
-                                <select
-                                    className="h-9 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-background text-text text-sm px-2"
-                                    value={activeType}
-                                    onChange={(e) => {
-                                        const val = e.target.value as any;
-                                        setActiveType(val);
-                                        if (val === 'code') setForcedCodeMode(true);
-                                    }}
-                                >
-                                    <option value="mcq">Multiple Choice</option>
-                                    <option value="true_false">True / False</option>
-                                    <option value="text">Descriptive Text</option>
-                                    <option value="numeric">Numeric Answer</option>
-                                    <option value="range">Range Answer</option>
-                                    <option value="code">Code</option>
-                                </select>
                                 {isCodeMode && (
                                     <Button
                                         type="button"

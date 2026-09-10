@@ -603,14 +603,14 @@ export function CodeEditor({
                         <button
                             type="button"
                             onClick={onRun}
-                            disabled={isRunning || disabled || isSubmitted || readOnly}
+                            disabled={isRunning || disabled || readOnly}
                             className={cn(
                                 "px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
                                 isRunning
                                     ? "bg-slate-300 dark:bg-neutral-800 text-slate-500 cursor-not-allowed"
                                     : "bg-surface border border-primary/40 text-primary hover:bg-primary/10"
                             )}
-                            title={isSubmitted ? "Submission is locked" : "Run code test cases"}
+                            title="Run code test cases"
                         >
                             {isRunning ? (
                                 <>
@@ -631,26 +631,26 @@ export function CodeEditor({
                         <button
                             type="button"
                             onClick={onSubmit}
-                            disabled={isSubmitting || disabled || isSubmitted || readOnly}
+                            disabled={isSubmitting || disabled || readOnly}
                             className={cn(
                                 "px-4 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-75 disabled:cursor-not-allowed",
-                                isSubmitted || readOnly
-                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-extrabold"
-                                    : isSubmitting
-                                        ? "bg-slate-300 dark:bg-neutral-800 text-slate-500"
+                                isSubmitting
+                                    ? "bg-slate-300 dark:bg-neutral-800 text-slate-500"
+                                    : isSubmitted
+                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
                                         : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
                             )}
-                            title={isSubmitted ? "You have already submitted this question. Code is locked." : "Submit final code solution"}
+                            title={isSubmitted ? "Re-submit updated solution" : "Submit final code solution"}
                         >
                             {isSubmitting ? (
                                 <>
                                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                     <span>Submitting...</span>
                                 </>
-                            ) : isSubmitted || readOnly ? (
+                            ) : isSubmitted ? (
                                 <>
                                     <CheckCircle2 className="w-3.5 h-3.5" />
-                                    <span>Submitted ✓</span>
+                                    <span>Submitted ✓ (Re-Submit)</span>
                                 </>
                             ) : (
                                 <>

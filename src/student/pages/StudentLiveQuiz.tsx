@@ -38,8 +38,8 @@ export default function StudentLiveQuiz() {
     const [questions, setQuestions] = useState<any[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(-1);
     const [loading, setLoading] = useState(true);
-    const [selectedOption, setSelectedOption] = useState<number | null>(null);
-    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [submittedMap, setSubmittedMap] = useState<Record<string, boolean>>({});
+    const [selectedOptions, setSelectedOptions] = useState<Record<string, number | null>>({});
     const [status, setStatus] = useState<'waiting' | 'active' | 'completed'>('waiting');
     const [viewMode, setViewMode] = useState<'voting' | 'results' | 'leaderboard'>('voting');
     const [startupCountdown, setStartupCountdown] = useState(0);
@@ -48,6 +48,25 @@ export default function StudentLiveQuiz() {
     const [quizTitle, setQuizTitle] = useState('');
     const [assignedSet, setAssignedSet] = useState<any | null>(null);
     const [quizDurationMinutes, setQuizDurationMinutes] = useState<number>(60);
+    const [isCodeModeQuiz, setIsCodeModeQuiz] = useState<boolean>(false);
+
+    // Active Question and Per-Question State Resolution
+    const activeQIndex = (questions.length > 0 && currentQuestionIndex >= 0)
+        ? Math.min(currentQuestionIndex, questions.length - 1)
+        : (currentQuestionIndex >= 0 ? 0 : -1);
+    const currentQuestion = (questions.length > 0 && activeQIndex >= 0) ? questions[activeQIndex] : undefined;
+    const isSubmitted = currentQuestion ? Boolean(submittedMap[currentQuestion.id]) : false;
+    const selectedOption = currentQuestion ? (selectedOptions[currentQuestion.id] ?? null) : null;
+    const setSelectedOption = useCallback((opt: number | null) => {
+        if (currentQuestion) {
+            setSelectedOptions(prev => ({ ...prev, [currentQuestion.id]: opt }));
+        }
+    }, [currentQuestion]);
+    const setIsSubmitted = useCallback((sub: boolean) => {
+        if (currentQuestion) {
+            setSubmittedMap(prev => ({ ...prev, [currentQuestion.id]: sub }));
+        }
+    }, [currentQuestion]);
 
     // Code Question State (Live ML / Python Code challenges)
     const [codeAnswers, setCodeAnswers] = useState<Record<string, string>>({});
@@ -84,6 +103,7 @@ export default function StudentLiveQuiz() {
                         ...(curAnswers[qId] || {}),
                         type: 'code',
                         code: codeVal,
+                        submitted: Boolean(curAnswers[qId]?.submitted === true)
                     }
                 };
 
@@ -335,23 +355,32 @@ export default function StudentLiveQuiz() {
             }
 
             // Update Local State based on host settings
-            const isCodeModeQuiz = Boolean(quizData.settings?.isCodingTest) || Boolean(quizData.settings?.setsConfig?.enabled);
+            const isCodeMode = Boolean(quizData.settings?.isCodingTest) || Boolean(quizData.settings?.setsConfig?.enabled) || isCodeModeQuiz;
+            setIsCodeModeQuiz(isCodeMode);
             if (quizData.settings) {
                 if (typeof quizData.settings.currentQuestionIndex === 'number') {
                     setCurrentQuestionIndex((prev) => {
-                        if (prev !== quizData.settings.currentQuestionIndex) {
-                            setStartupCountdown(3);
-                            setSelectedOption(null);
-                            setIsSubmitted(false);
-                            setElapsedTime(0);
+                        // In code mode, never let host polling overwrite student's current question once active
+                        if (isCodeMode && prev >= 0) {
+                            return prev;
+                        }
+                        const targetIdx = quizData.settings.currentQuestionIndex;
+                        if (prev !== targetIdx) {
+                            if (!isCodeMode) {
+                                setStartupCountdown(3);
+                            }
                             questionStartTimeRef.current = Date.now();
-                            return quizData.settings.currentQuestionIndex;
+                            return targetIdx;
                         }
                         return prev;
                     });
                 }
                 if (quizData.settings.viewMode) {
-                    setViewMode(quizData.settings.viewMode);
+                    if (isCodeMode && quizData.status !== 'completed') {
+                        setViewMode('voting');
+                    } else {
+                        setViewMode(quizData.settings.viewMode);
+                    }
                 }
             }
 
@@ -402,7 +431,12 @@ export default function StudentLiveQuiz() {
                     }
                 }
 
+                if (mappedQuestions.some(q => q.type === 'code')) {
+                    setIsCodeModeQuiz(true);
+                }
+
                 setQuestions(mappedQuestions);
+                setCurrentQuestionIndex(prev => prev < 0 ? 0 : prev);
             }
 
             // Initialize Attempt if needed (only once)
@@ -430,40 +464,44 @@ export default function StudentLiveQuiz() {
                     resetViolations();
                 }
 
-                // Restore saved answer for current question
-                const currentQIndex = quizData.settings?.currentQuestionIndex ?? 0;
-                let qIds: any[] = questions;
+                // Restore answers across all questions
+                const savedAnswers = existingAttempt.answers || {};
 
-                if (questions.length === 0) {
-                    const { data: qData } = await supabase
-                        .from('questions')
-                        .select('id')
-                        .eq('quiz_id', id)
-                        .order('created_at', { ascending: true });
-                    if (qData) qIds = qData;
-                }
+                if (typeof savedAnswers === 'object' && savedAnswers !== null) {
+                    const restoredCode: Record<string, string> = {};
+                    const restoredPassed: Record<string, boolean> = {};
+                    const restoredSubmissions: Record<string, boolean> = {};
+                    const restoredOptions: Record<string, number | null> = {};
 
-                if (qIds[currentQIndex]) {
-                    const currentQId = qIds[currentQIndex].id;
-                    const savedAnswers = existingAttempt.answers || {};
-                    const savedRecord = savedAnswers[currentQId];
-
-                    if (savedRecord !== undefined && savedRecord !== null) {
-                        if (typeof savedRecord === 'object' && savedRecord?.type === 'code') {
-                            if (savedRecord.code) {
-                                setCodeAnswers(prev => ({ ...prev, [currentQId]: savedRecord.code }));
+                    Object.entries(savedAnswers).forEach(([qId, rec]: [string, any]) => {
+                        if (rec && typeof rec === 'object') {
+                            if (rec.type === 'code') {
+                                if (rec.code) restoredCode[qId] = rec.code;
+                                if (rec.passed !== undefined) restoredPassed[qId] = Boolean(rec.passed);
                             }
-                            if (savedRecord.passed !== undefined) {
-                                setCodePassedStatus(prev => ({ ...prev, [currentQId]: Boolean(savedRecord.passed) }));
+                            if (rec.submitted === true) {
+                                restoredSubmissions[qId] = true;
                             }
-                            setIsSubmitted(true);
-                        } else {
-                            const savedOption = typeof savedRecord === 'object' ? savedRecord.option : savedRecord;
-                            if (typeof savedOption === 'number') {
-                                setSelectedOption(prev => prev === null ? savedOption : prev);
-                                setIsSubmitted(true);
+                            if (typeof rec.option === 'number') {
+                                restoredOptions[qId] = rec.option;
                             }
+                        } else if (typeof rec === 'number') {
+                            restoredOptions[qId] = rec;
+                            restoredSubmissions[qId] = true;
                         }
+                    });
+
+                    if (Object.keys(restoredCode).length > 0) {
+                        setCodeAnswers(prev => ({ ...restoredCode, ...prev }));
+                    }
+                    if (Object.keys(restoredPassed).length > 0) {
+                        setCodePassedStatus(prev => ({ ...restoredPassed, ...prev }));
+                    }
+                    if (Object.keys(restoredSubmissions).length > 0) {
+                        setSubmittedMap(prev => ({ ...restoredSubmissions, ...prev }));
+                    }
+                    if (Object.keys(restoredOptions).length > 0) {
+                        setSelectedOptions(prev => ({ ...restoredOptions, ...prev }));
                     }
                 }
             }
@@ -516,13 +554,17 @@ export default function StudentLiveQuiz() {
                             }
 
                             if (newSettings) {
+                                const isCodeMode = Boolean(newSettings?.isCodingTest) || Boolean(newSettings?.setsConfig?.enabled) || isCodeModeQuiz;
+                                setIsCodeModeQuiz(isCodeMode);
                                 if (typeof newSettings.currentQuestionIndex === 'number') {
                                     setCurrentQuestionIndex((prev) => {
+                                        if (isCodeMode && prev >= 0) {
+                                            return prev;
+                                        }
                                         if (prev !== newSettings.currentQuestionIndex) {
-                                            setStartupCountdown(3);
-                                            setSelectedOption(null);
-                                            setIsSubmitted(false);
-                                            setElapsedTime(0);
+                                            if (!isCodeMode) {
+                                                setStartupCountdown(3);
+                                            }
                                             questionStartTimeRef.current = Date.now();
                                             return newSettings.currentQuestionIndex;
                                         }
@@ -530,7 +572,11 @@ export default function StudentLiveQuiz() {
                                     });
                                 }
                                 if (newSettings.viewMode) {
-                                    setViewMode(newSettings.viewMode);
+                                    if (isCodeMode && newStatus !== 'completed' && status !== 'completed') {
+                                        setViewMode('voting');
+                                    } else {
+                                        setViewMode(newSettings.viewMode);
+                                    }
                                 }
                             }
                         }
@@ -614,7 +660,7 @@ export default function StudentLiveQuiz() {
                 const profileMap: Record<string, any> = {};
                 (profilesData || []).forEach((p: any) => { profileMap[p.id] = p; });
 
-                const currentQ = questions[currentQuestionIndex];
+                const currentQ = currentQuestion || questions[activeQIndex];
 
                 const enriched = allStudentIds
                     .map(sid => {
@@ -654,7 +700,7 @@ export default function StudentLiveQuiz() {
             const polling = setInterval(fetchLeaderboard, 2000);
             return () => clearInterval(polling);
         }
-    }, [viewMode, status, id, currentQuestionIndex, questions]);
+    }, [viewMode, status, id, currentQuestionIndex, questions, activeQIndex, currentQuestion]);
 
     // Countdown Interval
     useEffect(() => {
@@ -665,7 +711,7 @@ export default function StudentLiveQuiz() {
     }, [startupCountdown]);
 
     const handleRunLiveCode = async () => {
-        const q = questions[currentQuestionIndex];
+        const q = currentQuestion || questions[activeQIndex];
         const isCodeQ = q?.type === 'code' || Boolean(q?.correct?.testCases || q?.correct?.starterCode);
         if (!q || !isCodeQ || isExecutingCode) return;
 
@@ -695,7 +741,7 @@ export default function StudentLiveQuiz() {
                     const passedCount = res.results?.filter((r: any) => r.passed).length || 0;
                     const totalCases = totalTestCases > 0 ? totalTestCases : 1;
                     const isFullyPassed = res.allPassed;
-                    const secondsTaken = Math.max(1, elapsedTime || 1);
+                    const secondsTaken = Math.max(1, Math.round((Date.now() - questionStartTimeRef.current) / 1000));
                     const casePoints = Math.round((passedCount / totalCases) * 1000);
                     const speedBonus = passedCount > 0 ? Math.max(0, Math.round(500 * Math.max(0, 1 - (secondsTaken / 300)))) : 0;
                     const pointsForThisQ = casePoints + speedBonus;
@@ -715,13 +761,15 @@ export default function StudentLiveQuiz() {
                     const newAnswers = {
                         ...currentAnswers,
                         [qId]: {
+                            ...(currentAnswers[qId] || {}),
                             type: 'code',
                             code: currentCode,
                             passed: isFullyPassed,
                             passedCount,
                             totalCount: totalCases,
                             timeTaken: secondsTaken,
-                            points: pointsForThisQ
+                            points: pointsForThisQ,
+                            submitted: Boolean(currentAnswers[qId]?.submitted === true)
                         }
                     };
 
@@ -786,16 +834,20 @@ export default function StudentLiveQuiz() {
     });
 
     const handleSubmitAnswer = async () => {
-        const currentQ = questions[currentQuestionIndex];
+        const currentQ = currentQuestion || questions[activeQIndex];
         if (!currentQ || !user || !id) return;
 
-        const isCodeQ = currentQ.type === 'code';
+        const isCodeQ = currentQ.type === 'code' || Boolean(currentQ.correct?.testCases || currentQ.correct?.starterCode);
         if (!isCodeQ && selectedOption === null) return;
 
-        setIsSubmitted(true);
+        const questionId = currentQ.id;
+        if (autoSaveTimerRef.current[questionId]) {
+            clearTimeout(autoSaveTimerRef.current[questionId]);
+            delete autoSaveTimerRef.current[questionId];
+        }
+        setSubmittedMap(prev => ({ ...prev, [questionId]: true }));
 
         try {
-            const questionId = currentQ.id;
             const currentCode = codeAnswers[questionId] ?? currentQ.correct?.starterCode ?? '';
             let execResult = codeExecutionResult[questionId];
 
@@ -822,7 +874,7 @@ export default function StudentLiveQuiz() {
             const totalTestCases = (currentQ.correct?.testCases || []).length;
             const passedCount = execResult?.results?.filter((r: any) => r.passed).length || 0;
             const totalCases = totalTestCases > 0 ? totalTestCases : 1;
-            const secondsTaken = Math.max(1, elapsedTime || 1);
+            const secondsTaken = Math.max(1, Math.round((Date.now() - questionStartTimeRef.current) / 1000));
 
             let pointsForThisQ = 0;
             let isFullyPassed = false;
@@ -861,12 +913,16 @@ export default function StudentLiveQuiz() {
                 passedCount,
                 totalCount: totalCases,
                 timeTaken: secondsTaken,
-                points: pointsForThisQ
+                points: pointsForThisQ,
+                submitted: true,
+                submittedAt: new Date().toISOString()
             } : {
                 option: selectedOption,
                 passed: isFullyPassed,
                 timeTaken: secondsTaken,
-                points: pointsForThisQ
+                points: pointsForThisQ,
+                submitted: true,
+                submittedAt: new Date().toISOString()
             };
 
             const newAnswers = {
@@ -1084,9 +1140,6 @@ export default function StudentLiveQuiz() {
         );
     }
 
-    const activeQIndex = currentQuestionIndex >= 0 ? Math.min(currentQuestionIndex, Math.max(0, questions.length - 1)) : -1;
-    const currentQuestion = activeQIndex >= 0 ? questions[activeQIndex] : undefined;
-
     // --- LIVE LOBBY / WAITING ROOM ---
     if (!currentQuestion || currentQuestionIndex < 0) {
         return (
@@ -1211,7 +1264,7 @@ export default function StudentLiveQuiz() {
     }
 
     // --- LEADERBOARD PHASE ---
-    if (viewMode === 'leaderboard') {
+    if (viewMode === 'leaderboard' && (!isCodeModeQuiz || status === 'completed')) {
         const myIndex = leaderboardData.findIndex(d => d.student_id === user?.id);
         const myRank = myIndex >= 0 ? myIndex + 1 : '-';
         const myScore = leaderboardData.find(d => d.student_id === user?.id)?.score || 0;
@@ -1223,7 +1276,7 @@ export default function StudentLiveQuiz() {
                         <Trophy className="w-6 h-6 text-amber-500" />
                         <div>
                             <h1 className="text-lg font-bold">Live Standings</h1>
-                            <p className="text-xs text-muted">Question {currentQuestionIndex + 1} of {questions.length}</p>
+                            <p className="text-xs text-muted">Question {activeQIndex + 1} of {questions.length}</p>
                         </div>
                     </div>
                     <div className="text-xs text-muted font-medium bg-surface px-3 py-1.5 rounded-full border border-border animate-pulse flex items-center gap-1.5">
@@ -1309,7 +1362,8 @@ export default function StudentLiveQuiz() {
     }
 
     // --- ACTIVE QUESTION PHASE ---
-    const isLocked = isSubmitted || viewMode === 'results';
+    const isLocked = viewMode === 'results' || status === 'completed' || isTerminated;
+    const isMcqLocked = isSubmitted || isLocked;
 
     return (
         <div className="h-screen w-screen font-sans flex flex-col bg-background text-text overflow-hidden relative select-none">
@@ -1428,8 +1482,7 @@ export default function StudentLiveQuiz() {
                                     onClick={() => {
                                         if (currentQuestionIndex !== qIdx) {
                                             setCurrentQuestionIndex(qIdx);
-                                            setSelectedOption(null);
-                                            setIsSubmitted(false);
+                                            questionStartTimeRef.current = Date.now();
                                         }
                                     }}
                                     className={cn(
@@ -1511,11 +1564,13 @@ export default function StudentLiveQuiz() {
 
                             {/* Submission status if submitted */}
                             {isSubmitted && (
-                                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2.5">
-                                    <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                    <div>
-                                        <p className="font-bold">Solution Submitted</p>
-                                        <p className="opacity-90 text-[11px]">Waiting for instructor to advance to the next challenge.</p>
+                                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between gap-2.5">
+                                    <div className="flex items-center gap-2.5">
+                                        <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                        <div>
+                                            <p className="font-bold">Solution Submitted</p>
+                                            <p className="opacity-90 text-[11px]">Your solution is recorded. You can continue editing and re-submit anytime before time expires.</p>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -1532,7 +1587,7 @@ export default function StudentLiveQuiz() {
                                     handleAutoSaveCode(currentQuestion.id, val);
                                 }}
                                 fileName="solution.py"
-                                breadcrumbs={['live-assessment', `question-${currentQuestionIndex + 1}`, 'solution.py']}
+                                breadcrumbs={['live-assessment', `question-${activeQIndex + 1}`, 'solution.py']}
                                 disabled={isLocked}
                                 readOnly={isLocked}
                                 onReset={() => {
@@ -1663,7 +1718,7 @@ export default function StudentLiveQuiz() {
                     {/* Left: Problem Stem */}
                     <div className="w-full md:w-1/2 border-r border-border bg-surface flex flex-col h-full overflow-y-auto p-8 space-y-4 custom-scrollbar">
                         <span className="font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 text-primary w-fit">
-                            Question {currentQuestionIndex + 1}
+                            Question {activeQIndex + 1}
                         </span>
                         <MathText text={currentQuestion.stem} className="text-2xl font-bold leading-relaxed text-text" as="h2" />
                     </div>
@@ -1695,7 +1750,7 @@ export default function StudentLiveQuiz() {
                                 return (
                                     <button
                                         key={idx}
-                                        disabled={isLocked}
+                                        disabled={isMcqLocked}
                                         onClick={() => setSelectedOption(idx)}
                                         className={cn(
                                             "w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4",

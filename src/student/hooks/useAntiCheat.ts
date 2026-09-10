@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface AntiCheatOptions {
     enabled: boolean;
@@ -23,6 +23,7 @@ export const useAntiCheat = ({
     const [isFullScreen, setIsFullScreen] = useState(true); // Assume start in FS or prompt
     const [isObscured, setIsObscured] = useState(false);
     const [warning, setWarning] = useState<string | null>(null);
+    const wasInFullScreenRef = useRef(false);
 
     const triggerViolation = useCallback((type: string, instantTerminate: boolean = false) => {
         if (!enabled) return;
@@ -71,20 +72,28 @@ export const useAntiCheat = ({
             
             if (!inFullScreen) {
                 setIsFullScreen(false);
-                triggerViolation("Exited Full Screen");
+                if (wasInFullScreenRef.current) {
+                    triggerViolation("Exited Full Screen");
+                }
             } else {
+                wasInFullScreenRef.current = true;
                 setIsFullScreen(true);
             }
         };
 
         if (isIOS) {
             setIsFullScreen(true);
+            wasInFullScreenRef.current = true;
         } else {
             document.addEventListener('fullscreenchange', handleFullScreenChange);
             document.addEventListener('webkitfullscreenchange', handleFullScreenChange);
             
-            if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+            const currentFS = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+            if (!currentFS) {
                 setIsFullScreen(false);
+            } else {
+                wasInFullScreenRef.current = true;
+                setIsFullScreen(true);
             }
         }
 
@@ -111,18 +120,29 @@ export const useAntiCheat = ({
             }
         };
 
+        let blurTimeout: any = null;
         const handleBlur = () => {
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText('');
                 }
             } catch {}
-            if (!document.hidden && isArmed) {
-                triggerViolation("Focus Lost / Overlay Interaction");
+            if (isArmed) {
+                if (blurTimeout) clearTimeout(blurTimeout);
+                blurTimeout = setTimeout(() => {
+                    if (!document.hasFocus() && !document.hidden) {
+                        triggerViolation("Focus Lost / Overlay Interaction");
+                    }
+                }, 800);
             }
         };
 
-        const handleFocus = () => {};
+        const handleFocus = () => {
+            if (blurTimeout) {
+                clearTimeout(blurTimeout);
+                blurTimeout = null;
+            }
+        };
 
         document.addEventListener('visibilitychange', handleVisibility);
         window.addEventListener('blur', handleBlur);
@@ -130,6 +150,7 @@ export const useAntiCheat = ({
 
         return () => {
             clearTimeout(armTimer);
+            if (blurTimeout) clearTimeout(blurTimeout);
             document.removeEventListener('visibilitychange', handleVisibility);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
