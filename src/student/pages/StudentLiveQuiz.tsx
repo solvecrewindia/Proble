@@ -397,10 +397,11 @@ export default function StudentLiveQuiz() {
             if (quizData.status === 'completed') {
                 isCompletedRef.current = true;
                 setStatus('completed');
-            } else if (!isCompletedRef.current) {
-                // Only go to active if we haven't already completed locally
-                // (prevents poll from resetting timer-expired / auto-submitted sessions)
-                setStatus('active');
+            } else if (quizData.status === 'active') {
+                if (!isCompletedRef.current) setStatus('active');
+            } else {
+                // Quiz not yet started by faculty — keep student in lobby
+                if (!isCompletedRef.current) setStatus('waiting');
             }
 
             // Only fetch questions once if not already loaded
@@ -449,7 +450,11 @@ export default function StudentLiveQuiz() {
                 }
 
                 setQuestions(mappedQuestions);
-                setCurrentQuestionIndex(prev => prev < 0 ? 0 : prev);
+                // Only enter question 0 if faculty has already started (status === 'active')
+                // While 'waiting', keep index at -1 so student stays in lobby
+                if (quizData.status === 'active') {
+                    setCurrentQuestionIndex(prev => prev < 0 ? 0 : prev);
+                }
             }
 
             // Initialize Attempt if needed (only once)
@@ -573,6 +578,8 @@ export default function StudentLiveQuiz() {
                                 setStatus('completed');
                             } else if (newStatus === 'active' && !isCompletedRef.current) {
                                 setStatus('active');
+                                // If student was still in lobby (index = -1), move them to Q1
+                                setCurrentQuestionIndex(prev => prev < 0 ? 0 : prev);
                             }
 
                             if (newSettings) {
@@ -1164,7 +1171,9 @@ export default function StudentLiveQuiz() {
     }
 
     // --- LIVE LOBBY / WAITING ROOM ---
-    if (!currentQuestion || currentQuestionIndex < 0) {
+    // Show lobby while: faculty hasn't started yet (status='waiting')
+    //                   OR questions not assigned yet (currentQuestionIndex < 0)
+    if (status === 'waiting' || !currentQuestion || currentQuestionIndex < 0) {
         return (
             <div className="min-h-screen bg-background text-text flex flex-col">
                 <header className="px-6 py-4 border-b border-border bg-surface/50 backdrop-blur-md flex items-center justify-between">
