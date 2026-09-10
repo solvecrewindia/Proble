@@ -370,18 +370,16 @@ export default function StudentLiveQuiz() {
                     .order('created_at', { ascending: true });
 
                 let mappedQuestions = questionsData?.map((q: any) => {
-                    const isCode = q.type === 'code';
                     let parsedCorrect = q.correct_answer;
-                    if (isCode) {
-                        try {
-                            parsedCorrect = typeof q.correct_answer === 'string' ? JSON.parse(q.correct_answer) : q.correct_answer;
-                        } catch {
-                            parsedCorrect = q.correct_answer;
-                        }
+                    try {
+                        parsedCorrect = typeof q.correct_answer === 'string' ? JSON.parse(q.correct_answer) : q.correct_answer;
+                    } catch {
+                        parsedCorrect = q.correct_answer;
                     }
+                    const isCode = q.type === 'code' || q.type === 'coding' || Boolean(isCodeModeQuiz) || Boolean(parsedCorrect?.testCases || parsedCorrect?.starterCode);
                     return {
                         id: q.id,
-                        type: q.type || 'mcq',
+                        type: isCode ? 'code' : (q.type || 'mcq'),
                         stem: q.text,
                         options: Array.isArray(q.choices) ? q.choices.map((c: any) => typeof c === 'object' ? c.text : c) : (q.choices || []),
                         correct: parsedCorrect,
@@ -668,7 +666,8 @@ export default function StudentLiveQuiz() {
 
     const handleRunLiveCode = async () => {
         const q = questions[currentQuestionIndex];
-        if (!q || q.type !== 'code' || isExecutingCode) return;
+        const isCodeQ = q?.type === 'code' || Boolean(q?.correct?.testCases || q?.correct?.starterCode);
+        if (!q || !isCodeQ || isExecutingCode) return;
 
         const qId = q.id;
         const currentCode = codeAnswers[qId] ?? q.correct?.starterCode ?? '';
@@ -1477,18 +1476,16 @@ export default function StudentLiveQuiz() {
                         <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
                             <CheckCircle className="w-3.5 h-3.5" /> Submitted
                         </span>
-                    ) : (
+                    ) : currentQuestion.type !== 'code' ? (
                         <Button
                             onClick={handleSubmitAnswer}
-                            disabled={currentQuestion.type === 'code' ? isExecutingCode : selectedOption === null}
+                            disabled={selectedOption === null}
                             size="sm"
                             className="h-8 px-4 font-bold text-xs shadow-md bg-primary hover:bg-primary-600 text-white rounded-xl"
                         >
-                            {currentQuestion.type === 'code'
-                                ? (codePassedStatus[currentQuestion.id] ? "Submit Solution ✓" : "Submit Code")
-                                : "Submit Answer"}
+                            Submit Answer
                         </Button>
-                    )}
+                    ) : null}
                 </div>
             </header>
 
@@ -1521,32 +1518,6 @@ export default function StudentLiveQuiz() {
                                         <p className="opacity-90 text-[11px]">Waiting for instructor to advance to the next challenge.</p>
                                     </div>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Left Footer Action */}
-                        <div className="p-4 border-t border-border bg-surface-highlight shrink-0 flex items-center gap-2">
-                            {viewMode === 'voting' && (
-                                <>
-                                    <Button
-                                        onClick={handleRunLiveCode}
-                                        disabled={isExecutingCode || isSubmitted}
-                                        variant="outline"
-                                        className="flex-1 h-10 font-bold text-xs rounded-xl"
-                                    >
-                                        <Play className="w-3.5 h-3.5 mr-1.5 fill-current text-primary" /> Run Code
-                                    </Button>
-                                    <Button
-                                        onClick={handleSubmitAnswer}
-                                        disabled={isExecutingCode || isSubmitted}
-                                        className={cn(
-                                            "flex-1 h-10 font-bold text-xs rounded-xl shadow-md",
-                                            isSubmitted ? "bg-emerald-600/20 text-emerald-600 cursor-not-allowed border border-emerald-500/30" : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                        )}
-                                    >
-                                        {isSubmitted ? "Submitted ✓" : "Submit Code"}
-                                    </Button>
-                                </>
                             )}
                         </div>
                     </div>
