@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useAuth } from '../../../shared/context/AuthContext';
 import { Plus, Trash2, GripVertical, FileSpreadsheet, AlertTriangle, Image as ImageIcon, X, Loader2, FileArchive, CheckCircle, Download, PlusCircle, MinusCircle, Key, Sparkles, Play, CheckCircle2, Code2, Layers, Users, Mail, ListOrdered, Search, Hash, BookOpen } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
@@ -39,6 +40,9 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data,
     const useKeywords = Boolean(qMeta.settings?.useKeywords);
     const isAiEvaluationMode = isOriginals && !useKeywords;
     const isLiveCoding = Boolean(qMeta.settings?.setsConfig?.enabled) || Boolean(qMeta.settings?.isCodingTest);
+    const { user } = useAuth();
+    // ML Coding toggle is only shown to faculty with an @srmist.edu.in email
+    const isSrmFaculty = (user?.email || '').toLowerCase().endsWith('@srmist.edu.in');
     const [activeType, setActiveType] = useState<Question['type']>(isLiveCoding ? 'code' : 'mcq');
     const [view, setView] = useState<'list' | 'import' | 'existing'>('list');
     const [error, setError] = useState<string | null>(null);
@@ -1228,6 +1232,7 @@ if __name__ == '__main__':
                         >
                             Standard / MCQ
                         </button>
+                        {isSrmFaculty && (
                         <button
                             type="button"
                             onClick={() => {
@@ -1245,6 +1250,7 @@ if __name__ == '__main__':
                             <Code2 className="w-3.5 h-3.5" />
                             ML Coding
                         </button>
+                        )}
                     </div>
                 </div>
                 {questions.length > 0 && (
