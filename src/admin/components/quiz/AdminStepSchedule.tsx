@@ -4,8 +4,11 @@ import { Input } from '../../../faculty/components/ui/Input';
 import { Card } from '../../../faculty/components/ui/Card';
 
 export function AdminStepSchedule({ data, update, questions = [] }: any) {
+    const isCodeMode = Boolean(data.settings?.isCodingTest) || Boolean(data.settings?.setsConfig?.enabled) || (Array.isArray(questions) && questions.some((q: any) => q.type === 'code'));
+
     // Auto-calculate duration if timePerQuestion is present
     useEffect(() => {
+        if (isCodeMode) return;
         const sec = Number(data.settings?.timePerQuestion);
         const qCount = Array.isArray(questions) ? questions.length : 0;
         if (sec > 0 && qCount > 0) {
@@ -20,7 +23,7 @@ export function AdminStepSchedule({ data, update, questions = [] }: any) {
                 });
             }
         }
-    }, [questions.length, data.settings?.timePerQuestion]);
+    }, [questions.length, data.settings?.timePerQuestion, isCodeMode]);
 
     const handleTimePerQuestionChange = (val: string | number) => {
         const sec = val === '' ? 0 : Number(val);
@@ -82,42 +85,51 @@ export function AdminStepSchedule({ data, update, questions = [] }: any) {
                     </div>
 
                     <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-text flex items-center justify-between">
-                                <span className="flex items-center">
-                                    <Clock className="mr-2 h-4 w-4 text-primary" /> Time per Question (seconds)
-                                </span>
-                            </label>
-                            <Input
-                                type="number"
-                                placeholder="e.g. 30, 45, 60"
-                                value={data.settings?.timePerQuestion || ''}
-                                onChange={(e) => handleTimePerQuestionChange(e.target.value)}
-                            />
-                            <p className="text-[11px] text-muted">Entering seconds per question auto-calculates total test duration.</p>
-                        </div>
+                        {!isCodeMode && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-text flex items-center justify-between">
+                                    <span className="flex items-center">
+                                        <Clock className="mr-2 h-4 w-4 text-primary" /> Time per Question (seconds)
+                                    </span>
+                                </label>
+                                <Input
+                                    type="number"
+                                    placeholder="e.g. 30, 45, 60"
+                                    value={data.settings?.timePerQuestion || ''}
+                                    onChange={(e) => handleTimePerQuestionChange(e.target.value)}
+                                />
+                                <p className="text-[11px] text-muted">Entering seconds per question auto-calculates total test duration.</p>
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-text flex items-center justify-between">
                                 <span className="flex items-center">
-                                    <Clock className="mr-2 h-4 w-4 text-primary" /> Duration (minutes)
+                                    <Clock className="mr-2 h-4 w-4 text-primary" /> {isCodeMode ? 'Total Test Duration (minutes)' : 'Duration (minutes)'}
                                 </span>
-                                {Number(data.settings?.timePerQuestion) > 0 && (
+                                {!isCodeMode && Number(data.settings?.timePerQuestion) > 0 && (
                                     <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">Auto-calculated</span>
+                                )}
+                                {isCodeMode && (
+                                    <span className="text-[10px] font-semibold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded">Coding Test Mode</span>
                                 )}
                             </label>
                             <Input
                                 type="number"
-                                placeholder="e.g. 30"
+                                placeholder="e.g. 30, 60, 90"
                                 value={data.durationMinutes || data.settings?.duration || ''}
                                 onChange={(e) => handleDurationChange(e.target.value)}
                             />
-                            <p className="text-[11px] text-muted">Total test time allocated for all questions.</p>
+                            <p className="text-[11px] text-muted">
+                                {isCodeMode
+                                    ? 'Total time allocated for students to complete all coding challenges.'
+                                    : 'Total test time allocated for all questions.'}
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                {Number(data.settings?.timePerQuestion) > 0 && (
+                {!isCodeMode && Number(data.settings?.timePerQuestion) > 0 && (
                     <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary font-medium flex items-center justify-between">
                         <span>
                             ⚡ <strong>Auto-Calculated Duration:</strong> {questions.length || 0} question{(questions.length || 0) === 1 ? '' : 's'} × {data.settings.timePerQuestion}s = {questions.length > 0 ? `${Math.ceil((questions.length * Number(data.settings.timePerQuestion)) / 60)} mins (${questions.length * Number(data.settings.timePerQuestion)}s total)` : '0 mins'}

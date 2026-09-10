@@ -606,7 +606,17 @@ export default function LiveController() {
     const currentQuestion = quiz.questions[currentQuestionIndex];
     const totalQuestions = quiz.questions.length;
     const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+    const isCodeMode = Boolean(quiz.settings?.isCodingTest) || Boolean(quiz.settings?.setsConfig?.enabled) || (Array.isArray(quiz.questions) && quiz.questions.some((q: any) => q.type === 'code'));
     const totalVotes = Object.values(stats).reduce((a, b) => a + b, 0) || 1;
+
+    const handleFinishExam = async () => {
+        if (!id) return;
+        const confirmEnd = window.confirm("Are you sure you want to finish this live coding assessment? All student scores will be finalized.");
+        if (!confirmEnd) return;
+        await supabase.from('quizzes').update({ status: 'completed' }).eq('id', id);
+        setQuizStatus('completed');
+        fetchFinalResults(id);
+    };
 
     const terminatedCount = violationsList.filter(s => s.isTerminated).length;
     const warningsCount = violationsList.filter(s => s.strikes > 0 && !s.isTerminated).length;
@@ -1235,56 +1245,98 @@ export default function LiveController() {
                     </Card>
 
                     {/* Controls: Host-Controlled Transitions */}
-                    <div className="grid grid-cols-3 gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={handlePrev}
-                            disabled={currentQuestionIndex === 0}
-                            className="h-14 text-sm font-semibold"
-                        >
-                            <ChevronLeft className="mr-1.5 h-4 w-4" /> Previous
-                        </Button>
+                    {isCodeMode ? (
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={async () => {
+                                    if (viewMode === 'violations') {
+                                        setViewMode('voting');
+                                    } else {
+                                        const nextMode = viewMode === 'voting' ? 'leaderboard' : 'voting';
+                                        setViewMode(nextMode);
+                                        if (nextMode === 'leaderboard') fetchLiveLeaderboard();
+                                    }
+                                }}
+                                className={cn(
+                                    "h-14 text-sm font-bold border transition-all",
+                                    viewMode === 'voting'
+                                        ? "border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                                        : viewMode === 'violations'
+                                            ? "border-rose-500/40 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                                            : "border-primary/40 text-primary hover:bg-primary/10"
+                                )}
+                            >
+                                {viewMode === 'voting' ? (
+                                    <>
+                                        <Trophy className="mr-1.5 h-4 w-4" /> View Leaderboard
+                                    </>
+                                ) : (
+                                    <>
+                                        <BarChart3 className="mr-1.5 h-4 w-4" /> Live Analysis
+                                    </>
+                                )}
+                            </Button>
 
-                        <Button
-                            variant="outline"
-                            onClick={async () => {
-                                if (viewMode === 'violations') {
-                                    setViewMode('voting');
-                                    await updateQuizState(currentQuestionIndex, 'voting');
-                                } else {
-                                    const nextMode = viewMode === 'voting' ? 'leaderboard' : 'voting';
-                                    setViewMode(nextMode);
-                                    if (nextMode === 'leaderboard') fetchLiveLeaderboard();
-                                    await updateQuizState(currentQuestionIndex, nextMode);
-                                }
-                            }}
-                            className={cn(
-                                "h-14 text-sm font-bold border transition-all",
-                                viewMode === 'voting'
-                                    ? "border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-                                    : viewMode === 'violations'
-                                        ? "border-rose-500/40 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
-                                        : "border-primary/40 text-primary hover:bg-primary/10"
-                            )}
-                        >
-                            {viewMode === 'voting' ? (
-                                <>
-                                    <Trophy className="mr-1.5 h-4 w-4" /> View Leaderboard
-                                </>
-                            ) : (
-                                <>
-                                    <BarChart3 className="mr-1.5 h-4 w-4" /> Live Analysis
-                                </>
-                            )}
-                        </Button>
+                            <Button
+                                onClick={handleFinishExam}
+                                className="h-14 text-sm font-bold text-white transition-all shadow-lg bg-rose-600 hover:bg-rose-700"
+                            >
+                                Finish Exam <CheckCircle className="ml-1.5 h-4 w-4" />
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-3 gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={handlePrev}
+                                disabled={currentQuestionIndex === 0}
+                                className="h-14 text-sm font-semibold"
+                            >
+                                <ChevronLeft className="mr-1.5 h-4 w-4" /> Previous
+                            </Button>
 
-                        <Button
-                            onClick={handleNext}
-                            className="h-14 text-sm font-bold text-white transition-all shadow-lg bg-primary hover:bg-primary/90"
-                        >
-                            {isLastQuestion ? "Finish Quiz" : "Next Question"} <ChevronRight className="ml-1.5 h-4 w-4" />
-                        </Button>
-                    </div>
+                            <Button
+                                variant="outline"
+                                onClick={async () => {
+                                    if (viewMode === 'violations') {
+                                        setViewMode('voting');
+                                        await updateQuizState(currentQuestionIndex, 'voting');
+                                    } else {
+                                        const nextMode = viewMode === 'voting' ? 'leaderboard' : 'voting';
+                                        setViewMode(nextMode);
+                                        if (nextMode === 'leaderboard') fetchLiveLeaderboard();
+                                        await updateQuizState(currentQuestionIndex, nextMode);
+                                    }
+                                }}
+                                className={cn(
+                                    "h-14 text-sm font-bold border transition-all",
+                                    viewMode === 'voting'
+                                        ? "border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                                        : viewMode === 'violations'
+                                            ? "border-rose-500/40 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                                            : "border-primary/40 text-primary hover:bg-primary/10"
+                                )}
+                            >
+                                {viewMode === 'voting' ? (
+                                    <>
+                                        <Trophy className="mr-1.5 h-4 w-4" /> View Leaderboard
+                                    </>
+                                ) : (
+                                    <>
+                                        <BarChart3 className="mr-1.5 h-4 w-4" /> Live Analysis
+                                    </>
+                                )}
+                            </Button>
+
+                            <Button
+                                onClick={handleNext}
+                                className="h-14 text-sm font-bold text-white transition-all shadow-lg bg-primary hover:bg-primary/90"
+                            >
+                                {isLastQuestion ? "Finish Quiz" : "Next Question"} <ChevronRight className="ml-1.5 h-4 w-4" />
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar Controls */}
@@ -1380,8 +1432,10 @@ export default function LiveController() {
                                         onClick={() => {
                                             setCurrentQuestionIndex(idx);
                                             setViewMode('voting');
-                                            setElapsedTime(0);
-                                            updateQuizState(idx, 'voting');
+                                            if (!isCodeMode) {
+                                                setElapsedTime(0);
+                                                updateQuizState(idx, 'voting');
+                                            }
                                         }}
                                         className={cn(
                                             "p-3 rounded-xl cursor-pointer transition-colors text-xs flex items-center gap-3 border",
