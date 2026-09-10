@@ -440,17 +440,45 @@ export default function LiveController() {
             .eq('quiz_id', id);
 
         if (attempts) {
-            setOnlineCount(attempts.length);
-
             const allStudentIds = attempts.map(a => a.student_id);
             const profileMap: Record<string, any> = {};
             if (allStudentIds.length > 0) {
                 const { data: profiles } = await supabase
                     .from('profiles')
-                    .select('id, full_name, registration_number')
+                    .select('id, full_name, registration_number, email')
                     .in('id', allStudentIds);
                 (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
             }
+
+            const setsConfig = quiz?.settings?.setsConfig;
+            const isSetsEnabled = Boolean(setsConfig?.enabled) && Array.isArray(setsConfig?.mappings) && setsConfig.mappings.length > 0;
+            const mappings: any[] = isSetsEnabled ? setsConfig.mappings : [];
+
+            // Filter attempts to only include students assigned to the current question if Question Sets is active
+            const assignedAttempts = attempts.filter(attempt => {
+                if (!isSetsEnabled) return true;
+
+                const profile = profileMap[attempt.student_id];
+                const email = (profile?.email || '').trim().toLowerCase();
+                const regNo = (profile?.registration_number || '').trim().toLowerCase();
+
+                const mapping = mappings.find((m: any) => {
+                    const mEmail = (m.email || '').trim().toLowerCase();
+                    if (!mEmail) return false;
+                    if (email && mEmail === email) return true;
+                    if (regNo && mEmail === regNo) return true;
+                    return false;
+                });
+
+                if (!mapping) return true;
+
+                const startIdx = typeof mapping.startIndex === 'number' ? mapping.startIndex : (mapping.startQuestion ? mapping.startQuestion - 1 : 0);
+                const endIdx = typeof mapping.endIndex === 'number' ? mapping.endIndex : (mapping.endQuestion ? mapping.endQuestion - 1 : 0);
+
+                return currentQuestionIndex >= startIdx && currentQuestionIndex <= endIdx;
+            });
+
+            setOnlineCount(assignedAttempts.length);
 
             const newStats: Record<string, number> = {};
             let answeredCount = 0;
@@ -458,7 +486,7 @@ export default function LiveController() {
             let codeFailed = 0;
             const detailedSubmissions: StudentSubmission[] = [];
 
-            attempts.forEach(attempt => {
+            assignedAttempts.forEach(attempt => {
                 let answers = attempt.answers || {};
                 if (typeof answers === 'string') {
                     try { answers = JSON.parse(answers); } catch {}
@@ -537,7 +565,7 @@ export default function LiveController() {
             setCodeSubmissionStats({ passed: codePassed, failed: codeFailed, total: answeredCount });
             setStudentSubmissions(detailedSubmissions);
 
-            const totalParticipants = attempts.length;
+            const totalParticipants = assignedAttempts.length;
             const pct = totalParticipants > 0 ? Math.round((answeredCount / totalParticipants) * 100) : 0;
             setParticipation(pct);
         }
