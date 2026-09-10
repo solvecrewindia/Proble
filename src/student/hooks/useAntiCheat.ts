@@ -21,6 +21,7 @@ export const useAntiCheat = ({
 
     const [violations, setViolations] = useState(0);
     const [isFullScreen, setIsFullScreen] = useState(true); // Assume start in FS or prompt
+    const [isObscured, setIsObscured] = useState(false);
     const [warning, setWarning] = useState<string | null>(null);
 
     const triggerViolation = useCallback((type: string, instantTerminate: boolean = false) => {
@@ -45,6 +46,7 @@ export const useAntiCheat = ({
 
     // 1. Full Screen Enforcement
     const enterFullScreen = async () => {
+        setIsObscured(false);
         // iOS Safari doesn't support requestFullscreen on elements
         const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
         if (isIOS) return;
@@ -65,21 +67,19 @@ export const useAntiCheat = ({
         const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
         
         const handleFullScreenChange = () => {
-            // Document.fullscreenElement is common for Desktop and Android
             const inFullScreen = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
             
             if (!inFullScreen) {
                 setIsFullScreen(false);
-                // On mobile, sometimes rotation or system bars cause this, but it's still a risk
+                setIsObscured(true);
                 triggerViolation("Exited Full Screen");
             } else {
                 setIsFullScreen(true);
+                setIsObscured(false);
             }
         };
 
         if (isIOS) {
-            // iOS Safari doesn't support standard fullscreen API for elements well
-            // We assume true for UI purposes but still rely on blur/visibility
             setIsFullScreen(true);
         } else {
             document.addEventListener('fullscreenchange', handleFullScreenChange);
@@ -87,6 +87,7 @@ export const useAntiCheat = ({
             
             if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
                 setIsFullScreen(false);
+                setIsObscured(true);
             }
         }
 
@@ -96,60 +97,88 @@ export const useAntiCheat = ({
         };
     }, [enabled, triggerViolation]);
 
-    // 2. Visibility Change (Tab Switching) & Focus Loss
+    // 2. Visibility Change (Tab Switching) & Focus Loss Obscuration
     useEffect(() => {
         if (!enabled) return;
 
         let isArmed = false;
         const armTimer = setTimeout(() => {
             isArmed = true;
-        }, 2000); // 2 second grace period on start to allow OAuth popups to cleanly close
+        }, 2000);
 
         const handleVisibility = () => {
-            if (document.hidden && isArmed) {
-                triggerViolation("Tab Switched / Window Hidden");
+            if (document.hidden) {
+                setIsObscured(true);
+                if (isArmed) {
+                    triggerViolation("Tab Switched / Window Hidden");
+                }
+            } else {
+                setIsObscured(false);
             }
         };
 
         const handleBlur = () => {
-            // If the document is hidden, visibilitychange naturally handles it.
-            // We want to catch cases where document is VISIBLE but NOT FOCUSED (e.g. clicking address bar, split screen interaction)
+            setIsObscured(true);
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText('');
+                }
+            } catch {}
             if (!document.hidden && isArmed) {
                 triggerViolation("Focus Lost / Overlay Interaction");
             }
         };
 
+        const handleFocus = () => {
+            setIsObscured(false);
+        };
+
         document.addEventListener('visibilitychange', handleVisibility);
         window.addEventListener('blur', handleBlur);
+        window.addEventListener('focus', handleFocus);
 
         return () => {
             clearTimeout(armTimer);
             document.removeEventListener('visibilitychange', handleVisibility);
             window.removeEventListener('blur', handleBlur);
+            window.removeEventListener('focus', handleFocus);
         };
     }, [enabled, triggerViolation]);
 
-    // 3. Input Blocking (Copy/Paste/Right Click)
+    // 3. Input Blocking (Copy/Paste/Right Click & Screenshot key detection)
     useEffect(() => {
         if (!enabled) return;
 
-        const preventDefault = (e: Event) => e.preventDefault();
+        const preventDefault = (e: Event) => {
+            e.preventDefault();
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText('');
+                }
+            } catch {}
+        };
 
         const handleKeyDown = (e: KeyboardEvent) => {
             const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
-            // Screenshot detection (Instant Termination)
+            // Screenshot detection (Instant Termination & Immediate Screen Obscure)
             if (
                 e.key === 'PrintScreen' || 
                 (isCtrlOrCmd && e.shiftKey && e.key.toLowerCase() === 's') || 
                 (isCtrlOrCmd && e.shiftKey && ['3', '4', '5'].includes(e.key))
             ) {
                 e.preventDefault();
-                triggerViolation("Screenshot Attempt Detected", true); // true = instant terminate
+                setIsObscured(true);
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText('');
+                    }
+                } catch {}
+                triggerViolation("Screenshot Attempt Detected", true);
                 return;
             }
 
-            // Developer Tools / Inspect Element / Source inspection (AI Scraping prevention)
+            // Developer Tools / Inspect Element / Source inspection
             if (
                 e.key === 'F12' ||
                 (isCtrlOrCmd && e.shiftKey && ['i', 'j', 'c'].includes(e.key.toLowerCase())) ||
@@ -157,6 +186,7 @@ export const useAntiCheat = ({
                 (isCtrlOrCmd && e.key.toLowerCase() === 'u')
             ) {
                 e.preventDefault();
+                setIsObscured(true);
                 triggerViolation("Developer Tools / Source Inspection Blocked");
                 return;
             }
@@ -167,7 +197,20 @@ export const useAntiCheat = ({
                 (e.altKey && e.key === 'Tab')
             ) {
                 e.preventDefault();
+                setIsObscured(true);
                 triggerViolation("Restricted Keyboard Shortcut");
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'PrintScreen') {
+                e.preventDefault();
+                setIsObscured(true);
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText('');
+                    }
+                } catch {}
             }
         };
 
@@ -176,16 +219,19 @@ export const useAntiCheat = ({
         document.addEventListener('paste', preventDefault);
         document.addEventListener('cut', preventDefault);
         window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
 
         // 5. Block Long-Press & Multi-touch (used to trigger Google Lens / Circle to Search)
         let touchTimer: any = null;
         const handleTouchStart = (e: TouchEvent) => {
             if (e.touches.length > 1) {
                 e.preventDefault();
+                setIsObscured(true);
                 triggerViolation("Multi-touch Gesture (Google Lens / Screenshot blocked)");
                 return;
             }
             touchTimer = setTimeout(() => {
+                setIsObscured(true);
                 triggerViolation("Long Press Detected (Google Lens / Image Search blocked)");
             }, 600);
         };
@@ -201,9 +247,14 @@ export const useAntiCheat = ({
         document.addEventListener('touchend', handleTouchEnd);
         document.addEventListener('touchmove', handleTouchMove);
         
-        // 6. Disable Text Selection & Image Dragging via CSS
+        // 6. Disable Text Selection, Image Dragging & Print via CSS
         const style = document.createElement('style');
         style.innerHTML = `
+            @media print {
+                body {
+                    display: none !important;
+                }
+            }
             body {
                 -webkit-user-select: none !important;
                 -moz-user-select: none !important;
@@ -230,6 +281,7 @@ export const useAntiCheat = ({
             document.removeEventListener('paste', preventDefault);
             document.removeEventListener('cut', preventDefault);
             window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
             document.removeEventListener('touchstart', handleTouchStart);
             document.removeEventListener('touchend', handleTouchEnd);
             document.removeEventListener('touchmove', handleTouchMove);
@@ -242,12 +294,14 @@ export const useAntiCheat = ({
 
     const resetViolations = useCallback(() => {
         setViolations(0);
+        setIsObscured(false);
         setWarning(null);
     }, []);
 
     return {
         violations,
         isFullScreen,
+        isObscured,
         warning,
         enterFullScreen,
         resetViolations,
