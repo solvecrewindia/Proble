@@ -256,16 +256,27 @@ export default function LiveController() {
         }
     };
 
-    const handleAllowRetake = async (studentId: string) => {
+    const handleAllowRetake = async (studentId: string, resetAnswers: boolean = true, studentName?: string) => {
         if (!id) return;
+        const confirmMsg = studentName
+            ? `Allow ${studentName} to retake this test? Their attempt will be unlocked so they can retake it.`
+            : "Allow this student to retake the test?";
+        if (!window.confirm(confirmMsg)) return;
+
         setActionLoadingId(studentId);
         try {
+            const updatePayload: any = {
+                status: 'in-progress',
+                flags: []
+            };
+            if (resetAnswers) {
+                updatePayload.answers = {};
+                updatePayload.score = 0;
+            }
+
             const { error } = await supabase
                 .from('attempts')
-                .update({
-                    status: 'in-progress',
-                    flags: []
-                })
+                .update(updatePayload)
                 .eq('quiz_id', id)
                 .eq('student_id', studentId);
 
@@ -273,7 +284,15 @@ export default function LiveController() {
                 console.error("Error allowing retake:", error);
                 alert("Failed to allow retake: " + error.message);
             } else {
+                if (quizStatus === 'completed') {
+                    await supabase.from('quizzes').update({ status: 'active' }).eq('id', id);
+                    setQuizStatus('active');
+                }
                 await fetchViolationsData();
+                fetchLiveLeaderboard();
+                const curQ = quiz?.questions?.[currentQuestionIndex];
+                if (curQ?.id) fetchRealStats(curQ.id);
+                if (id) fetchFinalResults(id);
             }
         } catch (err) {
             console.error("Failed to allow retake:", err);
@@ -699,6 +718,7 @@ export default function LiveController() {
                                     <th className="p-4 font-bold text-muted text-xs uppercase">Rank</th>
                                     <th className="p-4 font-bold text-muted text-xs uppercase">Student Name</th>
                                     <th className="p-4 font-bold text-muted text-xs uppercase text-right">Score</th>
+                                    <th className="p-4 font-bold text-muted text-xs uppercase text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -720,6 +740,17 @@ export default function LiveController() {
                                                 </div>
                                             </td>
                                             <td className="p-4 font-bold text-primary text-right">{r.score} pts</td>
+                                            <td className="p-4 text-right">
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => handleAllowRetake(r.student_id, true, studentName)}
+                                                    disabled={actionLoadingId === r.student_id}
+                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 h-8 shadow-sm flex items-center gap-1.5 cursor-pointer ml-auto"
+                                                >
+                                                    <RotateCcw className="w-3.5 h-3.5" />
+                                                    {actionLoadingId === r.student_id ? 'Unlocking...' : 'Retake Test'}
+                                                </Button>
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -1022,17 +1053,16 @@ export default function LiveController() {
 
                                                 {/* Action buttons */}
                                                 <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                                                    {student.isTerminated ? (
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => handleAllowRetake(student.studentId)}
-                                                            disabled={actionLoadingId === student.studentId}
-                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 h-8 shadow-sm flex items-center gap-1.5 cursor-pointer"
-                                                        >
-                                                            <RotateCcw className="w-3.5 h-3.5" />
-                                                            {actionLoadingId === student.studentId ? 'Unlocking...' : 'Allow Retake'}
-                                                        </Button>
-                                                    ) : student.strikes > 0 ? (
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleAllowRetake(student.studentId, true, student.name)}
+                                                        disabled={actionLoadingId === student.studentId}
+                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 h-8 shadow-sm flex items-center gap-1.5 cursor-pointer"
+                                                    >
+                                                        <RotateCcw className="w-3.5 h-3.5" />
+                                                        {actionLoadingId === student.studentId ? 'Unlocking...' : 'Retake Test'}
+                                                    </Button>
+                                                    {student.strikes > 0 && !student.isTerminated && (
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
@@ -1043,10 +1073,6 @@ export default function LiveController() {
                                                             <RotateCcw className="w-3.5 h-3.5" />
                                                             {actionLoadingId === student.studentId ? 'Resetting...' : 'Reset Strikes'}
                                                         </Button>
-                                                    ) : (
-                                                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium px-2.5 py-1 rounded-lg bg-emerald-500/10 flex items-center gap-1">
-                                                            <CheckCircle className="w-3.5 h-3.5" /> Clean Session
-                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
@@ -1116,9 +1142,20 @@ export default function LiveController() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <span className="font-black text-primary text-base">{student.score}</span>
-                                                    <span className="text-[10px] text-muted block">pts</span>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-right">
+                                                        <span className="font-black text-primary text-base">{student.score}</span>
+                                                        <span className="text-[10px] text-muted block">pts</span>
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleAllowRetake(student.student_id, true, student.name)}
+                                                        disabled={actionLoadingId === student.student_id}
+                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2.5 py-1.5 h-8 shadow-sm flex items-center gap-1 cursor-pointer"
+                                                    >
+                                                        <RotateCcw className="w-3 h-3" />
+                                                        {actionLoadingId === student.student_id ? 'Unlocking...' : 'Retake Test'}
+                                                    </Button>
                                                 </div>
                                             </div>
                                         ))}
@@ -1234,6 +1271,17 @@ export default function LiveController() {
                                                                 Solving...
                                                             </span>
                                                         )}
+
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleAllowRetake(sub.studentId, true, sub.name)}
+                                                            disabled={actionLoadingId === sub.studentId}
+                                                            className="h-7 text-[11px] px-2 flex items-center gap-1 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400 font-bold cursor-pointer"
+                                                        >
+                                                            <RotateCcw className="w-3 h-3" />
+                                                            {actionLoadingId === sub.studentId ? '...' : 'Retake'}
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             ))}

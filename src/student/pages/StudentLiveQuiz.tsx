@@ -516,6 +516,8 @@ export default function StudentLiveQuiz() {
 
                             if (newStatus === 'completed') {
                                 setStatus('completed');
+                            } else if (newStatus === 'active') {
+                                setStatus('active');
                             }
 
                             if (newSettings) {
@@ -552,6 +554,9 @@ export default function StudentLiveQuiz() {
                                     setIsTerminated(true);
                                 } else if (payload.new.status === 'in-progress') {
                                     setIsTerminated(false);
+                                    setStatus('active');
+                                    setIsSubmitted(false);
+                                    setSelectedOption(null);
                                     resetViolations();
                                 }
                             }
