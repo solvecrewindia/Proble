@@ -36,9 +36,13 @@ interface StudentViolationInfo {
 }
 
 const formatSeconds = (totalSec: number) => {
-    if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
-    const mins = Math.floor(totalSec / 60);
+    if (!totalSec || isNaN(totalSec) || totalSec <= 0) return '00:00';
+    const hours = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
     const secs = Math.floor(totalSec % 60);
+    if (hours > 0) {
+        return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
@@ -68,14 +72,29 @@ export default function LiveController() {
     const [studentSubmissions, setStudentSubmissions] = useState<StudentSubmission[]>([]);
     const [viewingStudentCode, setViewingStudentCode] = useState<{ name: string; code: string } | null>(null);
 
-    // Elapsed timer increments while in voting mode
+    // Countdown timer & auto-finish when set test duration expires
     useEffect(() => {
-        if (viewMode !== 'voting' || quizStatus === 'completed') return;
+        if (quizStatus === 'completed') return;
+
+        const totalDurationMinutes = Number(quiz?.settings?.duration || (quiz as any)?.durationMinutes || 60);
+        const totalDurationSeconds = totalDurationMinutes * 60;
+
         const timer = setInterval(() => {
-            setElapsedTime(prev => prev + 1);
+            setElapsedTime(prev => {
+                const next = prev + 1;
+                if (next >= totalDurationSeconds) {
+                    // Auto-finish assessment for faculty & students when set time is finished
+                    supabase.from('quizzes').update({ status: 'completed' }).eq('id', id).then(() => {
+                        setQuizStatus('completed');
+                        if (id) fetchFinalResults(id);
+                    });
+                }
+                return next;
+            });
         }, 1000);
+
         return () => clearInterval(timer);
-    }, [viewMode, currentQuestionIndex, quizStatus]);
+    }, [quizStatus, quiz?.settings?.duration, id]);
 
     const fetchFinalResults = async (quizId: string) => {
         const { data, error } = await supabase
@@ -738,14 +757,25 @@ export default function LiveController() {
                     </div>
                 </div>
 
-                {/* Host Control Header Badge with live elapsed timer and view toggle */}
-                <div className="flex items-center gap-3">
-                    <div className="px-3.5 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-mono font-bold flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Elapsed: {formatSeconds(elapsedTime)}</span>
-                    </div>
+                {/* Host Control Header Badge with live countdown timer and view toggle */}
+                {(() => {
+                    const totalDurationMinutes = Number(quiz.settings?.duration || (quiz as any).durationMinutes || 60);
+                    const totalDurationSeconds = totalDurationMinutes * 60;
+                    const remainingSeconds = Math.max(0, totalDurationSeconds - elapsedTime);
 
-                    <div className="flex items-center p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-border">
+                    return (
+                        <div className="flex items-center gap-3">
+                            <div className={cn(
+                                "px-3.5 py-1.5 rounded-full text-xs font-mono font-bold flex items-center gap-2 transition-colors border",
+                                remainingSeconds <= 300
+                                    ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30 animate-pulse"
+                                    : "bg-primary/10 text-primary border-primary/20"
+                            )}>
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>Time Left: {formatSeconds(remainingSeconds)}</span>
+                            </div>
+
+                            <div className="flex items-center p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-border">
                         <button
                             type="button"
                             onClick={() => {
@@ -809,6 +839,8 @@ export default function LiveController() {
                         </button>
                     </div>
                 </div>
+                    );
+                })()}
             </div>
 
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">

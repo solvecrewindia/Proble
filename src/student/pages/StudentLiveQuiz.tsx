@@ -17,6 +17,17 @@ import { runTestCases, ExecutionResponse } from '../../shared/utils/codeExecutio
 import { CodeEditor } from '../../shared/components/CodeEditor';
 import { useAntiCheat } from '../hooks/useAntiCheat';
 
+const formatSeconds = (totalSec: number) => {
+    if (!totalSec || isNaN(totalSec) || totalSec <= 0) return '00:00';
+    const hours = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = Math.floor(totalSec % 60);
+    if (hours > 0) {
+        return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
 export default function StudentLiveQuiz() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -36,6 +47,7 @@ export default function StudentLiveQuiz() {
     const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
     const [quizTitle, setQuizTitle] = useState('');
     const [assignedSet, setAssignedSet] = useState<any | null>(null);
+    const [quizDurationMinutes, setQuizDurationMinutes] = useState<number>(60);
 
     // Code Question State (Live ML / Python Code challenges)
     const [codeAnswers, setCodeAnswers] = useState<Record<string, string>>({});
@@ -253,14 +265,22 @@ export default function StudentLiveQuiz() {
         };
     }, []);
 
-    // Elapsed timer for student visibility (controlled by host phase)
+    // Student countdown timer & auto-finish when set time is finished
     useEffect(() => {
-        if (viewMode !== 'voting' || currentQuestionIndex < 0) return;
+        if (status === 'completed' || currentQuestionIndex < 0) return;
+        const totalDurationSeconds = quizDurationMinutes * 60;
+
         const timer = setInterval(() => {
-            setElapsedTime(prev => prev + 1);
+            setElapsedTime(prev => {
+                const next = prev + 1;
+                if (next >= totalDurationSeconds) {
+                    setStatus('completed');
+                }
+                return next;
+            });
         }, 1000);
         return () => clearInterval(timer);
-    }, [viewMode, currentQuestionIndex]);
+    }, [status, currentQuestionIndex, quizDurationMinutes]);
 
     const fetchParticipants = async () => {
         if (!id) return;
@@ -308,6 +328,9 @@ export default function StudentLiveQuiz() {
 
             if (quizData) {
                 setQuizTitle(quizData.title);
+                if (quizData.settings?.duration || quizData.durationMinutes) {
+                    setQuizDurationMinutes(Number(quizData.settings?.duration || quizData.durationMinutes || 60));
+                }
             }
 
             // Update Local State based on host settings
@@ -1425,8 +1448,24 @@ export default function StudentLiveQuiz() {
                     </Button>
                 </div>
 
-                {/* Right: Quick Action / Status Mode */}
+                {/* Right: Quick Action / Status Mode / Live Countdown */}
                 <div className="flex items-center gap-2">
+                    {(() => {
+                        const totalSec = quizDurationMinutes * 60;
+                        const remainingSeconds = Math.max(0, totalSec - elapsedTime);
+                        return (
+                            <div className={cn(
+                                "px-3 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1.5 transition-colors border",
+                                remainingSeconds <= 300
+                                    ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30 animate-pulse"
+                                    : "bg-primary/10 text-primary border-primary/20"
+                            )}>
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>Time Left: {formatSeconds(remainingSeconds)}</span>
+                            </div>
+                        );
+                    })()}
+
                     {viewMode === 'results' ? (
                         <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                             Results Mode
