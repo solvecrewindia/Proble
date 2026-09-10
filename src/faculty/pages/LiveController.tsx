@@ -824,15 +824,7 @@ export default function LiveController() {
 
                     return (
                         <div className="flex items-center gap-3">
-                            <div className={cn(
-                                "px-3.5 py-1.5 rounded-full text-xs font-mono font-bold flex items-center gap-2 transition-colors border",
-                                remainingSeconds <= 300
-                                    ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30 animate-pulse"
-                                    : "bg-primary/10 text-primary border-primary/20"
-                            )}>
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>Time Left: {formatSeconds(remainingSeconds)}</span>
-                            </div>
+
 
                             <div className="flex items-center p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-border">
                         <button
