@@ -87,7 +87,24 @@ export async function executeSingleRun(
                 throw new Error(`Execution service responded with status ${response.status}: ${errText}`);
             }
 
-            const data = await response.json();
+            let data = await response.json();
+
+            // If Judge0 queued the execution, poll the token until completion
+            if ((data.status?.id === 1 || data.status?.id === 2) && data.token) {
+                for (let poll = 0; poll < 5; poll++) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    try {
+                        const pollRes = await fetch(`https://ce.judge0.com/submissions/${data.token}`);
+                        if (pollRes.ok) {
+                            data = await pollRes.json();
+                            if (data.status?.id !== 1 && data.status?.id !== 2) {
+                                break;
+                            }
+                        }
+                    } catch {}
+                }
+            }
+
             const stdout = data.stdout || '';
             const stderr = data.stderr || data.compile_output || '';
             const statusDesc = data.status?.description || 'Unknown';
@@ -136,7 +153,7 @@ export async function runTestCases({
     testCases: TestCase[];
 }): Promise<ExecutionResponse> {
     const codeToRun = driverCode ? `${studentCode}\n\n${driverCode}` : studentCode;
-    const cleanCases = (testCases || []).filter(tc => tc && (tc.input !== undefined || tc.output !== undefined));
+    const cleanCases = (testCases || []).filter(tc => tc && (tc.input !== undefined || tc.output !== undefined || (tc as any).expected !== undefined));
 
     // If no test cases, perform a single run to check for compilation/runtime errors
     if (cleanCases.length === 0) {
@@ -158,6 +175,11 @@ export async function runTestCases({
         };
     }
 
+    // Run all test cases in parallel for fast feedback (1s instead of 5s)
+    const runs = await Promise.all(
+        cleanCases.map(tc => executeSingleRun(language, codeToRun, tc.input || ''))
+    );
+
     let allPassed = true;
     let combinedStdout = '';
     let combinedStderr = '';
@@ -165,10 +187,10 @@ export async function runTestCases({
 
     for (let i = 0; i < cleanCases.length; i++) {
         const tc = cleanCases[i];
-        const run = await executeSingleRun(language, codeToRun, tc.input || '');
+        const run = runs[i];
 
         const actual = normalizeOutput(run.stdout);
-        const expected = normalizeOutput(tc.output);
+        const expected = normalizeOutput(tc.output ?? (tc as any).expected ?? '');
         const passed = actual === expected && !run.stderr;
 
         if (!passed) {
@@ -182,7 +204,7 @@ export async function runTestCases({
 
         results.push({
             index: i + 1,
-            input: tc.input,
+            input: tc.input || '(empty)',
             expected,
             actual,
             passed,

@@ -24,9 +24,17 @@ export const useAntiCheat = ({
     const [isObscured, setIsObscured] = useState(false);
     const [warning, setWarning] = useState<string | null>(null);
     const wasInFullScreenRef = useRef(false);
+    const lastViolationTimeRef = useRef<number>(0);
 
     const triggerViolation = useCallback((type: string, instantTerminate: boolean = false) => {
         if (!enabled) return;
+
+        const now = Date.now();
+        // Cooldown: prevent multiple simultaneous strikes within 4 seconds from cascading browser events (Alt+Tab, blur, visibility, fullscreen)
+        if (!instantTerminate && now - lastViolationTimeRef.current < 4000) {
+            return;
+        }
+        lastViolationTimeRef.current = now;
 
         const currentCount = instantTerminate ? effectiveLimit : violations + 1;
         setViolations(currentCount);
@@ -201,11 +209,11 @@ export const useAntiCheat = ({
                 return;
             }
 
-            // Normal restricted shortcuts (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+P, Alt+Tab)
-            if (
-                (isCtrlOrCmd && ['c', 'v', 'x', 'p'].includes(e.key.toLowerCase())) ||
-                (e.altKey && e.key === 'Tab')
-            ) {
+            // Normal restricted shortcuts (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+P)
+            // NOTE: Alt+Tab is NOT caught here — the OS-level tab switch fires visibilitychange
+            // which already calls triggerViolation with a 4s cooldown. Catching it here too
+            // would cause a double-strike from one single action.
+            if (isCtrlOrCmd && ['c', 'v', 'x', 'p'].includes(e.key.toLowerCase())) {
                 e.preventDefault();
                 triggerViolation("Restricted Keyboard Shortcut");
             }
