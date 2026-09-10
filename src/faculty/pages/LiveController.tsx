@@ -1512,7 +1512,7 @@ export default function LiveController() {
                         </CardContent>
                     </Card>
 
-                    {viewMode !== 'leaderboard' && (
+                    {viewMode === 'voting' && (
                         <Card className="border-neutral-200 dark:border-neutral-800 flex-1">
                             <CardContent className="p-5">
                                 <div className="flex items-center justify-between mb-3">
