@@ -71,11 +71,9 @@ export const useAntiCheat = ({
             
             if (!inFullScreen) {
                 setIsFullScreen(false);
-                setIsObscured(true);
                 triggerViolation("Exited Full Screen");
             } else {
                 setIsFullScreen(true);
-                setIsObscured(false);
             }
         };
 
@@ -87,7 +85,6 @@ export const useAntiCheat = ({
             
             if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
                 setIsFullScreen(false);
-                setIsObscured(true);
             }
         }
 
@@ -97,7 +94,7 @@ export const useAntiCheat = ({
         };
     }, [enabled, triggerViolation]);
 
-    // 2. Visibility Change (Tab Switching) & Focus Loss Obscuration
+    // 2. Visibility Change (Tab Switching)
     useEffect(() => {
         if (!enabled) return;
 
@@ -108,17 +105,13 @@ export const useAntiCheat = ({
 
         const handleVisibility = () => {
             if (document.hidden) {
-                setIsObscured(true);
                 if (isArmed) {
                     triggerViolation("Tab Switched / Window Hidden");
                 }
-            } else {
-                setIsObscured(false);
             }
         };
 
         const handleBlur = () => {
-            setIsObscured(true);
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText('');
@@ -129,9 +122,7 @@ export const useAntiCheat = ({
             }
         };
 
-        const handleFocus = () => {
-            setIsObscured(false);
-        };
+        const handleFocus = () => {};
 
         document.addEventListener('visibilitychange', handleVisibility);
         window.addEventListener('blur', handleBlur);
@@ -161,14 +152,13 @@ export const useAntiCheat = ({
         const handleKeyDown = (e: KeyboardEvent) => {
             const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
-            // Screenshot detection (Instant Termination & Immediate Screen Obscure)
+            // Screenshot detection (Instant Termination)
             if (
                 e.key === 'PrintScreen' || 
                 (isCtrlOrCmd && e.shiftKey && e.key.toLowerCase() === 's') || 
                 (isCtrlOrCmd && e.shiftKey && ['3', '4', '5'].includes(e.key))
             ) {
                 e.preventDefault();
-                setIsObscured(true);
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText('');
@@ -186,7 +176,6 @@ export const useAntiCheat = ({
                 (isCtrlOrCmd && e.key.toLowerCase() === 'u')
             ) {
                 e.preventDefault();
-                setIsObscured(true);
                 triggerViolation("Developer Tools / Source Inspection Blocked");
                 return;
             }
@@ -197,7 +186,6 @@ export const useAntiCheat = ({
                 (e.altKey && e.key === 'Tab')
             ) {
                 e.preventDefault();
-                setIsObscured(true);
                 triggerViolation("Restricted Keyboard Shortcut");
             }
         };
@@ -205,7 +193,6 @@ export const useAntiCheat = ({
         const handleKeyUp = (e: KeyboardEvent) => {
             if (e.key === 'PrintScreen') {
                 e.preventDefault();
-                setIsObscured(true);
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText('');
@@ -226,12 +213,10 @@ export const useAntiCheat = ({
         const handleTouchStart = (e: TouchEvent) => {
             if (e.touches.length > 1) {
                 e.preventDefault();
-                setIsObscured(true);
                 triggerViolation("Multi-touch Gesture (Google Lens / Screenshot blocked)");
                 return;
             }
             touchTimer = setTimeout(() => {
-                setIsObscured(true);
                 triggerViolation("Long Press Detected (Google Lens / Image Search blocked)");
             }, 600);
         };

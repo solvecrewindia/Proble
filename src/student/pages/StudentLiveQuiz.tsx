@@ -1313,25 +1313,7 @@ export default function StudentLiveQuiz() {
     const isLocked = isSubmitted || viewMode === 'results';
 
     return (
-        <div className={cn("h-screen w-screen font-sans flex flex-col bg-background text-text overflow-hidden relative select-none", isObscured && "filter blur-3xl pointer-events-none")}>
-            {/* Screenshot & Focus Loss Security Obscuration Overlay */}
-            {isObscured && isLiveTestActive && !isTerminated && (
-                <div className="fixed inset-0 z-[150] bg-neutral-950/95 backdrop-blur-3xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-100 select-none pointer-events-auto">
-                    <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mb-4 text-rose-500">
-                        <ShieldAlert className="w-8 h-8 animate-pulse" />
-                    </div>
-                    <h2 className="text-2xl font-black text-white mb-2">Screen Obscured for Security</h2>
-                    <p className="text-sm text-neutral-400 max-w-md mb-6 leading-relaxed">
-                        Screenshots, snipping tools, or window focus loss are strictly prohibited. Questions and code are blurred to prevent capturing or copying.
-                    </p>
-                    <Button
-                        onClick={async () => { await enterFullScreen(); }}
-                        className="bg-primary hover:bg-primary-600 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-lg cursor-pointer"
-                    >
-                        Return to Test Focus
-                    </Button>
-                </div>
-            )}
+        <div className="h-screen w-screen font-sans flex flex-col bg-background text-text overflow-hidden relative select-none">
 
             {/* Warning Overlay Banner */}
             {warning && (
