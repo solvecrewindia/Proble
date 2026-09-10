@@ -123,6 +123,8 @@ export default function StudentLiveQuiz() {
     // Host-directed timing: elapsed stopwatch
     const [elapsedTime, setElapsedTime] = useState<number>(0);
     const questionStartTimeRef = useRef<number>(Date.now());
+    // Guard: once completed locally, no poll or realtime event can flip it back
+    const isCompletedRef = useRef<boolean>(false);
 
     // Moveable & Resizable Output Terminal State
     const [terminalMode, setTerminalMode] = useState<'docked' | 'floating' | 'minimized'>('docked');
@@ -296,6 +298,8 @@ export default function StudentLiveQuiz() {
                 const next = prev + 1;
                 if (next >= totalDurationSeconds) {
                     clearInterval(timer);
+                    // Mark locally completed so polls can't flip it back
+                    isCompletedRef.current = true;
                     // Auto-submit: mark attempt as completed in DB and trigger submit
                     setStatus('completed');
                     // Trigger final submission via the ref so all code/MCQ answers are flushed
@@ -391,8 +395,11 @@ export default function StudentLiveQuiz() {
             }
 
             if (quizData.status === 'completed') {
+                isCompletedRef.current = true;
                 setStatus('completed');
-            } else {
+            } else if (!isCompletedRef.current) {
+                // Only go to active if we haven't already completed locally
+                // (prevents poll from resetting timer-expired / auto-submitted sessions)
                 setStatus('active');
             }
 
@@ -562,8 +569,9 @@ export default function StudentLiveQuiz() {
                             const newStatus = payload.new.status;
 
                             if (newStatus === 'completed') {
+                                isCompletedRef.current = true;
                                 setStatus('completed');
-                            } else if (newStatus === 'active') {
+                            } else if (newStatus === 'active' && !isCompletedRef.current) {
                                 setStatus('active');
                             }
 
@@ -607,7 +615,8 @@ export default function StudentLiveQuiz() {
                             if (payload.new && user && payload.new.student_id === user.id) {
                                 if (payload.new.status === 'terminated') {
                                     setIsTerminated(true);
-                                } else if (payload.new.status === 'in-progress') {
+                                } else if (payload.new.status === 'in-progress' && !isCompletedRef.current) {
+                                    // Only re-activate if we haven't completed locally
                                     setIsTerminated(false);
                                     setStatus('active');
                                     setIsSubmitted(false);
