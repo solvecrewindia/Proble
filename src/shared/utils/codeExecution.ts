@@ -50,52 +50,78 @@ export async function executeSingleRun(
     const langKey = (language || 'python').toLowerCase().trim();
     const languageId = LANGUAGE_ID_MAP[langKey] || 71;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const maxRetries = 3;
+    let attempt = 0;
 
-    try {
-        const response = await fetch('https://ce.judge0.com/submissions?wait=true', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            signal: controller.signal,
-            body: JSON.stringify({
-                source_code: sourceCode,
-                language_id: languageId,
-                stdin: stdin || '',
-            }),
-        });
+    while (attempt < maxRetries) {
+        attempt++;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-        clearTimeout(timeoutId);
+        try {
+            const response = await fetch('https://ce.judge0.com/submissions?wait=true', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    source_code: sourceCode,
+                    language_id: languageId,
+                    stdin: stdin || '',
+                }),
+            });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Execution service responded with status ${response.status}: ${errText}`);
+            clearTimeout(timeoutId);
+
+            if (response.status === 429 || response.status === 503) {
+                if (attempt < maxRetries) {
+                    const delay = Math.floor(Math.random() * 800) + 500 * attempt;
+                    await new Promise(r => setTimeout(r, delay));
+                    continue;
+                }
+            }
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Execution service responded with status ${response.status}: ${errText}`);
+            }
+
+            const data = await response.json();
+            const stdout = data.stdout || '';
+            const stderr = data.stderr || data.compile_output || '';
+            const statusDesc = data.status?.description || 'Unknown';
+            const isAccepted = data.status?.id === 3;
+
+            return {
+                stdout,
+                stderr,
+                passed: isAccepted,
+                status: statusDesc,
+            };
+        } catch (err: any) {
+            clearTimeout(timeoutId);
+            if (attempt < maxRetries && err.name !== 'AbortError') {
+                const delay = Math.floor(Math.random() * 600) + 400 * attempt;
+                await new Promise(r => setTimeout(r, delay));
+                continue;
+            }
+            const errMsg = err.name === 'AbortError' ? 'Execution timed out (15s limit)' : err.message || 'Execution error';
+            return {
+                stdout: '',
+                stderr: errMsg,
+                passed: false,
+                status: 'Error',
+            };
         }
-
-        const data = await response.json();
-        const stdout = data.stdout || '';
-        const stderr = data.stderr || data.compile_output || '';
-        const statusDesc = data.status?.description || 'Unknown';
-        const isAccepted = data.status?.id === 3;
-
-        return {
-            stdout,
-            stderr,
-            passed: isAccepted,
-            status: statusDesc,
-        };
-    } catch (err: any) {
-        clearTimeout(timeoutId);
-        const errMsg = err.name === 'AbortError' ? 'Execution timed out (15s limit)' : err.message || 'Execution error';
-        return {
-            stdout: '',
-            stderr: errMsg,
-            passed: false,
-            status: 'Error',
-        };
     }
+
+    return {
+        stdout: '',
+        stderr: 'Execution service busy, please try again.',
+        passed: false,
+        status: 'Error',
+    };
 }
 
 export async function runTestCases({

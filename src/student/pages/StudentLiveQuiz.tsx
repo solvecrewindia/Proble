@@ -490,11 +490,11 @@ export default function StudentLiveQuiz() {
 
         fetchQuizState();
 
-        // Polling Fallback (every 2.5 seconds)
+        // Adaptive Polling Fallback (10s when Realtime connected, 4s when disconnected)
+        const intervalMs = realtimeStatus === 'connected' ? 10000 : 4000;
         const pollInterval = setInterval(() => {
             fetchQuizState();
-            fetchParticipants();
-        }, 2500);
+        }, intervalMs);
 
         // Realtime Subscription
         let channel: any = null;
