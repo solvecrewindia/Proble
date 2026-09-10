@@ -1442,12 +1442,7 @@ export default function StudentLiveQuiz() {
                 {/* Left: Logo + Live status + Proctor Badge */}
                 <div className="flex items-center gap-3">
                     <img src={theme === 'dark' ? "/logo-light.png" : "/logo-dark.png"} alt="Logo" className="h-7 w-auto object-contain rounded-md" />
-                    <div className="flex items-center gap-2 px-2.5 py-1 bg-surface-highlight rounded-full border border-border">
-                        <div className={cn("w-2 h-2 rounded-full", realtimeStatus === 'connected' ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
-                        <span className="text-xs font-semibold text-muted hidden sm:inline">
-                            {realtimeStatus === 'connected' ? 'Live Session' : 'Syncing...'}
-                        </span>
-                    </div>
+
                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-surface-highlight rounded-full border border-border text-xs font-semibold text-muted">
                         <Shield className="w-3.5 h-3.5 text-primary" />
                         <span className="hidden md:inline">Proctored</span>
