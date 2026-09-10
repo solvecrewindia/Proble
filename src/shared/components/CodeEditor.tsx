@@ -67,19 +67,14 @@ function tokenizeLine(lineText: string, isDark: boolean): React.ReactNode[] {
         ] = match;
 
         if (comment) {
-            const isTodo = comment.includes('TODO');
+            // IMPORTANT: Use font-normal only — bold/semibold changes glyph width
+            // and causes the transparent textarea cursor to drift off the highlight.
             tokens.push(
                 <span
                     key={keyIdx++}
                     className={cn(
-                        "italic",
-                        isTodo
-                            ? isDark
-                                ? "text-amber-400 font-bold bg-amber-500/15 px-1 rounded"
-                                : "text-amber-700 font-bold bg-amber-100/90 px-1 rounded"
-                            : isDark
-                                ? "text-neutral-500"
-                                : "text-slate-400"
+                        "italic font-normal",
+                        isDark ? "text-neutral-500" : "text-slate-400"
                     )}
                 >
                     {comment}
@@ -88,64 +83,61 @@ function tokenizeLine(lineText: string, isDark: boolean): React.ReactNode[] {
         } else if (funcDef) {
             const parts = funcDef.split(/\s+/);
             tokens.push(
-                <span key={keyIdx++}>
-                    <span className={isDark ? "text-pink-400 font-semibold" : "text-indigo-600 font-semibold"}>{parts[0]}</span>
+                <span key={keyIdx++} className="font-normal">
+                    <span className={isDark ? "text-pink-400" : "text-indigo-600"}>{parts[0]}</span>
                     {' '}
-                    <span className={isDark ? "text-yellow-300 font-bold" : "text-blue-600 font-bold"}>{parts[1]}</span>
+                    <span className={isDark ? "text-yellow-300" : "text-blue-600"}>{parts[1]}</span>
                 </span>
             );
         } else if (classDef) {
             const parts = classDef.split(/\s+/);
             tokens.push(
-                <span key={keyIdx++}>
-                    <span className={isDark ? "text-pink-400 font-semibold" : "text-indigo-600 font-semibold"}>{parts[0]}</span>
+                <span key={keyIdx++} className="font-normal">
+                    <span className={isDark ? "text-pink-400" : "text-indigo-600"}>{parts[0]}</span>
                     {' '}
-                    <span className={isDark ? "text-cyan-300 font-bold" : "text-purple-600 font-bold"}>{parts[1]}</span>
+                    <span className={isDark ? "text-cyan-300" : "text-purple-600"}>{parts[1]}</span>
                 </span>
             );
         } else if (stringLit) {
             tokens.push(
-                <span key={keyIdx++} className={isDark ? "text-emerald-400" : "text-emerald-600"}>
+                <span key={keyIdx++} className={cn("font-normal", isDark ? "text-emerald-400" : "text-emerald-600")}>
                     {stringLit}
                 </span>
             );
         } else if (keyword) {
             tokens.push(
-                <span key={keyIdx++} className={isDark ? "text-pink-400 font-semibold" : "text-indigo-600 font-semibold"}>
+                <span key={keyIdx++} className={cn("font-normal", isDark ? "text-pink-400" : "text-indigo-600")}>
                     {keyword}
                 </span>
             );
         } else if (builtin) {
             tokens.push(
-                <span key={keyIdx++} className={isDark ? "text-cyan-400 font-medium" : "text-teal-700 font-medium"}>
+                <span key={keyIdx++} className={cn("font-normal", isDark ? "text-cyan-400" : "text-teal-700")}>
                     {builtin}
                 </span>
             );
         } else if (hexColor) {
+            // Render as plain text only — inline-flex with a swatch icon changes width
             tokens.push(
-                <span key={keyIdx++} className="inline-flex items-center gap-1 font-mono">
-                    <span
-                        className="inline-block w-2.5 h-2.5 rounded-full border border-black/20 dark:border-white/20 shrink-0 shadow-sm"
-                        style={{ backgroundColor: hexColor }}
-                    />
-                    <span className={isDark ? "text-purple-300" : "text-purple-700"}>{hexColor}</span>
+                <span key={keyIdx++} className={cn("font-normal", isDark ? "text-purple-300" : "text-purple-700")}>
+                    {hexColor}
                 </span>
             );
         } else if (numberLit) {
             tokens.push(
-                <span key={keyIdx++} className={cn("font-mono", isDark ? "text-amber-300" : "text-amber-600")}>
+                <span key={keyIdx++} className={cn("font-normal", isDark ? "text-amber-300" : "text-amber-600")}>
                     {numberLit}
                 </span>
             );
         } else if (operator) {
             tokens.push(
-                <span key={keyIdx++} className={isDark ? "text-sky-300" : "text-slate-600 font-medium"}>
+                <span key={keyIdx++} className={cn("font-normal", isDark ? "text-sky-300" : "text-slate-600")}>
                     {operator}
                 </span>
             );
         } else if (identifier) {
             tokens.push(
-                <span key={keyIdx++} className={isDark ? "text-neutral-200" : "text-slate-800"}>
+                <span key={keyIdx++} className={cn("font-normal", isDark ? "text-neutral-200" : "text-slate-800")}>
                     {identifier}
                 </span>
             );
@@ -155,7 +147,7 @@ function tokenizeLine(lineText: string, isDark: boolean): React.ReactNode[] {
             );
         } else {
             tokens.push(
-                <span key={keyIdx++} className={isDark ? "text-neutral-300" : "text-slate-700"}>{other}</span>
+                <span key={keyIdx++} className={cn("font-normal", isDark ? "text-neutral-300" : "text-slate-700")}>{other}</span>
             );
         }
     }
@@ -507,13 +499,23 @@ export function CodeEditor({
                 {/* Code Workspace with Background Highlighting & Foreground Input */}
                 <div className="relative flex-1 overflow-hidden h-full">
                     {/* Background Syntax Highlight Overlay */}
+                    {/* CRITICAL: Must be pixel-identical to the textarea in:
+                         - font-family (font-mono)
+                         - font-size (text-xs / md:text-sm)
+                         - font-weight (font-normal — never bold/semibold)
+                         - line-height (leading-6)
+                         - padding (p-3)
+                         - tab-size (4)
+                         - letter-spacing (none / tracking-normal)
+                        Any deviation shifts highlight vs cursor. */}
                     <div
                         ref={highlightRef}
                         className={cn(
-                            "absolute inset-0 p-3 font-mono text-xs md:text-sm leading-6 pointer-events-none overflow-hidden whitespace-pre font-normal select-none",
+                            "absolute inset-0 p-3 font-mono text-xs md:text-sm leading-6 pointer-events-none overflow-hidden whitespace-pre font-normal select-none tracking-normal",
                             isDark ? "text-neutral-200" : "text-slate-800"
                         )}
                         style={{ tabSize: 4 }}
+                        aria-hidden="true"
                     >
                         {lines.map((line, i) => {
                             const isCurrent = (i + 1) === cursorPosition.line;
@@ -522,11 +524,11 @@ export function CodeEditor({
                                 <div
                                     key={i}
                                     className={cn(
-                                        "h-6 relative flex items-center",
+                                        "h-6 relative",
                                         isCurrent && (isDark ? "bg-neutral-800/40 rounded" : "bg-primary/5 rounded")
                                     )}
                                 >
-                                    <span className="inline-block">{tokenizeLine(line, isDark)}</span>
+                                    {tokenizeLine(line, isDark)}
                                 </div>
                             );
                         })}
@@ -552,7 +554,7 @@ export function CodeEditor({
                         autoCorrect="off"
                         style={{ tabSize: 4 }}
                         className={cn(
-                            "absolute inset-0 w-full h-full p-3 font-mono text-xs md:text-sm leading-6 bg-transparent text-transparent resize-none outline-none border-none whitespace-pre overflow-y-auto overflow-x-hidden font-normal selection:bg-primary/25 custom-scrollbar",
+                            "absolute inset-0 w-full h-full p-3 font-mono text-xs md:text-sm leading-6 bg-transparent text-transparent resize-none outline-none border-none whitespace-pre overflow-y-auto overflow-x-hidden font-normal tracking-normal selection:bg-primary/25 custom-scrollbar",
                             isDark ? "caret-white" : "caret-slate-900"
                         )}
                     />
