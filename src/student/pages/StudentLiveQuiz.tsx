@@ -295,7 +295,13 @@ export default function StudentLiveQuiz() {
             setElapsedTime(prev => {
                 const next = prev + 1;
                 if (next >= totalDurationSeconds) {
+                    clearInterval(timer);
+                    // Auto-submit: mark attempt as completed in DB and trigger submit
                     setStatus('completed');
+                    // Trigger final submission via the ref so all code/MCQ answers are flushed
+                    setTimeout(() => {
+                        handleSubmitAnswerRef.current();
+                    }, 300);
                 }
                 return next;
             });
@@ -462,6 +468,14 @@ export default function StudentLiveQuiz() {
                 } else if (existingAttempt.status === 'in-progress' && isTerminated) {
                     setIsTerminated(false);
                     resetViolations();
+                }
+
+                // ── Restore elapsed time from wall clock so reload doesn't reset timer ──
+                if (existingAttempt.started_at) {
+                    const startMs = new Date(existingAttempt.started_at).getTime();
+                    const nowMs = Date.now();
+                    const alreadyElapsed = Math.floor((nowMs - startMs) / 1000);
+                    setElapsedTime(alreadyElapsed);
                 }
 
                 // Restore answers across all questions
