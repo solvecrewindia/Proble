@@ -198,6 +198,7 @@ export function CodeEditor({
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const highlightRef = useRef<HTMLDivElement>(null);
     const gutterRef = useRef<HTMLDivElement>(null);
+    const [scrollTop, setScrollTop] = useState(0);
 
     // Compute lines array
     const lines = useMemo(() => value.split('\n'), [value]);
@@ -206,13 +207,14 @@ export function CodeEditor({
     // Sync scroll between textarea, syntax highlight layer, and line number gutter
     const handleScroll = useCallback(() => {
         if (!textareaRef.current) return;
-        const { scrollTop, scrollLeft } = textareaRef.current;
+        const { scrollTop: st, scrollLeft } = textareaRef.current;
+        setScrollTop(st);
         if (highlightRef.current) {
-            highlightRef.current.scrollTop = scrollTop;
+            highlightRef.current.scrollTop = st;
             highlightRef.current.scrollLeft = scrollLeft;
         }
         if (gutterRef.current) {
-            gutterRef.current.scrollTop = scrollTop;
+            gutterRef.current.scrollTop = st;
         }
     }, []);
 
@@ -498,43 +500,48 @@ export function CodeEditor({
 
                 {/* Code Workspace with Background Highlighting & Foreground Input */}
                 <div className="relative flex-1 overflow-hidden h-full">
-                    {/* Background Syntax Highlight Overlay */}
-                    {/* CRITICAL: Must be pixel-identical to the textarea in:
-                         - font-family (font-mono)
-                         - font-size (text-xs / md:text-sm)
-                         - font-weight (font-normal — never bold/semibold)
-                         - line-height (leading-6)
-                         - padding (p-3)
-                         - tab-size (4)
-                         - letter-spacing (none / tracking-normal)
-                        Any deviation shifts highlight vs cursor. */}
+
+                    {/* Layer 0: Current-line highlight band — absolute, behind everything */}
+                    {/* top = (line-1) * 24px lineHeight + 12px paddingTop - scrollTop */}
+                    <div
+                        className={cn(
+                            "absolute left-3 right-3 pointer-events-none rounded",
+                            isDark ? "bg-neutral-800/40" : "bg-primary/5"
+                        )}
+                        style={{
+                            top: `${(cursorPosition.line - 1) * 24 + 12 - scrollTop}px`,
+                            height: '24px',
+                        }}
+                        aria-hidden="true"
+                    />
+
+                    {/* Layer 1: Syntax Highlight Overlay
+                        CRITICAL: layout must be pixel-identical to the textarea:
+                        - Same font-family, size, weight (font-normal only), line-height
+                        - Same padding (p-3 = 12px)
+                        - Same tab-size, letter-spacing, whitespace handling
+                        - Uses inline text flow (no per-line block divs) so text
+                          positions match the textarea's text stream exactly. */}
                     <div
                         ref={highlightRef}
                         className={cn(
-                            "absolute inset-0 p-3 font-mono text-xs md:text-sm leading-6 pointer-events-none overflow-hidden whitespace-pre font-normal select-none tracking-normal",
+                            "absolute inset-0 p-3 font-mono text-xs md:text-sm leading-6",
+                            "pointer-events-none overflow-hidden whitespace-pre",
+                            "font-normal tracking-normal select-none",
                             isDark ? "text-neutral-200" : "text-slate-800"
                         )}
-                        style={{ tabSize: 4 }}
+                        style={{ tabSize: 4, lineHeight: '24px' }}
                         aria-hidden="true"
                     >
-                        {lines.map((line, i) => {
-                            const isCurrent = (i + 1) === cursorPosition.line;
-
-                            return (
-                                <div
-                                    key={i}
-                                    className={cn(
-                                        "h-6 relative",
-                                        isCurrent && (isDark ? "bg-neutral-800/40 rounded" : "bg-primary/5 rounded")
-                                    )}
-                                >
-                                    {tokenizeLine(line, isDark)}
-                                </div>
-                            );
-                        })}
+                        {lines.map((line, i) => (
+                            <React.Fragment key={i}>
+                                {tokenizeLine(line, isDark)}
+                                {i < lines.length - 1 ? '\n' : ''}
+                            </React.Fragment>
+                        ))}
                     </div>
 
-                    {/* Foreground Transparent Editable Textarea - zero horizontal scroll */}
+                    {/* Layer 2: Transparent Editable Textarea (cursor lives here) */}
                     <textarea
                         ref={textareaRef}
                         value={value}
@@ -552,13 +559,19 @@ export function CodeEditor({
                         autoCapitalize="off"
                         autoComplete="off"
                         autoCorrect="off"
-                        style={{ tabSize: 4 }}
+                        style={{ tabSize: 4, lineHeight: '24px' }}
                         className={cn(
-                            "absolute inset-0 w-full h-full p-3 font-mono text-xs md:text-sm leading-6 bg-transparent text-transparent resize-none outline-none border-none whitespace-pre overflow-y-auto overflow-x-hidden font-normal tracking-normal selection:bg-primary/25 custom-scrollbar",
+                            "absolute inset-0 w-full h-full p-3",
+                            "font-mono text-xs md:text-sm font-normal tracking-normal",
+                            "bg-transparent text-transparent",
+                            "resize-none outline-none border-none",
+                            "whitespace-pre overflow-auto",
+                            "selection:bg-primary/25 custom-scrollbar",
                             isDark ? "caret-white" : "caret-slate-900"
                         )}
                     />
                 </div>
+
             </div>
 
             {/* Bottom Status Bar & Action Controls */}
