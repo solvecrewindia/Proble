@@ -565,6 +565,9 @@ Correct Answer: ${typeof q.options[q.correct] === 'object' ? q.options[q.correct
                                         onRun={handleRunCode}
                                         isRunning={isExecuting}
                                         runButtonText="Run Code"
+                                        onSubmit={handleRunCode}
+                                        submitButtonText="Submit Code"
+                                        autoSaveStatus="Auto-saved"
                                         allPassed={codeExecutionStatus[currentQIndex] === true}
                                         testCasesCount={((q.correct as any)?.testCases || []).length}
                                         minHeight="320px"

@@ -25,12 +25,17 @@ interface CodeEditorProps {
     onRun?: () => void;
     isRunning?: boolean;
     runButtonText?: string;
+    onSubmit?: () => void;
+    isSubmitting?: boolean;
+    isSubmitted?: boolean;
+    submitButtonText?: string;
     allPassed?: boolean;
     annotations?: CodeEditorAnnotation[];
     className?: string;
     minHeight?: string;
     testCasesCount?: number;
     editorTheme?: 'auto' | 'light' | 'dark';
+    autoSaveStatus?: string;
 }
 
 // Tokenize Python / TypeScript code into theme-aware colored syntax spans
@@ -171,13 +176,18 @@ export function CodeEditor({
     showCopy = true,
     onRun,
     isRunning = false,
-    runButtonText = 'Run & Test Code',
+    runButtonText = 'Run Code',
+    onSubmit,
+    isSubmitting = false,
+    isSubmitted = false,
+    submitButtonText = 'Submit Code',
     allPassed = false,
     annotations = [],
     className,
     minHeight = '360px',
     testCasesCount,
-    editorTheme = 'auto'
+    editorTheme = 'auto',
+    autoSaveStatus
 }: CodeEditorProps) {
     const { theme: appTheme } = useTheme();
 
@@ -574,41 +584,83 @@ export function CodeEditor({
                     </span>
                 </div>
 
-                {/* Right: Run Code Button & Pass Notification */}
-                {onRun && (
-                    <div className="flex items-center gap-2 ml-auto">
-                        {allPassed && (
-                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-sans">
-                                <CheckCircle2 className="w-4 h-4" /> All Passed
-                            </span>
-                        )}
+                {/* Right: Action Controls (Auto-save Indicator + Run Code + Submit Code) */}
+                <div className="flex items-center gap-2 ml-auto flex-wrap">
+                    {/* Auto-save Status Indicator */}
+                    <span className="text-[11px] font-sans font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mr-1">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>{autoSaveStatus || 'Auto-saved'}</span>
+                    </span>
+
+                    {allPassed && !onSubmit && (
+                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-sans mr-1">
+                            <CheckCircle2 className="w-4 h-4" /> All Passed
+                        </span>
+                    )}
+
+                    {/* Run Code Button */}
+                    {onRun && (
                         <button
                             type="button"
                             onClick={onRun}
-                            disabled={isRunning || disabled}
+                            disabled={isRunning || disabled || isSubmitted || readOnly}
                             className={cn(
-                                "px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
+                                "px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
                                 isRunning
                                     ? "bg-slate-300 dark:bg-neutral-800 text-slate-500 cursor-not-allowed"
-                                    : allPassed
-                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
-                                        : "bg-primary hover:bg-primary-600 text-white shadow-primary/25"
+                                    : "bg-surface border border-primary/40 text-primary hover:bg-primary/10"
                             )}
+                            title={isSubmitted ? "Submission is locked" : "Run code test cases"}
                         >
                             {isRunning ? (
                                 <>
-                                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                                     <span>Running...</span>
                                 </>
                             ) : (
                                 <>
                                     <Play className="w-3.5 h-3.5 fill-current" />
-                                    <span>{runButtonText}</span>
+                                    <span>{runButtonText || 'Run Code'}</span>
                                 </>
                             )}
                         </button>
-                    </div>
-                )}
+                    )}
+
+                    {/* Submit Code Button */}
+                    {onSubmit && (
+                        <button
+                            type="button"
+                            onClick={onSubmit}
+                            disabled={isSubmitting || disabled || isSubmitted || readOnly}
+                            className={cn(
+                                "px-4 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-75 disabled:cursor-not-allowed",
+                                isSubmitted || readOnly
+                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-extrabold"
+                                    : isSubmitting
+                                        ? "bg-slate-300 dark:bg-neutral-800 text-slate-500"
+                                        : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
+                            )}
+                            title={isSubmitted ? "You have already submitted this question. Code is locked." : "Submit final code solution"}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <span>Submitting...</span>
+                                </>
+                            ) : isSubmitted || readOnly ? (
+                                <>
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Submitted ✓</span>
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>{submitButtonText || 'Submit Code'}</span>
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -42,6 +42,51 @@ export default function StudentLiveQuiz() {
     const [codeExecutionResult, setCodeExecutionResult] = useState<Record<string, ExecutionResponse | null>>({});
     const [codePassedStatus, setCodePassedStatus] = useState<Record<string, boolean>>({});
     const [isExecutingCode, setIsExecutingCode] = useState(false);
+    const [autoSaveStatusMap, setAutoSaveStatusMap] = useState<Record<string, string>>({});
+    const autoSaveTimerRef = useRef<Record<string, any>>({});
+
+    // Debounced Auto-Save Draft Code as Student Types
+    const handleAutoSaveCode = useCallback((qId: string, codeVal: string) => {
+        setAutoSaveStatusMap(prev => ({ ...prev, [qId]: 'Saving...' }));
+        if (autoSaveTimerRef.current[qId]) {
+            clearTimeout(autoSaveTimerRef.current[qId]);
+        }
+        autoSaveTimerRef.current[qId] = setTimeout(async () => {
+            if (!id || !user) return;
+            try {
+                const { data: curAttempt } = await supabase
+                    .from('attempts')
+                    .select('answers')
+                    .eq('quiz_id', id)
+                    .eq('student_id', user.id)
+                    .maybeSingle();
+
+                let curAnswers = curAttempt?.answers || {};
+                if (typeof curAnswers === 'string') {
+                    try { curAnswers = JSON.parse(curAnswers); } catch {}
+                }
+
+                const updatedAns = {
+                    ...curAnswers,
+                    [qId]: {
+                        ...(curAnswers[qId] || {}),
+                        type: 'code',
+                        code: codeVal,
+                    }
+                };
+
+                await supabase
+                    .from('attempts')
+                    .update({ answers: updatedAns })
+                    .eq('quiz_id', id)
+                    .eq('student_id', user.id);
+
+                setAutoSaveStatusMap(prev => ({ ...prev, [qId]: 'Auto-saved' }));
+            } catch (err) {
+                console.warn("Auto save code error:", err);
+            }
+        }, 1000);
+    }, [id, user]);
 
     // Host-directed timing: elapsed stopwatch
     const [elapsedTime, setElapsedTime] = useState<number>(0);
@@ -1438,15 +1483,28 @@ export default function StudentLiveQuiz() {
                         </div>
 
                         {/* Left Footer Action */}
-                        <div className="p-4 border-t border-border bg-surface-highlight shrink-0">
-                            {viewMode === 'voting' && !isSubmitted && (
-                                <Button
-                                    onClick={handleSubmitAnswer}
-                                    disabled={isExecutingCode}
-                                    className="w-full h-10 font-bold text-xs rounded-xl shadow-md"
-                                >
-                                    {codePassedStatus[currentQuestion.id] ? "Submit Solution ✓" : "Run & Submit Code"}
-                                </Button>
+                        <div className="p-4 border-t border-border bg-surface-highlight shrink-0 flex items-center gap-2">
+                            {viewMode === 'voting' && (
+                                <>
+                                    <Button
+                                        onClick={handleRunLiveCode}
+                                        disabled={isExecutingCode || isSubmitted}
+                                        variant="outline"
+                                        className="flex-1 h-10 font-bold text-xs rounded-xl"
+                                    >
+                                        <Play className="w-3.5 h-3.5 mr-1.5 fill-current text-primary" /> Run Code
+                                    </Button>
+                                    <Button
+                                        onClick={handleSubmitAnswer}
+                                        disabled={isExecutingCode || isSubmitted}
+                                        className={cn(
+                                            "flex-1 h-10 font-bold text-xs rounded-xl shadow-md",
+                                            isSubmitted ? "bg-emerald-600/20 text-emerald-600 cursor-not-allowed border border-emerald-500/30" : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        )}
+                                    >
+                                        {isSubmitted ? "Submitted ✓" : "Submit Code"}
+                                    </Button>
+                                </>
                             )}
                         </div>
                     </div>
@@ -1456,7 +1514,10 @@ export default function StudentLiveQuiz() {
                         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                             <CodeEditor
                                 value={codeAnswers[currentQuestion.id] ?? (currentQuestion.correct as any)?.starterCode ?? ''}
-                                onChange={(val) => setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: val }))}
+                                onChange={(val) => {
+                                    setCodeAnswers(prev => ({ ...prev, [currentQuestion.id]: val }));
+                                    handleAutoSaveCode(currentQuestion.id, val);
+                                }}
                                 fileName="solution.py"
                                 breadcrumbs={['live-assessment', `question-${currentQuestionIndex + 1}`, 'solution.py']}
                                 disabled={isLocked}
@@ -1469,7 +1530,11 @@ export default function StudentLiveQuiz() {
                                 showCopy={false}
                                 onRun={handleRunLiveCode}
                                 isRunning={isExecutingCode}
-                                runButtonText="Run & Test Code"
+                                runButtonText="Run Code"
+                                onSubmit={handleSubmitAnswer}
+                                isSubmitted={isSubmitted}
+                                submitButtonText="Submit Code"
+                                autoSaveStatus={autoSaveStatusMap[currentQuestion.id] || 'Auto-saved'}
                                 allPassed={codePassedStatus[currentQuestion.id]}
                                 testCasesCount={((currentQuestion.correct as any)?.testCases || []).length}
                                 className="h-full flex-1 rounded-none border-0 shadow-none"

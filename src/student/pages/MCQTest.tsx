@@ -1359,6 +1359,9 @@ const MCQTest = () => {
                                         onRun={handleRunCode}
                                         isRunning={isExecuting}
                                         runButtonText="Run Code"
+                                        onSubmit={handleRunCode}
+                                        submitButtonText="Submit Code"
+                                        autoSaveStatus="Auto-saved"
                                         allPassed={codeExecutionStatus[activeQuestion.id] === true}
                                         testCasesCount={((activeQuestion?.correct as any)?.testCases || []).length}
                                         minHeight="320px"
