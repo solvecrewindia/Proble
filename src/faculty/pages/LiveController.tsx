@@ -1087,49 +1087,44 @@ export default function LiveController() {
                                         )}
                                     </div>
                                 </div>
-                            ) : (
-                                <>
-                                    <div className="flex justify-between items-start mb-3">
-                                        <span className="text-sm font-medium text-muted">
-                                            Question {currentQuestionIndex + 1} of {totalQuestions}
-                                        </span>
-                                        <span className="bg-neutral-100 dark:bg-neutral-800 text-xs px-2.5 py-1 rounded-md font-bold text-muted">
-                                            {currentQuestion.type === 'code' ? 'CODE CHALLENGE' : 'MULTIPLE CHOICE'}
-                                        </span>
-                                    </div>
-
-                                    <MathText text={currentQuestion.stem} className="text-xl font-bold text-text mb-4" as="h2" />
-
-                                    {/* View Mode: Leaderboard vs Question Workspace */}
-                                    {viewMode === 'leaderboard' ? (
-                                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-                                    <div className="flex items-center justify-between pb-2 border-b border-border">
-                                        <div className="flex items-center gap-2 text-amber-500 font-bold text-sm">
-                                            <Trophy className="w-4 h-4" />
-                                            <span>Current Standings (Test Cases & Timing)</span>
+                            ) : viewMode === 'leaderboard' ? (
+                                <div className="space-y-4 flex-1 flex flex-col min-h-0">
+                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-3 border-b border-border shrink-0">
+                                        <div>
+                                            <div className="flex items-center gap-2 text-amber-500 font-bold text-xs uppercase tracking-wider">
+                                                <Trophy className="w-4 h-4" /> Live Assessment Leaderboard
+                                            </div>
+                                            <h2 className="text-xl font-black text-text mt-0.5">
+                                                Current Student Standings
+                                            </h2>
+                                            <p className="text-xs text-muted mt-0.5">
+                                                Real-time standings calculated by points, passed test cases, and completion speed.
+                                            </p>
                                         </div>
-                                        <span className="text-xs text-muted">{liveLeaderboard.length} student(s) ranked</span>
+                                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                                            {liveLeaderboard.length} Ranked Student(s)
+                                        </span>
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 flex-1 overflow-y-auto pr-1">
                                         {liveLeaderboard.map((student, idx) => (
                                             <div
                                                 key={student.student_id}
-                                                className="p-3 rounded-xl border border-border bg-surface flex items-center justify-between text-sm hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
+                                                className="p-3.5 rounded-xl border border-border bg-surface flex items-center justify-between text-sm hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
                                             >
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 min-w-0">
                                                     <span className={cn(
-                                                        "font-black w-6 text-center text-sm",
+                                                        "font-black w-6 text-center text-sm shrink-0",
                                                         idx === 0 ? "text-amber-500" : idx === 1 ? "text-slate-400" : idx === 2 ? "text-amber-700" : "text-muted"
                                                     )}>
                                                         #{idx + 1}
                                                     </span>
-                                                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                                                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
                                                         {student.name.substring(0, 2).toUpperCase()}
                                                     </div>
-                                                    <div>
-                                                        <p className="font-bold text-text text-sm">{student.name}</p>
-                                                        <div className="flex items-center gap-2 text-xs text-muted">
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-text text-sm truncate">{student.name}</p>
+                                                        <div className="flex items-center gap-2 text-xs text-muted flex-wrap">
                                                             {student.regNo && <span className="font-mono">{student.regNo}</span>}
                                                             {student.testCasesInfo && (
                                                                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-[11px]">
@@ -1142,7 +1137,7 @@ export default function LiveController() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 shrink-0">
                                                     <div className="text-right">
                                                         <span className="font-black text-primary text-base">{student.score}</span>
                                                         <span className="text-[10px] text-muted block">pts</span>
@@ -1161,13 +1156,28 @@ export default function LiveController() {
                                         ))}
 
                                         {liveLeaderboard.length === 0 && (
-                                            <div className="p-8 text-center text-muted text-sm">
-                                                No submissions recorded yet for this question.
+                                            <div className="p-8 text-center text-muted text-sm bg-surface rounded-xl border border-dashed border-border space-y-1">
+                                                <Trophy className="w-6 h-6 mx-auto text-muted/50 mb-2" />
+                                                <p className="font-semibold text-text">No leaderboard standings recorded yet.</p>
+                                                <p className="text-xs">Students will appear here as they run code and submit test cases.</p>
                                             </div>
                                         )}
                                     </div>
                                 </div>
-                            ) : currentQuestion.type === 'code' ? (
+                            ) : (
+                                <>
+                                    <div className="flex justify-between items-start mb-3">
+                                        <span className="text-sm font-medium text-muted">
+                                            Question {currentQuestionIndex + 1} of {totalQuestions}
+                                        </span>
+                                        <span className="bg-neutral-100 dark:bg-neutral-800 text-xs px-2.5 py-1 rounded-md font-bold text-muted">
+                                            {currentQuestion.type === 'code' ? 'CODE CHALLENGE' : 'MULTIPLE CHOICE'}
+                                        </span>
+                                    </div>
+
+                                    <MathText text={currentQuestion.stem} className="text-xl font-bold text-text mb-4" as="h2" />
+
+                                    {currentQuestion.type === 'code' ? (
                                 <div className="space-y-4 flex-1 overflow-y-auto pr-1">
                                     <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-primary font-bold text-sm">
@@ -1502,53 +1512,55 @@ export default function LiveController() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-neutral-200 dark:border-neutral-800 flex-1">
-                        <CardContent className="p-5">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="font-bold text-text text-sm">Question Queue</h3>
-                                <span className="text-[11px] font-semibold text-muted bg-surface-highlight px-2 py-0.5 rounded-full border border-border">
-                                    {quiz.questions.length} Questions
-                                </span>
-                            </div>
-                            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-                                {quiz.questions.map((q, idx) => {
-                                    const cleanTitle = (q.stem || '')
-                                        .replace(/^#+\s*/, '')
-                                        .split('\n')[0]
-                                        .replace(/\*\*/g, '')
-                                        .trim();
+                    {viewMode !== 'leaderboard' && (
+                        <Card className="border-neutral-200 dark:border-neutral-800 flex-1">
+                            <CardContent className="p-5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="font-bold text-text text-sm">Question Queue</h3>
+                                    <span className="text-[11px] font-semibold text-muted bg-surface-highlight px-2 py-0.5 rounded-full border border-border">
+                                        {quiz.questions.length} Questions
+                                    </span>
+                                </div>
+                                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                                    {quiz.questions.map((q, idx) => {
+                                        const cleanTitle = (q.stem || '')
+                                            .replace(/^#+\s*/, '')
+                                            .split('\n')[0]
+                                            .replace(/\*\*/g, '')
+                                            .trim();
 
-                                    return (
-                                        <div
-                                            key={q.id || idx}
-                                            onClick={() => {
-                                                setCurrentQuestionIndex(idx);
-                                                setViewMode('voting');
-                                                updateQuizState(idx, 'voting');
-                                            }}
-                                            className={cn(
-                                                "p-3 rounded-xl cursor-pointer transition-all text-xs flex items-center gap-3 border",
-                                                currentQuestionIndex === idx
-                                                    ? "bg-primary/10 border-primary text-primary font-bold shadow-xs"
-                                                    : "border-border hover:bg-surface text-muted hover:text-text"
-                                            )}
-                                        >
-                                            <span className={cn(
-                                                "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0",
-                                                currentQuestionIndex === idx ? "bg-primary text-white" : "bg-neutral-100 dark:bg-neutral-800 text-muted"
-                                            )}>
-                                                {idx + 1}
-                                            </span>
-                                            <span className="truncate flex-1 font-semibold text-xs text-text" title={cleanTitle}>
-                                                {cleanTitle || `Question ${idx + 1}`}
-                                            </span>
-                                            {currentQuestionIndex > idx && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </CardContent>
-                    </Card>
+                                        return (
+                                            <div
+                                                key={q.id || idx}
+                                                onClick={() => {
+                                                    setCurrentQuestionIndex(idx);
+                                                    setViewMode('voting');
+                                                    updateQuizState(idx, 'voting');
+                                                }}
+                                                className={cn(
+                                                    "p-3 rounded-xl cursor-pointer transition-all text-xs flex items-center gap-3 border",
+                                                    currentQuestionIndex === idx
+                                                        ? "bg-primary/10 border-primary text-primary font-bold shadow-xs"
+                                                        : "border-border hover:bg-surface text-muted hover:text-text"
+                                                )}
+                                            >
+                                                <span className={cn(
+                                                    "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0",
+                                                    currentQuestionIndex === idx ? "bg-primary text-white" : "bg-neutral-100 dark:bg-neutral-800 text-muted"
+                                                )}>
+                                                    {idx + 1}
+                                                </span>
+                                                <span className="truncate flex-1 font-semibold text-xs text-text" title={cleanTitle}>
+                                                    {cleanTitle || `Question ${idx + 1}`}
+                                                </span>
+                                                {currentQuestionIndex > idx && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
 
