@@ -768,7 +768,7 @@ export default function LiveController() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6 h-[calc(100vh-100px)] flex flex-col">
+        <div className="max-w-6xl mx-auto space-y-6 min-h-[calc(100vh-100px)] flex flex-col pb-12">
             {/* Header */}
             <div className="flex justify-between items-center bg-surface p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
                 <div className="flex items-center gap-4">
@@ -874,7 +874,7 @@ export default function LiveController() {
                 })()}
             </div>
 
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 {/* Main Control Panel: Question or Leaderboard */}
                 <div className="lg:col-span-2 flex flex-col gap-4">
                     <Card className="flex-1 flex flex-col overflow-hidden border-neutral-200 dark:border-neutral-800">
@@ -1420,7 +1420,7 @@ export default function LiveController() {
                 </div>
 
                 {/* Sidebar Controls */}
-                <div className="space-y-4">
+                <div className="space-y-4 lg:sticky lg:top-4 flex flex-col">
                     <Card className="border-neutral-200 dark:border-neutral-800">
                         <CardContent className="p-6 space-y-5">
                             <div className="text-center">
