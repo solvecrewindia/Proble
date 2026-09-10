@@ -1503,34 +1503,49 @@ export default function LiveController() {
                     </Card>
 
                     <Card className="border-neutral-200 dark:border-neutral-800 flex-1">
-                        <CardContent className="p-6">
-                            <h3 className="font-bold text-text text-sm mb-3">Question Queue</h3>
-                            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-                                {quiz.questions.map((q, idx) => (
-                                    <div
-                                        key={q.id || idx}
-                                        onClick={() => {
-                                            setCurrentQuestionIndex(idx);
-                                            setViewMode('voting');
-                                            updateQuizState(idx, 'voting');
-                                        }}
-                                        className={cn(
-                                            "p-3 rounded-xl cursor-pointer transition-colors text-xs flex items-center gap-3 border",
-                                            currentQuestionIndex === idx
-                                                ? "bg-primary/10 border-primary text-primary font-bold"
-                                                : "border-border hover:bg-surface text-muted hover:text-text"
-                                        )}
-                                    >
-                                        <span className={cn(
-                                            "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0",
-                                            currentQuestionIndex === idx ? "bg-primary text-white" : "bg-neutral-100 dark:bg-neutral-800 text-muted"
-                                        )}>
-                                            {idx + 1}
-                                        </span>
-                                        <MathText text={q.stem} className="truncate flex-1" />
-                                        {currentQuestionIndex > idx && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                                    </div>
-                                ))}
+                        <CardContent className="p-5">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="font-bold text-text text-sm">Question Queue</h3>
+                                <span className="text-[11px] font-semibold text-muted bg-surface-highlight px-2 py-0.5 rounded-full border border-border">
+                                    {quiz.questions.length} Questions
+                                </span>
+                            </div>
+                            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                                {quiz.questions.map((q, idx) => {
+                                    const cleanTitle = (q.stem || '')
+                                        .replace(/^#+\s*/, '')
+                                        .split('\n')[0]
+                                        .replace(/\*\*/g, '')
+                                        .trim();
+
+                                    return (
+                                        <div
+                                            key={q.id || idx}
+                                            onClick={() => {
+                                                setCurrentQuestionIndex(idx);
+                                                setViewMode('voting');
+                                                updateQuizState(idx, 'voting');
+                                            }}
+                                            className={cn(
+                                                "p-3 rounded-xl cursor-pointer transition-all text-xs flex items-center gap-3 border",
+                                                currentQuestionIndex === idx
+                                                    ? "bg-primary/10 border-primary text-primary font-bold shadow-xs"
+                                                    : "border-border hover:bg-surface text-muted hover:text-text"
+                                            )}
+                                        >
+                                            <span className={cn(
+                                                "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0",
+                                                currentQuestionIndex === idx ? "bg-primary text-white" : "bg-neutral-100 dark:bg-neutral-800 text-muted"
+                                            )}>
+                                                {idx + 1}
+                                            </span>
+                                            <span className="truncate flex-1 font-semibold text-xs text-text" title={cleanTitle}>
+                                                {cleanTitle || `Question ${idx + 1}`}
+                                            </span>
+                                            {currentQuestionIndex > idx && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </CardContent>
                     </Card>
