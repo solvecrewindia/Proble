@@ -65,6 +65,10 @@ export interface Quiz {
         validUntil?: string | null;
         useKeywords?: boolean;
         evaluationMode?: 'ai' | 'keywords';
+        isLive?: boolean;
+        isCodingTest?: boolean;
+        setsConfig?: any;
+        modes?: string[];
     };
     created_by: string; // Foreign Key to profiles
     createdAt: string;

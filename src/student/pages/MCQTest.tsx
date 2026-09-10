@@ -12,6 +12,7 @@ import { MathText } from '../../shared/components/MathText';
 import { evaluateTestWithAI, QuestionEvaluationResult, QuestionEvaluationInput } from '../services/aiEvaluationService';
 import { runTestCases } from '../../shared/utils/codeExecution';
 import { CodeEditor } from '../../shared/components/CodeEditor';
+import { Calculator } from '../../shared/components/Calculator';
 
 const formatSeconds = (totalSec: number) => {
     if (!totalSec || isNaN(totalSec) || totalSec < 0) return '00:00';
@@ -638,7 +639,7 @@ const MCQTest = () => {
                     });
                     let finalQuestions = mapped;
                     if (quizData?.settings?.setsConfig?.enabled && Array.isArray(quizData.settings.setsConfig.mappings)) {
-                        const currentUserEmail = (currentUser?.email || user?.email || '').trim().toLowerCase();
+                        const currentUserEmail = (user?.email || '').trim().toLowerCase();
                         const mapping = quizData.settings.setsConfig.mappings.find(
                             (m: any) => m.email?.trim().toLowerCase() === currentUserEmail
                         );

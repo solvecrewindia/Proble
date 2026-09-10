@@ -37,6 +37,7 @@ export function StepQuestions({ questions, setQuestions, quizId, quizData, data,
     const qMeta = quizData || data || {};
     const isOriginals = qMeta.type === 'originals' || qMeta.settings?.category?.toUpperCase() === 'ORIGINALS' || qMeta.settings?.category?.toUpperCase() === 'PROBLE ORIGINALS';
     const useKeywords = Boolean(qMeta.settings?.useKeywords);
+    const isAiEvaluationMode = isOriginals && !useKeywords;
     const isLiveCoding = Boolean(qMeta.settings?.setsConfig?.enabled) || Boolean(qMeta.settings?.isCodingTest);
     const [activeType, setActiveType] = useState<Question['type']>(isLiveCoding ? 'code' : 'mcq');
     const [view, setView] = useState<'list' | 'import' | 'existing'>('list');
