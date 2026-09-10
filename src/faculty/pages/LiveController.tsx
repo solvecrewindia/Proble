@@ -1512,10 +1512,7 @@ export default function LiveController() {
                                         onClick={() => {
                                             setCurrentQuestionIndex(idx);
                                             setViewMode('voting');
-                                            if (!isCodeMode) {
-                                                setElapsedTime(0);
-                                                updateQuizState(idx, 'voting');
-                                            }
+                                            updateQuizState(idx, 'voting');
                                         }}
                                         className={cn(
                                             "p-3 rounded-xl cursor-pointer transition-colors text-xs flex items-center gap-3 border",

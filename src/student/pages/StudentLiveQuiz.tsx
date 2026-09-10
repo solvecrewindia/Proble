@@ -339,10 +339,6 @@ export default function StudentLiveQuiz() {
             if (quizData.settings) {
                 if (typeof quizData.settings.currentQuestionIndex === 'number') {
                     setCurrentQuestionIndex((prev) => {
-                        // In code mode, preserve student's question navigation once initialized
-                        if (isCodeModeQuiz && prev >= 0) {
-                            return prev;
-                        }
                         if (prev !== quizData.settings.currentQuestionIndex) {
                             setStartupCountdown(3);
                             setSelectedOption(null);
